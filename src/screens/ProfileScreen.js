@@ -1,14 +1,27 @@
 import { View, Text, Alert, Image, StyleSheet, Button, TouchableOpacity } from 'react-native'
 import React from 'react'
 import IMG from '../utils/image';
+import { useNavigation } from '@react-navigation/native';
 
 const ProfileScreen = () => {
+  const navigation = useNavigation();
+
   const handleEdit = () =>{
     Alert.alert('Edit Profile');
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout');
+    Alert.alert('Logout', 'Are you sure you want to logout?',[
+      { text: 'Cancel', style: 'cancel'},
+        {
+          text: 'Yes',
+          onPress: () => {
+            navigation.navigate('Home');
+          }
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
 

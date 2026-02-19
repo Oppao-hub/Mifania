@@ -3,6 +3,7 @@ import { ROUTES } from '../utils';
 
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import Login from '../screens/auth/Login';
 
 const Stack = createStackNavigator();
 
@@ -11,6 +12,7 @@ const MainNavigation = () => {
     <Stack.Navigator initialRouteName={ROUTES.HOME}>
       <Stack.Screen name={ROUTES.HOME} component={HomeScreen} />
       <Stack.Screen name={ROUTES.PROFILE} component={ProfileScreen} />
+      <Stack.Screen name={ROUTES.LOGIN} component={Login} />
     </Stack.Navigator>
   );
 };
