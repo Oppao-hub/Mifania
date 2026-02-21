@@ -1,4 +1,4 @@
-import { View, TextInput,StyleSheet } from 'react-native'
+import { View, TextInput } from 'react-native'
 import React from 'react'
 
 const FormInput = ({
@@ -7,11 +7,14 @@ const FormInput = ({
     placeholder,
     secureTextEntry = false,
     keyboardType = 'default',
-    style,}) => {
+    className, // Use this for the container (margins, width)
+    inputClassName, // Use this for the actual input (colors, borders)
+}) => {
   return (
-    <View style={styles.container}>
+    <View>
       <TextInput
-        style={[styles.input, style]}
+        // The TextInput handles the internal "box" styling
+        className={`w-full bg-white h-12 rounded-xl px-4 mb-4 border border-light-gray ${inputClassName}`}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -22,19 +25,5 @@ const FormInput = ({
     </View>
   )
 }
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-  },
-  input: {
-    height: 50,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#1e1e1e',
-    color: '#fff',
-    marginBottom: 16,
-  },
-});
 
 export default FormInput;

@@ -11,7 +11,19 @@ module.exports = {
   ],
   presets: [require("nativewind/preset")],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        brand: "#6B7C57",
+        brandDark: "#556345",
+        brandLight: "#6b703d",
+        green500: "#626F3A",
+        green550: "#586334",
+        mocha: "#3D3D3D",
+        lightGray: "#EAEAEA",
+        dashboardBG: "#f1f8ed",
+        red: "#FFFF00",
+      },
+    }
   },
   plugins: [],
 }
