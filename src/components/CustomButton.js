@@ -1,24 +1,17 @@
 import { Dimensions, Text, TouchableOpacity, View } from 'react-native';
 
-const CustomButton = ({ label, onPress }) => {
+const CustomButton = ({ label, onPress, buttonStyle, buttonTextStyle }) => {
 
   const { width, height } = Dimensions.get('window');
   return (
     <View>
       <TouchableOpacity
         onPress={onPress}
-        style={{
-          margin: 10,
-          backgroundColor: 'blue',
-          borderRadius: 10,
-        }}
+        style={ buttonStyle }
       >
         <View style={{ padding: width * 0.02 }}>
           <Text
-            style={{
-              color: 'white',
-              fontSize: 15,
-            }}
+            style={buttonTextStyle}
           >
             {label}
           </Text>
