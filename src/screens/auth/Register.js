@@ -3,9 +3,12 @@ import { View, Text, TouchableOpacity, ImageBackground, Image } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { IMG }from '../../utils'; 
 import FormInput from '../../components/FormInput';
+import PasswordInput from '../../components/PasswordInput';
 import { useNavigation } from '@react-navigation/native';
 
 const Register = () => {
+  const [email, setEmail] = useState(false);
+  const [password, setPassword] = useState(false);
   const [agree, setAgree] = useState(false);
   const navigation = useNavigation();
 
@@ -40,10 +43,15 @@ const Register = () => {
 
               <FormInput 
                 placeholder="Email Address" 
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
               />
 
-              <FormInput 
+              <PasswordInput 
                 placeholder="Password" 
+                value={password}
+                onChangeText={setPassword}
                 secureTextEntry={true}
               />
             </View>
