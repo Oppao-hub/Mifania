@@ -51,7 +51,7 @@ const Login = () => {
             {/* Checkbox Section - Using --color-green-500 */}
             <TouchableOpacity 
               onPress={() => setAgree(!agree)}
-              className="flex-row items-center self-start mt-4 mb-6"
+              className="flex-row items-center self-start mt-2 mb-6"
             >
               <View className={`w-5 h-5 border border-gray-400 rounded-md mr-2 justify-center items-center ${agree ? 'bg-brandDark' : 'bg-white'}`}>
                 {agree && <Text className="text-white text-[10px]">✓</Text>}

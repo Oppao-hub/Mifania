@@ -28,9 +28,7 @@ const ProfileScreen = () => {
   return (
     <View style={styles.container}>
       <Image
-        source={{
-          uri:IMG.LOGO,
-        }}
+        source={IMG.LOGO}
         style={styles.avatar}
       />
 
