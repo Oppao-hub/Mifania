@@ -1,18 +1,16 @@
 import React from 'react';
-import { View } from 'react-native';
 import { verifyInstallation } from 'nativewind';
-import AppNavigation from './src/navigations';
+import AppNavigator from './src/navigations';
 // @ts-ignore
 import "./global.css";
+import { AuthProvider } from './src/context/AuthContext';
 
 const App = () => {
-
   verifyInstallation();
-
   return (
-    <View style={{ flex: 1 }}>
-      <AppNavigation />
-    </View>
+    <AuthProvider>
+      <AppNavigator />
+    </AuthProvider>
   );
 };
 

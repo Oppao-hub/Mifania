@@ -1,23 +1,35 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ImageBackground, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, TouchableOpacity, ImageBackground, Image, Alert } from 'react-native';
 import { IMG }from '../../utils'; 
 import FormInput from '../../components/FormInput';
 import PasswordInput from '../../components/PasswordInput';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState(false);
   const [password, setPassword] = useState('');
   const [agree, setAgree] = useState(false);
   const navigation = useNavigation();
+  const { login } = useAuth();
+
+  const handleLogin = () => {
+    if(!email || !password){
+      Alert.alert("Error", "Please enter your email and password.");
+    }else if(email !== "admin@gmail.com" || password !== "admin123"){
+      Alert.alert("Error", "Invalid email or password.");
+    }else{
+      login();
+      navigation.navigate('Home');
+    }
+  }
 
   return (
     <ImageBackground
       source={ IMG.REGISTER_BG } 
       className="flex-1 justify-center items-center"
     >
-      <SafeAreaView className="w-full items-center">
+      <View className="w-full items-center">
 
         <View className="w-[90%] bg-white/50 rounded-[40px] p-8 items-center shadow-2xl">
           <Image 
@@ -62,7 +74,7 @@ const Login = () => {
             </TouchableOpacity>
 
             {/* Register Button - Using --color-brand */}
-            <TouchableOpacity className="w-full bg-brand h-14 rounded-2xl justify-center items-center shadow-lg active:bg-brand-dark">
+            <TouchableOpacity className="w-full bg-brand h-14 rounded-2xl justify-center items-center shadow-lg active:bg-brand-dark" onPress={handleLogin}>
               <Text className="text-white font-bold text-lg tracking-widest">LOGIN</Text>
             </TouchableOpacity>
 
@@ -71,7 +83,7 @@ const Login = () => {
               No account yet? <Text className="font-bold text-sm text-brand underline" onPress={() => navigation.navigate('Register')}>Register</Text>
             </Text>
         </View>
-      </SafeAreaView>
+      </View>
     </ImageBackground>
   );
 };

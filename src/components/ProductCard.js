@@ -1,7 +1,7 @@
 import { View, Text, Dimensions, TouchableOpacity, Image } from 'react-native'
 import React from 'react'
 
-const ProductCard = ({ product, onPress }) => {
+const ProductCard = ({ user,product, onPress }) => {
     return (
         <TouchableOpacity 
             className="mb-20 bg-white rounded-2xl overflow-hidden mb-5 w-[48%] shadow=sm"

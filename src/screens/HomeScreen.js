@@ -1,6 +1,5 @@
 import { View, Text, FlatList } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { IMG } from '../utils';
 import ProductCard from '../components/ProductCard';
 import React from 'react';
 

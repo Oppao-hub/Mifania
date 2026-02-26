@@ -1,101 +1,71 @@
-import { View, Text, Alert, Image, StyleSheet, Button, TouchableOpacity } from 'react-native'
-import React from 'react'
-import IMG from '../utils/image';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Alert, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import IMG from '../utils/image';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
+  const [user, setUser] = useState(null);
 
-  const handleEdit = () =>{
-    Alert.alert('Edit Profile');
+  useEffect(() => {
+    const checkUser = async () => {
+      if(!user){
+        navigation.replace('Login');
+      }else{
+        setUser(JSON.parse(userData));
+      }
+    };
+    checkUser();
+  }, []);
+
+  const handleEdit = () => {
+    Alert.alert("Edit Profile", "This feature is coming soon!");
   };
 
-  const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?',[
-      { text: 'Cancel', style: 'cancel'},
-        {
-          text: 'Yes',
-          onPress: () => {
-            navigation.navigate('Home');
-          }
+  const handleLogout = async () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Logout", 
+          onPress: async () => {
+            navigation.replace('Login');
+          },
         },
       ],
       { cancelable: true }
     );
   };
 
+  if(!user) return null; // or a loading spinner
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 items-center pt-16 px-6 bg-black">
       <Image
         source={IMG.LOGO}
-        style={styles.avatar}
+        className="w-30 h-30 rounded-full mb-5 resize-contain"
       />
 
-      <Text style={styles.name}>John Doe</Text>
-      <Text style={styles.email}>john.doe@email.com</Text>
+      <Text className="text-white text-xl font-bold">{user.name || 'John Doe'}</Text>
+      <Text className="text-gray-400 text-sm mb-8">{user.email || 'john.doe@email.com'}</Text>
 
-      <TouchableOpacity style={styles.editButton} onPress={handleEdit}>
-        <Text style={styles.editText}>Edit Profile</Text>
+      <TouchableOpacity
+        className="w-full h-12 rounded-lg bg-indigo-600 justify-center items-center mb-3"
+        onPress={handleEdit}
+      >
+        <Text className="text-white font-semibold">Edit Profile</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
+      <TouchableOpacity
+        className="w-full h-12 rounded-lg bg-gray-800 justify-center items-center"
+        onPress={handleLogout}
+      >
+        <Text className="text-red-500 font-semibold">Logout</Text>
       </TouchableOpacity>
-    </View>
-  )
-}
+    </View> 
+  );
+};
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    backgroundColor: '#121212',
-  },
-  avatar: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    marginBottom: 20,
-    resizeMode: 'contain',
-  },
-  name: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  email: {
-    fontSize: 14,
-    color: '#aaa',
-    marginBottom: 30,
-  },
-  editButton: {
-    width: '100%',
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#4f46e5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  editText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
-  logoutButton: {
-    width: '100%',
-    height: 50,
-    borderRadius: 12,
-    backgroundColor: '#2a2a2a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoutText: {
-    color: '#ff4d4d',
-    fontWeight: '600',
-  },
-})
-
-export default ProfileScreen
+export default ProfileScreen;

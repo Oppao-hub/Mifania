@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ImageBackground, Image } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { IMG }from '../../utils'; 
 import FormInput from '../../components/FormInput';
 import PasswordInput from '../../components/PasswordInput';
@@ -17,7 +16,7 @@ const Register = () => {
       source={ IMG.REGISTER_BG } 
       className="flex-1 justify-center items-center"
     >
-      <SafeAreaView className="w-full items-center">
+      <View className="w-full items-center">
 
         <View className="w-[90%] bg-white/50 rounded-[40px] p-8 items-center shadow-2xl">
           <Image 
@@ -79,7 +78,7 @@ const Register = () => {
               Already have an account? <Text className="font-bold text-sm text-brand underline" onPress={() => navigation.navigate('Login')}>Login</Text>
             </Text>
         </View>
-      </SafeAreaView>
+      </View>
     </ImageBackground>
   );
 };
