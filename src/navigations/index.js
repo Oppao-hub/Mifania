@@ -1,7 +1,7 @@
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { Platform, StatusBar, useColorScheme } from 'react-native';
 import { useEffect } from 'react';
-import  MainNavigation  from "./MainNavigator";
+import AppNavigator from '../navigations/AppNavigator';
 
 export default () => {
   
@@ -18,7 +18,7 @@ export default () => {
 
   return (
     <NavigationContainer theme={theme}>
-      <MainNavigation/>
+      <AppNavigator/>
     </NavigationContainer>
   );
 };

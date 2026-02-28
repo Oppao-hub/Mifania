@@ -1,28 +1,22 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import { ROUTES } from '../utils';
-import BottomTab from './BottomTabNav';
+import BottomTab from './BottomTabNavigator';
 
-import HomeScreen from '../screens/HomeScreen';
-import ProfileScreen from '../screens/ProfileScreen';
-import Login from '../screens/auth/Login';
-import Register from '../screens/auth/Register';
+import Home from '../screens/HomeScreen'; 
+import Cart from '../screens/CartScreen';
+import Profile from '../screens/ProfileScreen';
 
 const Stack = createStackNavigator();
 
-const MainNavigation = () => {
+const MainNavigator = () => {
   return (
-    <Stack.Navigator initialRouteName="Sag unsa ra">
-      <Stack.Screen 
-        name="Sag unsa ra" 
-        component={BottomTab} 
-        options={{ headerShown: false }}
-      />
-      <Stack.Screen name={ROUTES.HOME} component={HomeScreen} />
-      <Stack.Screen name={ROUTES.PROFILE} component={ProfileScreen} />
-      <Stack.Screen name={ROUTES.LOGIN} component={Login} />
-      <Stack.Screen name={ROUTES.REGISTER} component={Register} />
+    <Stack.Navigator initialRouteName="BottomTab" screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="BottomTab" component={BottomTab} options={{ headerShown: false }}/>
+      <Stack.Screen name={ROUTES.HOME} component={Home} />
+      <Stack.Screen name={ROUTES.PROFILE} component={Profile} />
+      <Stack.Screen name={ROUTES.CART} component={Cart} />
     </Stack.Navigator>
   );
 };
 
-export default MainNavigation;
+export default MainNavigator;

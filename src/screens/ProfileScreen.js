@@ -10,7 +10,7 @@ const ProfileScreen = () => {
   useEffect(() => {
     const checkUser = async () => {
       if(!user){
-        navigation.replace('Login');
+          
       }else{
         setUser(JSON.parse(userData));
       }

@@ -1,10 +1,10 @@
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import { useAuth } from '../context/AuthContext';
 import AuthNavigator from './AuthNavigator'; // Your Auth Stack
 import MainNavigator from './MainNavigator'; // Your Tab + App Stack
 
-const Stack = createNativeStackNavigator();
+const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   const { isLoggedIn } = useAuth(); // Using the boolean we discussed

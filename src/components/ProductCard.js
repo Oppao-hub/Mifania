@@ -4,7 +4,7 @@ import React from 'react'
 const ProductCard = ({ user,product, onPress }) => {
     return (
         <TouchableOpacity 
-            className="mb-20 bg-white rounded-2xl overflow-hidden mb-5 w-[48%] shadow=sm"
+            className="bg-white rounded-2xl overflow-hidden mb-5 w-[48%] shadow=sm"
             onPress={onPress}  
             activeOpacity={0.8}     
         >
