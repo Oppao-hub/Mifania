@@ -1,7 +1,7 @@
-import { View, Text, Dimensions, TouchableOpacity, Image } from 'react-native'
+import { View, Text, TouchableOpacity, Image } from 'react-native'
 import React from 'react'
 
-const ProductCard = ({ user,product, onPress }) => {
+const ProductCard = ({ product, onPress }) => {
     return (
         <TouchableOpacity 
             className="bg-white rounded-2xl overflow-hidden mb-5 w-[48%] shadow=sm"
@@ -10,7 +10,7 @@ const ProductCard = ({ user,product, onPress }) => {
         >
             <View className="w-full aspect-[3/4] bg-gray-100 relative">
                 <Image 
-                source={{ uri: product.image }} 
+                source={{ uri: product.image || 'https://via.placeholder.com/150'}} 
                 className="w-full h-full"
                 resizeMode="cover"
                 />
@@ -25,7 +25,7 @@ const ProductCard = ({ user,product, onPress }) => {
             
             <View className="py-3 px-1">
                 <Text className="text-[10px] text-gray-400 font-semibold tracking-wider">
-                {product.category.toUpperCase()}
+                    {product.category?.name ? product.category.name.toUpperCase() : "NO CATEGORY"}
                 </Text>
                 <Text 
                 className="text-sm font-bold text-mocha mt-1" 

@@ -4,6 +4,7 @@ import { IMG }from '../../utils';
 import FormInput from '../../components/FormInput';
 import PasswordInput from '../../components/PasswordInput';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const RegisterScreen = () => {
   const [email, setEmail] = useState(false);
@@ -12,74 +13,76 @@ const RegisterScreen = () => {
   const navigation = useNavigation();
 
   return (
-    <ImageBackground
+    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+      <ImageBackground
       source={ IMG.REGISTER_BG } 
       className="flex-1 justify-center items-center"
-    >
-      <View className="w-full items-center">
+      >
+        <View className="w-full items-center">
 
-        <View className="w-[90%] bg-white/50 rounded-[40px] p-8 items-center shadow-2xl">
-          <Image 
-            className="w-full h-10"
-            source={IMG.LOGO}
-            resizeMode='contain'
-          />
-          <View className="items-center mb-6">
-            <View className="h-[2px] w-32 bg-brand-dark my-3" />
-              <Text className="text-sm font-bold text-brandLight border-b-2 border-brandLight pb-1">
-                CREATE AN ACCOUNT
-              </Text>
-            </View>
-
-            <View className="w-full">
-              <FormInput 
-                placeholder="First Name" 
-              />
-
-              <FormInput 
-                placeholder="Last Name" 
-              />
-
-              <FormInput 
-                placeholder="Email Address" 
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-              />
-
-              <PasswordInput 
-                placeholder="Password" 
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={true}
-              />
-            </View>
-
-            {/* Checkbox Section - Using --color-green-500 */}
-            <TouchableOpacity 
-              onPress={() => setAgree(!agree)}
-              className="flex-row items-center self-start mt-4 mb-6"
-            >
-              <View className={`w-5 h-5 border border-gray-400 rounded-md mr-2 justify-center items-center ${agree ? 'bg-brandDark' : 'bg-white'}`}>
-                {agree && <Text className="text-white text-[10px]">✓</Text>}
+          <View className="w-[90%] bg-white/50 rounded-[40px] p-8 items-center shadow-2xl">
+            <Image 
+              className="w-full h-10"
+              source={IMG.LOGO}
+              resizeMode='contain'
+            />
+            <View className="items-center mb-6">
+              <View className="h-[2px] w-32 bg-brand-dark my-3" />
+                <Text className="text-sm font-bold text-brandLight border-b-2 border-brandLight pb-1">
+                  CREATE AN ACCOUNT
+                </Text>
               </View>
-              <Text className="text-sm text-mocha">
-                I agree to the <Text className="underline text-sm">terms and conditions.</Text>
+
+              <View className="w-full">
+                <FormInput 
+                  placeholder="First Name" 
+                />
+
+                <FormInput 
+                  placeholder="Last Name" 
+                />
+
+                <FormInput 
+                  placeholder="Email Address" 
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                />
+
+                <PasswordInput 
+                  placeholder="Password" 
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={true}
+                />
+              </View>
+
+              {/* Checkbox Section - Using --color-green-500 */}
+              <TouchableOpacity 
+                onPress={() => setAgree(!agree)}
+                className="flex-row items-center self-start mt-4 mb-6"
+              >
+                <View className={`w-5 h-5 border border-gray-400 rounded-md mr-2 justify-center items-center ${agree ? 'bg-brandDark' : 'bg-white'}`}>
+                  {agree && <Text className="text-white text-[10px]">✓</Text>}
+                </View>
+                <Text className="text-sm text-mocha">
+                  I agree to the <Text className="underline text-sm">terms and conditions.</Text>
+                </Text>
+              </TouchableOpacity>
+
+              {/* Register Button - Using --color-brand */}
+              <TouchableOpacity className="w-full bg-brand h-14 rounded-2xl justify-center items-center shadow-lg active:bg-brand-dark">
+                <Text className="text-white font-bold text-lg tracking-widest">REGISTER</Text>
+              </TouchableOpacity>
+
+              {/* Footer */}
+              <Text className="mt-4 text-mocha text-sm">
+                Already have an account? <Text className="font-bold text-sm text-brand underline" onPress={() => navigation.navigate('Login')}>Login</Text>
               </Text>
-            </TouchableOpacity>
-
-            {/* Register Button - Using --color-brand */}
-            <TouchableOpacity className="w-full bg-brand h-14 rounded-2xl justify-center items-center shadow-lg active:bg-brand-dark">
-              <Text className="text-white font-bold text-lg tracking-widest">REGISTER</Text>
-            </TouchableOpacity>
-
-            {/* Footer */}
-            <Text className="mt-4 text-mocha text-sm">
-              Already have an account? <Text className="font-bold text-sm text-brand underline" onPress={() => navigation.navigate('Login')}>Login</Text>
-            </Text>
+          </View>
         </View>
-      </View>
-    </ImageBackground>
+      </ImageBackground>
+    </SafeAreaView>
   );
 };
 

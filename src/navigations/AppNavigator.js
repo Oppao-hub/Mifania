@@ -1,17 +1,18 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useAuth } from '../context/AuthContext';
-import AuthNavigator from './AuthNavigator'; // Your Auth Stack
-import MainNavigator from './MainNavigator'; // Your Tab + App Stack
+import { useSelector } from 'react-redux';
+
+import AuthNavigator from './AuthNavigator';
+import MainNavigator from './MainNavigator';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const { isLoggedIn } = useAuth(); // Using the boolean we discussed
+  const { data } = useSelector(state => state.authentication || {data: null, isLoading: false});
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {isLoggedIn === false ? (
+      {data === null ? (
         // User is not logged in
         <Stack.Screen name="Auth" component={AuthNavigator} />
       ) : (

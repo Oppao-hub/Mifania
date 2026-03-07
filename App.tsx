@@ -1,23 +1,26 @@
 import React from 'react';
 import { View } from 'react-native';
-import { verifyInstallation } from 'nativewind';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';  
-import AppNavigation from './src/navigations';
-import { AuthProvider } from './src/context/AuthContext';
+
+// IMPORT FROM YOUR NEW PATH
 // @ts-ignore
-import "./global.css";
+import configureStore from './src/app/store'; 
+import AppNavigation from './src/navigations';
+
+const { store, persistor } = configureStore();
 
 const App = () => {
-
-  verifyInstallation();
-
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <View style={{ flex: 1 }}>
-          <AppNavigation />
-        </View>
-    </AuthProvider>
+      <Provider store={store}>
+        <PersistGate loading={null} persistor={persistor}>
+          <View style={{ flex: 1 }}>
+            <AppNavigation />
+          </View>
+        </PersistGate>
+      </Provider>
     </SafeAreaProvider>
   );
 };

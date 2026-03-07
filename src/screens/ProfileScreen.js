@@ -1,28 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, Alert, Image, TouchableOpacity } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import IMG from '../utils/image';
 
-const ProfileScreen = () => {
-  const navigation = useNavigation();
-  const [user, setUser] = useState(null);
+import { useDispatch, useSelector } from 'react-redux';
+import { USER_LOGIN_RESET } from '../app/actions';
 
-  useEffect(() => {
-    const checkUser = async () => {
-      if(!user){
-          
-      }else{
-        setUser(JSON.parse(userData));
-      }
-    };
-    checkUser();
-  }, []);
+const ProfileScreen = () => {
+
+  const dispatch = useDispatch();
+
+  const { data } = useSelector((state) => state.authentication);
 
   const handleEdit = () => {
     Alert.alert("Edit Profile", "This feature is coming soon!");
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     Alert.alert(
       "Logout",
       "Are you sure you want to logout?",
@@ -30,41 +24,43 @@ const ProfileScreen = () => {
         { text: "Cancel", style: "cancel" },
         { 
           text: "Logout", 
-          onPress: async () => {
-            navigation.replace('Login');
-          },
+          style: "destructive",
+          onPress: () => dispatch({ type: USER_LOGIN_RESET }) 
         },
-      ],
-      { cancelable: true }
+      ]
     );
   };
 
-  if(!user) return null; // or a loading spinner
+ const displayName = data?.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : 'Fashion Enthusiast';
+  const displayEmail = data?.user?.email || 'mifania.user@email.com';
 
   return (
-    <View className="flex-1 items-center pt-16 px-6 bg-black">
-      <Image
-        source={IMG.LOGO}
-        className="w-30 h-30 rounded-full mb-5 resize-contain"
-      />
+    <SafeAreaView className="flex-1 bg-black" edges={['top']}>
+      <View className="flex-1 items-center pt-16 px-6">
+        <Image
+          source={IMG.LOGO}
+          className="w-32 h-32 rounded-full mb-5"
+          resizeMode="contain"
+        />
 
-      <Text className="text-white text-xl font-bold">{user.name || 'John Doe'}</Text>
-      <Text className="text-gray-400 text-sm mb-8">{user.email || 'john.doe@email.com'}</Text>
+        <Text className="text-white text-2xl font-bold mb-1">{displayName}</Text>
+        <Text className="text-gray-400 text-sm mb-8">{displayEmail}</Text>
 
-      <TouchableOpacity
-        className="w-full h-12 rounded-lg bg-indigo-600 justify-center items-center mb-3"
-        onPress={handleEdit}
-      >
-        <Text className="text-white font-semibold">Edit Profile</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          className="w-full h-14 rounded-xl bg-indigo-600 justify-center items-center mb-4 shadow-lg"
+          onPress={handleEdit}
+        >
+          <Text className="text-white font-bold text-lg">Edit Profile</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        className="w-full h-12 rounded-lg bg-gray-800 justify-center items-center"
-        onPress={handleLogout}
-      >
-        <Text className="text-red-500 font-semibold">Logout</Text>
-      </TouchableOpacity>
-    </View> 
+        <TouchableOpacity
+          className="w-full h-14 rounded-xl bg-zinc-900 justify-center items-center border border-zinc-800"
+          onPress={handleLogout}
+        >
+          <Text className="text-red-500 font-bold text-lg">Logout</Text>
+        </TouchableOpacity>
+      </View> 
+    </SafeAreaView>
   );
 };
 
