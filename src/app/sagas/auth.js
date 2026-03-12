@@ -1,29 +1,44 @@
-import { call, put, takeLatest } from 'redux-saga/effects';
+import { takeEvery, call, put } from 'redux-saga/effects';
 import { userLoginApi } from '../api/auth';
-import { 
-    USER_LOGIN_REQUEST, 
-    USER_LOGIN_COMPLETED, 
-    USER_LOGIN_ERROR 
-} from '../actions';
+import { userRegisterApi } from '../api/auth'
+import * as Type from '../../app/actions';
 
-function* handleLogin(action) {
-    try {
-        const response = yield call(userLoginApi, action.payload);
-        
-        if (!response) throw new Error("No response from server.");
-
-        const data = yield response.json();
-
-        if (response.ok) {
-            yield put({ type: USER_LOGIN_COMPLETED, payload: data });
-        } else {
-            throw new Error(data?.message || "Invalid email or password.");
-        }
-    } catch (error) {
-        yield put({ type: USER_LOGIN_ERROR, payload: error.message });
+export function* userLoginAsync(action) {
+    yield put({ type: Type.USER_LOGIN_REQUEST });
+  try {
+    const response = yield call(userLoginApi, action.payload);
+    if (response.ok) {
+      const data = yield response.json(); 
+      yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
+    } else {
+      const errorData = yield response.json();
+      throw new Error(errorData.message || "Invalid Email or Password");
     }
+  } catch (error) {
+    yield put({ type: Type.USER_LOGIN_ERROR, payload: error.message });
+  }
 }
 
-export function* watchAuth() {
-    yield takeLatest(USER_LOGIN_REQUEST, handleLogin);
+export function* userRegister(action){
+  yield put({ type: Type.USER_REGISTER_REQUEST });
+  try{
+    const response = yield call(userRegisterApi, action.payload);
+    if(response.ok){
+      const data = yield response.json();
+      yield put({ type: Type.USER_REGISTER_COMPLETED, payload: data});
+    } else {
+      const errorData = yield response.json();
+      throw new Error(errorData.message || "Registration failed");
+    }
+  }catch(error){
+    yield put({ type: Type.USER_REGISTER_ERROR, payload: error.message });
+  }
+}
+
+export function* watchLogin() {
+  yield takeEvery(Type.USER_LOGIN, userLoginAsync);
+}
+
+export function* watchRegister(){
+  yield takeEvery(Type.USER_REGISTER, userRegister)
 }

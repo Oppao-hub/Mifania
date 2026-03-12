@@ -1,86 +1,121 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ImageBackground, Image } from 'react-native';
-import { IMG }from '../../utils'; 
+import React, { useEffect, useState } from 'react';
+import { Alert, View, Text, TouchableOpacity, ImageBackground, Image, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { IMG } from '../../utils'; 
 import FormInput from '../../components/FormInput';
 import PasswordInput from '../../components/PasswordInput';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch, useSelector } from 'react-redux';
+import { userRegister } from '../../app/reducers/auth';
 
 const RegisterScreen = () => {
-  const [email, setEmail] = useState(false);
-  const [password, setPassword] = useState(false);
-  const [agree, setAgree] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
   const navigation = useNavigation();
+  const dispatch = useDispatch();
+  const { isLoading, isError, error } = useSelector((state) => state.authentication);
+
+  useEffect(() => {
+    if (isError && error && !isLoading) {
+      Alert.alert("Registration Failed", error);
+    }
+  }, [isError, error, isLoading]);
+
+  const handleRegister = () => {
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
+      Alert.alert("Input Error", "Please fill in all fields.");
+      return;
+    }
+    
+    dispatch(userRegister({ 
+      firstName, 
+      lastName, 
+      email, 
+      password })
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <ImageBackground
-      source={ IMG.REGISTER_BG } 
-      className="flex-1 justify-center items-center"
-      >
-        <View className="w-full items-center">
+      <ImageBackground source={IMG.AUTH_BG} className="flex-1" resizeMode="cover">
+        {/* KeyboardAvoidingView prevents the inputs from being hidden by the keyboard on your Pixel 9 Pro */}
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          className="flex-1"
+        >
+          <ScrollView 
+            contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', alignItems: 'center' }}
+            showsVerticalScrollIndicator={false}
+          >
+            <View className="w-[92%] bg-white/80 rounded-[40px] p-8 items-center shadow-xl border border-white/20">
+              
+              <Image 
+                className="w-48 h-12 mb-4"
+                source={IMG.LOGO}
+                resizeMode="contain"
+              />
 
-          <View className="w-[90%] bg-white/50 rounded-[40px] p-8 items-center shadow-2xl">
-            <Image 
-              className="w-full h-10"
-              source={IMG.LOGO}
-              resizeMode='contain'
-            />
-            <View className="items-center mb-6">
-              <View className="h-[2px] w-32 bg-brand-dark my-3" />
-                <Text className="text-sm font-bold text-brandLight border-b-2 border-brandLight pb-1">
-                  CREATE AN ACCOUNT
+              <View className="items-center mb-8">
+                <View className="h-[1px] w-20 bg-brand/30 mb-2" />
+                <Text className="text-xs font-bold text-brand tracking-[3px] uppercase">
+                  Create Account
                 </Text>
               </View>
 
-              <View className="w-full">
-                <FormInput 
-                  placeholder="First Name" 
-                />
+              <View className="w-full space-y-2">
+                <View className="flex-1">
+                  <FormInput 
+                    placeholder="First Name" 
+                    value={firstName}
+                    onChangeText={setFirstName}
+                  />
+                </View>
 
-                <FormInput 
-                  placeholder="Last Name" 
-                />
+                <View className="flex-1">
+                  <FormInput 
+                    placeholder="Last Name" 
+                    value={lastName}
+                    onChangeText={setLastName}
+                  />
+                </View>
 
                 <FormInput 
                   placeholder="Email Address" 
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
+                  autoCapitalize="none"
                 />
 
                 <PasswordInput 
                   placeholder="Password" 
                   value={password}
                   onChangeText={setPassword}
-                  secureTextEntry={true}
                 />
               </View>
 
-              {/* Checkbox Section - Using --color-green-500 */}
               <TouchableOpacity 
-                onPress={() => setAgree(!agree)}
-                className="flex-row items-center self-start mt-4 mb-6"
+                className={`w-full h-14 rounded-2xl justify-center items-center mt-8 shadow-md ${isLoading ? 'bg-brand/50' : 'bg-brand'}`}
+                onPress={handleRegister}
+                disabled={isLoading}
               >
-                <View className={`w-5 h-5 border border-gray-400 rounded-md mr-2 justify-center items-center ${agree ? 'bg-brandDark' : 'bg-white'}`}>
-                  {agree && <Text className="text-white text-[10px]">✓</Text>}
-                </View>
-                <Text className="text-sm text-mocha">
-                  I agree to the <Text className="underline text-sm">terms and conditions.</Text>
+                <Text className="text-white font-bold text-base tracking-widest">
+                  {isLoading ? "PROCESSING..." : "REGISTER"}
                 </Text>
               </TouchableOpacity>
 
-              {/* Register Button - Using --color-brand */}
-              <TouchableOpacity className="w-full bg-brand h-14 rounded-2xl justify-center items-center shadow-lg active:bg-brand-dark">
-                <Text className="text-white font-bold text-lg tracking-widest">REGISTER</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('Login')} className="mt-6">
+                <Text className="text-mocha text-sm">
+                  Already have an account? <Text className="font-bold text-brand">Login</Text>
+                </Text>
               </TouchableOpacity>
-
-              {/* Footer */}
-              <Text className="mt-4 text-mocha text-sm">
-                Already have an account? <Text className="font-bold text-sm text-brand underline" onPress={() => navigation.navigate('Login')}>Login</Text>
-              </Text>
-          </View>
-        </View>
+              
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </ImageBackground>
     </SafeAreaView>
   );

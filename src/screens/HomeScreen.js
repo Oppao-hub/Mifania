@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 
 import ProductCard from '../components/ProductCard';
-import { GET_PRODUCTS_REQUEST } from '../app/actions';
+import { getProducts } from '../app/reducers/product';
 
 const HomeScreen = () => {
   const navigation = useNavigation();
@@ -16,21 +16,20 @@ const HomeScreen = () => {
   const { items, isLoading, error } = productState;
 
   useEffect(() => {
-    dispatch({ type: GET_PRODUCTS_REQUEST });
+    dispatch(getProducts());
   }, [dispatch]);
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <View className="flex-1 bg-dashboardBG px-4">
         
-        {/* 3. Handle Loading State */}
         {isLoading && items.length === 0 ? (
           <View className="flex-1 justify-center items-center">
             <ActivityIndicator size="large" color="brand" />
           </View>
         ) : (
           <FlatList
-            data={items} // Using real API data
+            data={items}
             numColumns={2}
             keyExtractor={(item) => item.id.toString()}
             columnWrapperStyle={{ justifyContent: 'space-between' }}
@@ -53,8 +52,8 @@ const HomeScreen = () => {
               />
             )}
             contentContainerStyle={{ paddingBottom: 40 }}
-            // 4. Optional: Add Pull-to-Refresh
-            onRefresh={() => dispatch({ type: GET_PRODUCTS_REQUEST })}
+            //Add Pull-to-Refresh
+            onRefresh={() => dispatch(getProducts())}
             refreshing={isLoading}
           />
         )}

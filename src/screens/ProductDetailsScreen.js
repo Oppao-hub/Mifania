@@ -3,7 +3,7 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 export default function ProductDetailScreen({ route }) {
-  const { productId } = route.params; // Passed from List screen
+  const { productId } = route.params;
   const { userToken } = useAuth();
   const [details, setDetails] = useState(null);
 

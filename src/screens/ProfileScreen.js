@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import IMG from '../utils/image';
 
 import { useDispatch, useSelector } from 'react-redux';
-import { USER_LOGIN_RESET } from '../app/actions';
+import { loginReset } from '../app/reducers/auth';
 
 const ProfileScreen = () => {
 
@@ -25,7 +25,7 @@ const ProfileScreen = () => {
         { 
           text: "Logout", 
           style: "destructive",
-          onPress: () => dispatch({ type: USER_LOGIN_RESET }) 
+          onPress: () => dispatch(loginReset()) 
         },
       ]
     );
