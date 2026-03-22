@@ -31,17 +31,17 @@ const RegisterScreen = () => {
     }
     
     dispatch(userRegister({ 
-      firstName, 
-      lastName, 
-      email, 
-      password })
+        firstName, 
+        lastName, 
+        email, 
+        password 
+      })
     );
   };
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <ImageBackground source={IMG.AUTH_BG} className="flex-1" resizeMode="cover">
-        {/* KeyboardAvoidingView prevents the inputs from being hidden by the keyboard on your Pixel 9 Pro */}
         <KeyboardAvoidingView 
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
           className="flex-1"
@@ -102,9 +102,10 @@ const RegisterScreen = () => {
                 onPress={handleRegister}
                 disabled={isLoading}
               >
-                <Text className="text-white font-bold text-base tracking-widest">
-                  {isLoading ? "PROCESSING..." : "REGISTER"}
-                </Text>
+                {isLoading ? <ActivityIndicator color="#fff" /> : 
+                  <Text className="text-white font-bold text-lg">
+                    REGISTER
+                  </Text>}
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => navigation.navigate('Login')} className="mt-6">

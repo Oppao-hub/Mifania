@@ -9,7 +9,7 @@ function* fetchProductsWorker() {
         const data = yield response.json();
 
         if (response.ok) {
-            yield put({ type: Type.GET_PRODUCTS_SUCCESS, payload: data });
+            yield put({ type: Type.GET_PRODUCTS_COMPLETED, payload: data });
         } else {
             yield put({ type: Type.GET_PRODUCTS_FAILURE, payload: data.message || 'Error fetching products.' });
         }
@@ -29,10 +29,6 @@ export function* fetchPexelsImagesWorker(action) {
     } catch (error) {
         yield put({ type: GET_PEXELS_IMAGES_ERROR, payload: error.message });
     }
-}
-
-export function* fectchPexelsImagesWorker() {
-    yield takeLatest(Type.GET_PEXELS_IMAGES, fetchPexelsImagesWorker);
 }
 
 export function* watchProduct() {

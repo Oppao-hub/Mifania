@@ -14,7 +14,7 @@ export const productReducer = (state = initialState, action) => {
                 isLoading: true,
                 error: null,
             };
-        case Type.GET_PRODUCTS_SUCCESS:
+        case Type.GET_PRODUCTS_COMPLETED:
             return {
                 ...state,
                 isLoading: false,
@@ -32,13 +32,13 @@ export const productReducer = (state = initialState, action) => {
                 isLoading: true,
                 error: null,
             }
-        case Type.GET_PEXELS_IMAGES_SUCCESS:
+        case Type.GET_PEXELS_IMAGES_COMPLETED:
             return{
                 ...state,
                 isLoading: false,
                 items: action.payload,
             }
-        case Type.GET_PEXELS_IMAGES_FAILURE:
+        case Type.GET_PEXELS_IMAGES_ERROR:
             return{
                 ...state,
                 isLoading: false,

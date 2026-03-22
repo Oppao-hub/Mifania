@@ -6,8 +6,8 @@ export const userLoginApi = async (credentials) => {
 
 export const userRegisterApi = async ({ firstName, lastName, email, password }) => {
     const body = {
-        first_name: firstName,
-        last_name: lastName,
+        firstName: firstName,
+        lastName: lastName,
         email,
         password
     };
