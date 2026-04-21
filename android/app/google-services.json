@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "30531231842",
+    "project_id": "mifania",
+    "storage_bucket": "mifania.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:30531231842:android:eaa2661c48f0f443ab313b",
+        "android_client_info": {
+          "package_name": "com.mifania"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "30531231842-s27d7v0mib1r0jm1d43shdiu5p1kqofl.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvOMfdfGaofouK2JfTQm7mHK_NCFZqzKg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "30531231842-llo1lo93ld0dbmjvqf3723v3e3fieopt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

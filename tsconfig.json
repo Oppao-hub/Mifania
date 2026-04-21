@@ -3,13 +3,26 @@
   "compilerOptions": {
     "types": [
       "jest"
-    ]
+    ],
+    "jsx": "react-native",
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    },
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "5.0"
   },
   "include": [
+    "src",
+    "index.js",
+    "App.tsx",
     "**/*.ts",
     "**/*.tsx",
     "nativewind-env.d.ts"
-  ],
+, "src/screens/auth/LoginScreen.js"  ],
   "exclude": [
     "**/node_modules",
     "**/Pods"

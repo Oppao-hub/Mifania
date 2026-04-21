@@ -4,16 +4,31 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        /* --- 🌿 Core Brand Palette --- */
         brand: {
-          DEFAULT: "#6B7C57",
-          dark: "#556345",
+          DEFAULT: "#52622E",
+          light: "#6A7B42",
+          dark: "#3F4C23",
         },
-        mocha: "#3D3D3D",
-        cream: "#F7F7F7",
-        "light-brown": "#A49C91",
-        "light-gray": "#EAEAEA",
+        "light-brown": "#8A7363",
+
+        /* --- 🩶 UI Neutrals & Shades --- */
+        "app-bg": "#FBFBFA",
+        "light-gray": "#F3F4F6",
+        gray: "#6A7282",
+        "dark-gray": "#4B5563",
+        "border-color": "#EAE8E3",
+        "row-hover": "#F9F9F8",
+
+        /* --- ✅ Status Colors --- */
+        success: "#52622E",
+        danger: "#DC3545",
+        warning: "#D97706",
         terracotta: "#B45239",
-        success: "#626F3A",
+      },
+      fontSize: {
+        /* --- 📏 Custom Sizes --- */
+        xxs: "8px",
       },
       fontFamily: {
         montserrat: ["Montserrat-Regular"], 
