@@ -5,12 +5,16 @@ export const userLoginApi = async (credentials: AuthCredentials) => {
     return await postRequest("/login", credentials);
 };
 
-export const userRegisterApi = async ({ firstName, lastName, email, password }: AuthCredentials) => {
+export const userGoogleLoginApi = async (idToken: string) => {
+    return await postRequest("/login/google", { idToken });
+};
+
+export const userRegisterApi = async (credentials: AuthCredentials) => {
     const body = {
-        firstName: firstName,
-        lastName: lastName,
-        email,
-        password
+        first_name: credentials.firstName || credentials.first_name,
+        last_name: credentials.lastName || credentials.last_name,
+        email: credentials.email,
+        password: credentials.password
     };
     return await postRequest("/register", body);
 };
