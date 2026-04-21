@@ -1,6 +1,4 @@
 import { legacy_createStore as createStore, applyMiddleware, combineReducers } from "redux";
-import { persistReducer, persistStore } from "redux-persist";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import createSagaMiddleware from "redux-saga";
 import { authReducer } from '../reducers/auth';
 import { productReducer } from '../reducers/product';
@@ -8,14 +6,8 @@ import rootSaga from "../sagas";
 
 const sagaMiddleware = createSagaMiddleware();
 
-const authPersistConfig = {
-    key: "authentication",
-    storage: AsyncStorage,
-    whitelist: ['data'],
-};
-
 const rootReducer = combineReducers({
-    authentication: persistReducer(authPersistConfig, authReducer),
+    authentication: authReducer,
     product: productReducer,
 });
 
@@ -25,11 +17,9 @@ const configureStore = () => {
         applyMiddleware(sagaMiddleware)
     );
 
-    const persistor = persistStore(store);
-
     sagaMiddleware.run(rootSaga);
 
-    return { store, persistor };
+    return { store };
 };
 
 export default configureStore;

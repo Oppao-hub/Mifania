@@ -5,12 +5,13 @@ import IMG from '../utils/image';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { loginReset } from '../app/reducers/auth';
+import { RootState } from '../types';
 
 const ProfileScreen = () => {
 
   const dispatch = useDispatch();
 
-  const { data } = useSelector((state: any) => state.authentication);
+  const { data } = useSelector((state: RootState) => state.authentication);
 
   const handleEdit = () => {
     Alert.alert("Edit Profile", "This feature is coming soon!");

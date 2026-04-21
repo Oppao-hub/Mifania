@@ -13,23 +13,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 
 // Redux Imports
 import { useDispatch, useSelector } from 'react-redux';
 import { userLogin, loginReset, userLoginCompleted } from '../../app/reducers/auth';
 import { IMG, ROUTES } from '../../utils';
+import { RootState } from '../../types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
-
-// Local Types for Redux State
-interface RootState {
-    authentication: {
-        isLoading: boolean;
-        isError: boolean;
-        error: string | null;
-    };
-}
 
 GoogleSignin.configure({
     webClientId: '30531231842-s27d7v0mib1r0jm1d43shdiu5p1kqofl.apps.googleusercontent.com',
@@ -40,7 +32,7 @@ const LoginScreen = () => {
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     
-    const navigation = useNavigation<any>();
+    const navigation = useNavigation<NavigationProp<any>>();
     const dispatch = useDispatch();
 
     // Pulling state from your existing Redux slice
@@ -92,7 +84,11 @@ const LoginScreen = () => {
             
             // 3. Redirect 
             dispatch(userLoginCompleted({
-                email: userCredential.user.email,
+                user: {
+                    email: userCredential.user.email || '',
+                    first_name: userCredential.user.displayName || 'Google User',
+                },
+                token: idToken
             }));
             
         } catch (error: any) { 

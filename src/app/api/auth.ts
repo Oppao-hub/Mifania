@@ -1,10 +1,11 @@
+import { AuthCredentials } from '../../types';
 import { postRequest } from './client';
 
-export const userLoginApi = async (credentials: any) => {
+export const userLoginApi = async (credentials: AuthCredentials) => {
     return await postRequest("/login", credentials);
 };
 
-export const userRegisterApi = async ({ firstName, lastName, email, password }: any) => {
+export const userRegisterApi = async ({ firstName, lastName, email, password }: AuthCredentials) => {
     const body = {
         firstName: firstName,
         lastName: lastName,

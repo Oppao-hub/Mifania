@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { IMG } from '../utils';
+import { RootState } from '../types';
 
 import ProductCard from '../components/ProductCard';
 import { getProducts } from '../app/reducers/product';
@@ -12,7 +13,7 @@ import { getProducts } from '../app/reducers/product';
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const dispatch = useDispatch();
-  const { items, isLoading } = useSelector((state: any) => state.product);
+  const { items, isLoading } = useSelector((state: RootState) => state.product);
 
   useEffect(() => {
     dispatch(getProducts());

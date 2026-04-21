@@ -1,11 +1,5 @@
 import * as Types from "../actions";
-
-interface AuthState {
-    isLoading: boolean;
-    data: any | null;
-    isError: boolean;
-    error: any | null;
-}
+import { AuthState, User } from "../../types";
 
 const initialState: AuthState = {
     isLoading: false, 
@@ -14,7 +8,7 @@ const initialState: AuthState = {
     error: null
 };
 
-export function authReducer(state = initialState, action: any): AuthState {
+export function authReducer(state = initialState, action: { type: string; payload?: any }): AuthState {
     console.log(action.type);
     switch (action.type) {
         case Types.USER_LOGIN_REQUEST:
@@ -74,7 +68,7 @@ export const userLogin = (payload: any) => ({
     payload
 });
 
-export const userLoginCompleted = (payload: any) => ({
+export const userLoginCompleted = (payload: { user: User; token?: string }) => ({
     type: Types.USER_LOGIN_COMPLETED,
     payload
 });

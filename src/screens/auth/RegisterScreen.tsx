@@ -7,14 +7,7 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { userRegister } from '../../app/reducers/auth';
-
-interface RootState {
-    authentication: {
-        isLoading: boolean;
-        isError: boolean;
-        error: string | null;
-    };
-}
+import { RootState } from '../../types';
 
 const RegisterScreen = () => {
   const [firstName, setFirstName] = useState('');

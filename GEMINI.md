@@ -6,7 +6,7 @@ Mifania is a modern **React Native** mobile application designed for fashion and
 
 - **Framework:** React Native (v0.84+)
 - **Language:** TypeScript
-- **State Management:** Redux with Redux-Saga and Redux Persist (AsyncStorage)
+- **State Management:** Redux with Redux-Saga
 - **Navigation:** React Navigation (Stack and Bottom Tabs)
 - **Styling:** NativeWind (Tailwind CSS for React Native)
 - **Icons:** Lucide-React-Native and React-Native-Vector-Icons
@@ -14,12 +14,12 @@ Mifania is a modern **React Native** mobile application designed for fashion and
 
 ## 📂 Project Structure
 
-- `App.tsx`: Main entry point, sets up Redux Provider, PersistGate, and Navigation.
+- `App.tsx`: Main entry point, sets up Redux Provider and Navigation.
 - `src/app/`:
     - `actions.js`: Redux action creators.
     - `reducers/`: Redux slices (auth, product).
     - `sagas/`: Redux-Saga middleware for API calls and side effects.
-    - `store/`: Redux store configuration and persistence setup.
+    - `store/`: Redux store configuration.
     - `api/`: API client configuration and request helpers.
 - `src/navigations/`:
     - `AppNavigator.js`: Root navigator (switches between Auth and Main based on login state).
