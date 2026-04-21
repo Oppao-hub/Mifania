@@ -10,7 +10,7 @@ const sharedHeaders = {
     "Content-Type": "application/json"
 };
 
-export const postRequest = async (endpoint: string, body: any) => {
+export const postRequest = async (endpoint: string, body: object) => {
     return await fetch(`${BASE_URL}${endpoint}`, {
         method: "POST",
         headers: sharedHeaders,

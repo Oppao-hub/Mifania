@@ -4,11 +4,12 @@ import { useSelector } from 'react-redux';
 
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+import { RootState } from '../types';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const { data } = useSelector((state: any) => state.authentication || {data: null, isLoading: false});
+  const { data } = useSelector((state: RootState) => state.authentication || {data: null, isLoading: false});
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>

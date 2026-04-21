@@ -1,10 +1,5 @@
 import * as Type from '../actions';
-
-interface ProductState {
-    items: any[];
-    isLoading: boolean;
-    error: string | null;
-}
+import { ProductState } from '../../types';
 
 const initialState: ProductState = {
     items: [],
@@ -12,7 +7,7 @@ const initialState: ProductState = {
     error: null,
 };
 
-export const productReducer = (state = initialState, action: any): ProductState => {
+export const productReducer = (state = initialState, action: { type: string; payload?: any }): ProductState => {
     switch (action.type) {
         case Type.GET_PRODUCTS_REQUEST:
             return {
