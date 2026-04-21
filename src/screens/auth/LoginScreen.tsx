@@ -22,6 +22,7 @@ import { IMG, ROUTES } from '../../utils';
 import { RootState } from '../../types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
+import { userGoogleLoginApi } from '../../app/api/auth';
 
 GoogleSignin.configure({
     webClientId: '30531231842-s27d7v0mib1r0jm1d43shdiu5p1kqofl.apps.googleusercontent.com',
@@ -68,12 +69,30 @@ const LoginScreen = () => {
     const handleGoogleSignIn = async () => {
         try {
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+            // Force the account picker to appear by signing out first
+            try {
+                await GoogleSignin.signOut();
+            } catch (e) {
+                // Ignore errors if user wasn't signed in yet
+            }
+
             const userInfo = await GoogleSignin.signIn();
             const idToken = userInfo.data?.idToken;
-
+    ...
             if (!idToken) {
                 throw new Error("No ID token found in Google response.");
             }
+
+            // 1. VERIFY WITH SYMFONY SERVER
+            const response = await userGoogleLoginApi(idToken);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || "Failed to verify Google account with server.");
+            }
+
+            const serverData = await response.json();
 
             // 2. USING THE NEW MODULAR FIREBASE SYNTAX
             const authInstance = getAuth();
@@ -88,7 +107,7 @@ const LoginScreen = () => {
                     email: userCredential.user.email || '',
                     first_name: userCredential.user.displayName || 'Google User',
                 },
-                token: idToken
+                token: serverData.token || idToken
             }));
             
         } catch (error: any) { 
