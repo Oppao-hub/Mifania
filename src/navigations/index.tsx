@@ -11,8 +11,7 @@ const RootNavigation: React.FC = () => {
     if (Platform.OS === 'android'){
       StatusBar.setBackgroundColor(isDarkMode ? '#000' : '#ffff');
     }
-
-    StatusBar.setBarStyle(isDarkMode ? 'light-content' : 'dark-content');
+      StatusBar.setBarStyle(isDarkMode ? 'light-content' : 'dark-content');
   }, [isDarkMode]);
 
   return (

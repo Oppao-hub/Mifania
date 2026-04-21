@@ -25,7 +25,7 @@ import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native
 import { userGoogleLoginApi } from '../../app/api/auth';
 
 GoogleSignin.configure({
-    webClientId: '30531231842-s27d7v0mib1r0jm1d43shdiu5p1kqofl.apps.googleusercontent.com',
+    webClientId: '300896200734-ti08h9ju74onbmmsl1v9oq011qtvgj1e.apps.googleusercontent.com',
 });
 
 const LoginScreen = () => {
@@ -72,7 +72,7 @@ const LoginScreen = () => {
 
             // Force the account picker to appear by signing out first
             // Only sign out if we are already signed in to prevent activity errors
-            const hasPrevious = GoogleSignin.hasPreviousSignIn();
+            const hasPrevious = await GoogleSignin.hasPreviousSignIn();
             if (hasPrevious) {
                 await GoogleSignin.signOut();
                 // Give the native side a moment to settle before signing in again
