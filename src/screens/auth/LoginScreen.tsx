@@ -71,15 +71,22 @@ const LoginScreen = () => {
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
             // Force the account picker to appear by signing out first
-            try {
+            // Only sign out if we are already signed in to prevent activity errors
+            const hasPrevious = GoogleSignin.hasPreviousSignIn();
+            if (hasPrevious) {
                 await GoogleSignin.signOut();
-            } catch (e) {
-                // Ignore errors if user wasn't signed in yet
+                // Give the native side a moment to settle before signing in again
+                await new Promise(resolve => setTimeout(() => resolve(null), 500));
             }
 
-            const userInfo = await GoogleSignin.signIn();
-            const idToken = userInfo.data?.idToken;
-    ...
+            const signInResponse = await GoogleSignin.signIn();
+            
+            if (signInResponse.type === 'cancelled') {
+                return;
+            }
+
+            const idToken = signInResponse.data.idToken;
+
             if (!idToken) {
                 throw new Error("No ID token found in Google response.");
             }
@@ -112,7 +119,6 @@ const LoginScreen = () => {
             
         } catch (error: any) { 
             console.error("Google Sign-In Error:", error);
-            if (error.code === 'SIGN_IN_CANCELLED') return;
             Alert.alert("Google Sign-In Failed", error.message || "An unknown error occurred.");
         }
     };
