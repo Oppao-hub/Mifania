@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Alert, Image, TouchableOpacity } from 'react-native';
+import { View, Text, Alert, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import IMG from '../utils/image';
 
@@ -37,30 +37,35 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-black" edges={['top']}>
-      <View className="flex-1 items-center pt-16 px-6">
-        <Image
-          source={IMG.LOGO}
-          className="w-32 h-32 rounded-full mb-5"
-          resizeMode="contain"
-        />
+      <ScrollView 
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 120 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View className="flex-1 items-center pt-16 px-6">
+          <Image
+            source={IMG.LOGO}
+            className="w-32 h-32 rounded-full mb-5"
+            resizeMode="contain"
+          />
 
-        <Text className="text-white text-2xl font-bold mb-1">{displayName}</Text>
-        <Text className="text-gray-400 text-sm mb-8">{displayEmail}</Text>
+          <Text className="text-white text-2xl font-bold mb-1">{displayName}</Text>
+          <Text className="text-gray-400 text-sm mb-8">{displayEmail}</Text>
 
-        <TouchableOpacity
-          className="w-full h-14 rounded-xl bg-indigo-600 justify-center items-center mb-4 shadow-lg"
-          onPress={handleEdit}
-        >
-          <Text className="text-white font-bold text-lg">Edit Profile</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            className="w-full h-14 rounded-xl bg-indigo-600 justify-center items-center mb-4 shadow-lg"
+            onPress={handleEdit}
+          >
+            <Text className="text-white font-bold text-lg">Edit Profile</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          className="w-full h-14 rounded-xl bg-zinc-900 justify-center items-center border border-zinc-800"
-          onPress={handleLogout}
-        >
-          <Text className="text-red-500 font-bold text-lg">Logout</Text>
-        </TouchableOpacity>
-      </View> 
+          <TouchableOpacity
+            className="w-full h-14 rounded-xl bg-zinc-900 justify-center items-center border border-zinc-800"
+            onPress={handleLogout}
+          >
+            <Text className="text-red-500 font-bold text-lg">Logout</Text>
+          </TouchableOpacity>
+        </View> 
+      </ScrollView>
     </SafeAreaView>
   );
 };

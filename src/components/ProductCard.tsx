@@ -10,7 +10,7 @@ interface ProductCardProps {
 const ProductCard: React.FC<ProductCardProps> = ({ productName, productImage, onPress }) => {
     return (
         <TouchableOpacity 
-            className="bg-white rounded-2xl overflow-hidden mb-5 w-[48%] shadow-sm"
+            className="bg-light-gray rounded-2xl overflow-hidden mb-5 w-[48%] shadow-sm"
             onPress={onPress}  
             activeOpacity={0.8}     
         >
@@ -22,6 +22,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ productName, productImage, on
                 />
             </View>
             
+            <View className="py-3 px-1">
+                <Text className="text-sm font-bold text-brand mt-1" numberOfLines={1}>
+                    {productName}
+                </Text>
+            </View>
             <View className="py-3 px-1">
                 <Text className="text-sm font-bold text-brand mt-1" numberOfLines={1}>
                     {productName}
