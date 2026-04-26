@@ -27,24 +27,6 @@ export const productReducer = (state = initialState, action: { type: string; pay
                 isLoading: false,
                 error: action.payload,
             };
-        case Type.GET_PEXELS_IMAGES_REQUEST:
-            return{
-                ...state,
-                isLoading: true,
-                error: null,
-            }
-        case Type.GET_PEXELS_IMAGES_COMPLETED:
-            return{
-                ...state,
-                isLoading: false,
-                items: action.payload,
-            }
-        case Type.GET_PEXELS_IMAGES_ERROR:
-            return{
-                ...state,
-                isLoading: false,
-                error: action.payload,
-            }
         default:
             return state;
         }
@@ -52,9 +34,4 @@ export const productReducer = (state = initialState, action: { type: string; pay
 
 export const getProducts = () => ({
     type: Type.GET_PRODUCTS
-});
-
-
-export const getPexelsImages = () => ({
-    type: Type.GET_PEXELS_IMAGES
 });

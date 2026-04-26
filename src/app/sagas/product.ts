@@ -1,5 +1,5 @@
 import { call, put, takeLatest } from 'redux-saga/effects';
-import { fetchProducts, fetchPexelsImages } from '../api/product';
+import { fetchProducts } from '../api/product';
 import * as Type from '../actions';
 
 function* fetchProductsWorker(): Generator<any, void, any> {
@@ -19,24 +19,6 @@ function* fetchProductsWorker(): Generator<any, void, any> {
     }
 }
 
-export function* fetchPexelsImagesWorker(action: { type: string; payload: string }): Generator<any, void, any> {
-    yield put({ type: Type.GET_PEXELS_IMAGES_REQUEST });
-    try {
-        const data = yield call(fetchPexelsImages, action.payload);
-        
-        const images = data.photos.map((photo: { src: { large: string } }) => photo.src.large);
-        
-        yield put({ type: Type.GET_PEXELS_IMAGES_COMPLETED, payload: images });
-    } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "An unknown error occurred";
-        yield put({ type: Type.GET_PEXELS_IMAGES_ERROR, payload: message });
-    }
-}
-
 export function* watchProduct() {
     yield takeLatest(Type.GET_PRODUCTS, fetchProductsWorker); 
-}
-
-export function* watchPexelsImages(){
-    yield takeLatest(Type.GET_PEXELS_IMAGES, fetchPexelsImagesWorker)
 }
