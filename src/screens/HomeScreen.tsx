@@ -35,9 +35,10 @@ const HomeScreen = () => {
           numColumns={2}
           keyExtractor={(item) => item.id.toString()}
           columnWrapperStyle={{ justifyContent: 'space-between' }}
+          contentContainerStyle={{ paddingBottom: 100 }} // Added padding for floating nav bar
           renderItem={({ item }) => (
             <ProductCard
-              productName={item.title}
+              productName={item.name}
               productImage={item.image}
               onPress={() => navigation.navigate('ProductDetails', { product: item })}
             />
