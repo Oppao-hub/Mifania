@@ -4,8 +4,6 @@ import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';  
 
 import Toast from 'react-native-toast-message'; 
-
-// @ts-ignore
 import configureStore from './src/app/store'; 
 import AppNavigation from './src/navigations';
 
