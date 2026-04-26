@@ -18,7 +18,7 @@ export interface AuthState {
 
 export interface Product {
     id: number | string;
-    title: string;
+    name: string;
     image: string;
     description?: string;
     price?: number;
