@@ -1,35 +1,31 @@
-import React from 'react';
-import { View, Text, Alert, Image, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import IMG from '../utils/image';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { loginReset } from '../app/reducers/auth';
 import { RootState } from '../types';
+import { AlertMsg } from '../components/AlertMsg';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const ProfileScreen = () => {
-
+  const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
   const dispatch = useDispatch();
 
   const { data } = useSelector((state: RootState) => state.authentication);
 
   const handleEdit = () => {
-    Alert.alert("Edit Profile", "This feature is coming soon!");
+    AlertMsg.customInfo({ title: "Edit Profile", message: "This feature is coming soon!" });
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to logout?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive",
-          onPress: () => dispatch(loginReset()) 
-        },
-      ]
-    );
+    setIsLogoutModalVisible(true);
+  };
+
+  const confirmLogout = () => {
+    setIsLogoutModalVisible(false);
+    dispatch(loginReset());
   };
 
  const displayName = data?.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : 'Fashion Enthusiast';
@@ -66,6 +62,16 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View> 
       </ScrollView>
+
+      <ConfirmationModal
+        visible={isLogoutModalVisible}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        onConfirm={confirmLogout}
+        onCancel={() => setIsLogoutModalVisible(false)}
+        confirmText="Logout"
+        isDanger={true}
+      />
     </SafeAreaView>
   );
 };

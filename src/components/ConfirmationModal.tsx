@@ -25,7 +25,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
       <View className="flex-1 justify-center items-center bg-black/60 px-6">
         <View className="w-full bg-white rounded-[30px] p-6 shadow-2xl">
           <Text className="text-xl font-bold text-brand-dark mb-2">{title}</Text>
-          <Text className="text-mocha text-base mb-8">{message}</Text>
+          <Text className="text-gray text-base mb-8">{message}</Text>
 
           <View className="flex-row justify-between gap-x-4">
             <TouchableOpacity 

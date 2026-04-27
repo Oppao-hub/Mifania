@@ -5,7 +5,6 @@ import {
     TextInput, 
     TouchableOpacity, 
     ActivityIndicator, 
-    Alert, 
     Image, 
     KeyboardAvoidingView, 
     Platform, 
@@ -23,6 +22,7 @@ import { RootState } from '../../types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import { userGoogleLoginApi } from '../../app/api/auth';
+import { AlertMsg } from '../../components/AlertMsg';
 
 GoogleSignin.configure({
     webClientId: '300896200734-ti08h9ju74onbmmsl1v9oq011qtvgj1e.apps.googleusercontent.com',
@@ -36,79 +36,59 @@ const LoginScreen = () => {
     const navigation = useNavigation<NavigationProp<any>>();
     const dispatch = useDispatch();
 
-    // Pulling state from your existing Redux slice
     const { isLoading, isError, error } = useSelector((state: RootState) => state.authentication);
 
-    // Clear any previous error state on component mount
     useEffect(() => {
         dispatch(loginReset());
     }, [dispatch]);
 
+    useEffect(() => {
+        if (isError && error) {
+            AlertMsg.customError({ title: "Login Failed", message: error });
+        }
+    }, [isError, error]);
+
     const handleLogin = () => {
         if (!email.trim() || !password.trim()) {
-            Alert.alert("Input Error", "Please enter your credentials.");
+            AlertMsg.customError({ title: "Input Error", message: "Please enter your credentials." });
             return;
         }
 
-        // Basic Email validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            Alert.alert("Input Error", "Please enter a valid email address.");
+            AlertMsg.customError({ title: "Input Error", message: "Please enter a valid email address." });
             return;
         }
         
-        // Dispatching your specific Redux action
-        dispatch(
-            userLogin({
-                email: email,
-                password: password,
-            })
-        );
+        dispatch(userLogin({ email: email, password: password }));
     };
 
     const handleGoogleSignIn = async () => {
         try {
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-
-            // Force the account picker to appear by signing out first
-            // Only sign out if we are already signed in to prevent activity errors
             const hasPrevious = await GoogleSignin.hasPreviousSignIn();
             if (hasPrevious) {
                 await GoogleSignin.signOut();
-                // Give the native side a moment to settle before signing in again
                 await new Promise(resolve => setTimeout(() => resolve(null), 500));
             }
 
             const signInResponse = await GoogleSignin.signIn();
-            
-            if (signInResponse.type === 'cancelled') {
-                return;
-            }
+            if (signInResponse.type === 'cancelled') return;
 
             const idToken = signInResponse.data.idToken;
+            if (!idToken) throw new Error("No ID token found.");
 
-            if (!idToken) {
-                throw new Error("No ID token found in Google response.");
-            }
-
-            // 1. VERIFY WITH SYMFONY SERVER
             const response = await userGoogleLoginApi(idToken);
-            
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.message || "Failed to verify Google account with server.");
+                throw new Error(errorData.message || "Failed to verify account.");
             }
 
             const serverData = await response.json();
-
-            // 2. USING THE NEW MODULAR FIREBASE SYNTAX
             const authInstance = getAuth();
             const googleCredential = GoogleAuthProvider.credential(idToken);
             const userCredential = await signInWithCredential(authInstance, googleCredential);
             
-            console.log("Signed in with Google! User:", userCredential.user.email);
-            
-            // 3. Redirect 
             dispatch(userLoginCompleted({
                 user: {
                     email: userCredential.user.email || '',
@@ -118,15 +98,7 @@ const LoginScreen = () => {
             }));
             
         } catch (error: any) { 
-            console.error("Google Sign-In Error:", error);
-            Alert.alert("Google Sign-In Failed", error.message || "An unknown error occurred.");
-        }
-    };
-
-    const onInputChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (text: string) => {
-        setter(text);
-        if (isError) {
-            dispatch(loginReset());
+            AlertMsg.customError({ title: "Google Sign-In Failed", message: error.message || "An unknown error occurred." });
         }
     };
 
@@ -139,118 +111,113 @@ const LoginScreen = () => {
                 <ScrollView 
                     contentContainerStyle={{ flexGrow: 1 }}
                     keyboardShouldPersistTaps="handled"
-                    className="flex-1 px-6 pt-10"
+                    showsVerticalScrollIndicator={false}
+                    className="flex-1 px-6"
                 >
-                    {/* Header Section */}
-                    <Image 
-                        source={IMG.LOGO} 
-                        className="w-72 h-72 self-center"
-                        resizeMode="contain"
-                    />
-
-                    <View className="mb-10">
-                        <Text className="text-2xl font-bold text-brand-dark mb-2">Sign In</Text>
-                        <Text className="text-sm text-gray font-medium tracking-widest">
-                            Fill in your credentials to access your account.
+                    {/* Hero Section */}
+                    <View className="mt-12 mb-10 items-center">
+                        <View className="w-24 h-24 bg-white rounded-[30px] items-center justify-center shadow-sm border border-border-color mb-6">
+                            <Image 
+                                source={IMG.LOGO} 
+                                className="w-16 h-16"
+                                resizeMode="contain"
+                            />
+                        </View>
+                        <Text className="text-3xl font-extrabold text-brand-dark tracking-tight">Mifania</Text>
+                        <Text className="text-gray mt-2 text-center px-4 font-montserrat">
+                            Experience the future of fashion.
                         </Text>
                     </View>
 
-                    {/* Inline Error Message */}
-                    {isError && error && (
-                        <View className="bg-red-50 p-4 rounded-sm border border-red-100 flex-row items-center mb-6">
-                            <Icon name="alert-circle-outline" size={16} color="#dc2626" />
-                            <Text className="text-red-600 text-[10px] font-bold tracking-widest ml-3 flex-1">
-                                {error}
-                            </Text>
+                    {/* Form Section */}
+                    <View className="space-y-4">
+                        {/* Email Input */}
+                        <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm mb-4">
+                            <Icon name="mail-outline" size={20} color="#6A7282" />
+                            <TextInput
+                                value={email}
+                                onChangeText={(text) => {
+                                    setEmail(text);
+                                    if (isError) dispatch(loginReset());
+                                }}
+                                placeholder="Email Address"
+                                className="flex-1 ml-3 text-sm font-bold text-brand-dark"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                editable={!isLoading}
+                                placeholderTextColor="#9CA3AF"
+                            />
                         </View>
-                    )}
 
-                    {/* Email Input */}
-                    <View className="mb-6">
-                        <Text className="text-[10px] font-bold text-gray tracking-[0.2em] uppercase mb-2">
-                            Email Address
-                        </Text>
-                        <TextInput
-                            value={email}
-                            onChangeText={onInputChange(setEmail)}
-                            placeholder="e.g. paolo@mifania.com"
-                            className="w-full px-4 py-3 bg-white border border-border-color rounded-sm text-sm font-bold text-brand-dark"
-                            keyboardType="email-address"
-                            autoCapitalize="none"
-                            editable={!isLoading}
-                        />
-                    </View>
-
-                    {/* Password Input */}
-                    <View className="mb-8">
-                        <View className="flex-row justify-between items-center mb-2">
-                            <Text className="text-[10px] font-bold text-gray tracking-[0.2em] uppercase">
-                                Password
-                            </Text>
-                            <TouchableOpacity onPress={() => Alert.alert("Reset Password", "Coming soon!")}>
-                                <Text className="text-[10px] font-bold text-brand tracking-widest uppercase">Forgot Password?</Text>
-                            </TouchableOpacity>
-                        </View>
-                        
-                        <View className="relative">
+                        {/* Password Input */}
+                        <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
+                            <Icon name="lock-closed-outline" size={20} color="#6A7282" />
                             <TextInput
                                 value={password}
-                                onChangeText={onInputChange(setPassword)}
-                                placeholder="••••••••"
-                                className="w-full px-4 py-3 bg-white border border-border-color rounded-sm text-sm font-bold text-brand-dark"
+                                onChangeText={(text) => {
+                                    setPassword(text);
+                                    if (isError) dispatch(loginReset());
+                                }}
+                                placeholder="Password"
+                                className="flex-1 ml-3 text-sm font-bold text-brand-dark"
                                 secureTextEntry={!isPasswordVisible}
                                 editable={!isLoading}
+                                placeholderTextColor="#9CA3AF"
                             />
-                            <TouchableOpacity 
-                                onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-                                className="absolute right-4 top-3.5"
-                            >
+                            <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
                                 <Icon 
                                     name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-                                    size={18} 
+                                    size={20} 
                                     color="#6A7282" 
                                 />
                             </TouchableOpacity>
                         </View>
+
+                        {/* Forgot Password */}
+                        <TouchableOpacity 
+                            onPress={() => AlertMsg.customInfo({ title: "Reset Password", message: "Coming soon!" })}
+                            className="items-end mt-3"
+                        >
+                            <Text className="text-xs font-bold text-brand tracking-wider">Forgot Password?</Text>
+                        </TouchableOpacity>
                     </View>
 
-                    {/* Submit Button */}
-                    <TouchableOpacity 
-                        onPress={handleLogin}
-                        disabled={isLoading}
-                        className={`w-full h-14 rounded-sm items-center justify-center shadow-md ${isLoading ? 'bg-brand-light' : 'bg-brand'}`}
-                    >
-                        {isLoading ? (
-                            <ActivityIndicator color="#ffffff" />
-                        ) : (
-                            <Text className="text-white text-sm font-bold tracking-[0.2em] uppercase">Sign In</Text>
-                        )}
-                    </TouchableOpacity>
+                    {/* Action Buttons */}
+                    <View className="mt-10">
+                        <TouchableOpacity 
+                            onPress={handleLogin}
+                            disabled={isLoading}
+                            className={`w-full h-16 rounded-2xl items-center justify-center shadow-lg ${isLoading ? 'bg-brand-light' : 'bg-brand'}`}
+                        >
+                            {isLoading ? (
+                                <ActivityIndicator color="#ffffff" />
+                            ) : (
+                                <Text className="text-white text-base font-bold tracking-widest uppercase">Sign In</Text>
+                            )}
+                        </TouchableOpacity>
 
-                    {/* Social Gateways Divider */}
-                    <View className="flex-row items-center my-8">
-                        <View className="flex-1 h-[1px] bg-border-color" />
-                        <Text className="mx-4 text-gray text-[10px] font-bold tracking-widest uppercase">Social Gateways</Text>
-                        <View className="flex-1 h-[1px] bg-border-color" />
+                        {/* Social Login */}
+                        <View className="flex-row items-center my-8">
+                            <View className="flex-1 h-[1px] bg-border-color" />
+                            <Text className="mx-4 text-gray text-[10px] font-bold tracking-widest uppercase">Or continue with</Text>
+                            <View className="flex-1 h-[1px] bg-border-color" />
+                        </View>
+
+                        <TouchableOpacity 
+                            onPress={handleGoogleSignIn}
+                            className="w-full h-16 flex-row items-center justify-center rounded-2xl border border-border-color bg-white shadow-sm"
+                            disabled={isLoading}
+                        >
+                            <Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>
+                            <Text className="text-dark-gray font-bold text-sm">Google Account</Text>
+                        </TouchableOpacity>
                     </View>
-
-                    {/* Google Button - Placeholder for functionality */}
-                    <TouchableOpacity 
-                        onPress={handleGoogleSignIn}
-                        className="w-full flex-row items-center justify-center py-4 rounded-sm border border-border-color bg-white shadow-sm"
-                        disabled={isLoading}
-                    >
-                        <Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>
-                        <Text className="ml-3 text-dark-gray font-bold text-[10px] tracking-widest uppercase">
-                            Sign in with Google
-                        </Text>
-                    </TouchableOpacity>
 
                     {/* Footer */}
-                    <View className="mt-10 mb-6 items-center">
+                    <View className="mt-auto py-10 items-center">
                         <TouchableOpacity onPress={() => navigation.navigate(ROUTES.REGISTER)} disabled={isLoading}>
                             <Text className="text-sm text-gray font-medium">
-                                New to Mifania? <Text className="font-bold text-brand tracking-widest">Create an Account</Text>
+                                Don't have an account? <Text className="font-bold text-brand">Create Account</Text>
                             </Text>
                         </TouchableOpacity>
                     </View>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, View, Text, TouchableOpacity, ImageBackground, Image, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ImageBackground, Image, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
 import { IMG, ROUTES } from '../../utils'; 
 import FormInput from '../../components/FormInput';
 import PasswordInput from '../../components/PasswordInput';
@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { userRegister } from '../../app/reducers/auth';
 import { RootState } from '../../types';
+import { AlertMsg } from '../../components/AlertMsg';
 
 const RegisterScreen = () => {
   const [firstName, setFirstName] = useState('');
@@ -21,13 +22,13 @@ const RegisterScreen = () => {
 
   useEffect(() => {
     if (isError && error && !isLoading) {
-      Alert.alert("Registration Failed", error);
+      AlertMsg.customError({ title: "Registration Failed", message: error });
     }
   }, [isError, error, isLoading]);
 
   const handleRegister = () => {
     if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Input Error", "Please fill in all fields.");
+      AlertMsg.customError({ title: "Input Error", message: "Please fill in all fields." });
       return;
     }
     
@@ -112,7 +113,7 @@ const RegisterScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity onPress={() => navigation.navigate(ROUTES.LOGIN)} className="mt-6">
-                <Text className="text-mocha text-sm">
+                <Text className="text-gray text-sm">
                   Already have an account? <Text className="font-bold text-brand">Login</Text>
                 </Text>
               </TouchableOpacity>
