@@ -1,4 +1,4 @@
-import * as Type from '../actions';
+import * as Types from '../actions';
 import { ProductState } from '../../types';
 
 const initialState: ProductState = {
@@ -9,19 +9,19 @@ const initialState: ProductState = {
 
 export const productReducer = (state = initialState, action: { type: string; payload?: any }): ProductState => {
     switch (action.type) {
-        case Type.GET_PRODUCTS_REQUEST:
+        case Types.GET_PRODUCTS_REQUEST:
             return {
                 ...state,
                 isLoading: true,
                 error: null,
             };
-        case Type.GET_PRODUCTS_COMPLETED:
+        case Types.GET_PRODUCTS_COMPLETED:
             return {
                 ...state,
                 isLoading: false,
                 items: action.payload,
             };
-        case Type.GET_PRODUCTS_ERROR:
+        case Types.GET_PRODUCTS_ERROR:
             return {
                 ...state,
                 isLoading: false,
@@ -33,5 +33,5 @@ export const productReducer = (state = initialState, action: { type: string; pay
 }
 
 export const getProducts = () => ({
-    type: Type.GET_PRODUCTS
+    type: Types.GET_PRODUCTS
 });
