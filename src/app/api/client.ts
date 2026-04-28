@@ -1,9 +1,11 @@
 import { Platform } from 'react-native';
 
-const BASE_URL = Platform.select({
-    android: "http://10.0.2.2:8000/api",
-    default: "http://127.0.0.1:8000/api",
+export const ASSET_URL = Platform.select({
+    android: "http://10.0.2.2:8000",
+    default: "http://127.0.0.1:8000",
 });
+
+const BASE_URL = `${ASSET_URL}/api`;
 
 const sharedHeaders = {
     "Accept": "application/json",
