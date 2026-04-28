@@ -20,6 +20,7 @@ export interface Product {
     id: number | string;
     name: string;
     image: string;
+    imageUrl?: string;
     description?: string;
     price?: number;
 }
@@ -30,9 +31,22 @@ export interface ProductState {
     error: string | null;
 }
 
+export interface SubCategory {
+    id: number | string;
+    name: string;
+    icon: string;
+}
+
+export interface SubCategoryState {
+    items: SubCategory[];
+    isLoading: boolean;
+    error: string | null;
+}
+
 export interface RootState {
     authentication: AuthState;
     product: ProductState;
+    subCategory: SubCategoryState;
 }
 
 export interface AuthCredentials {

@@ -3,12 +3,14 @@ import createSagaMiddleware from "redux-saga";
 import { authReducer } from '../reducers/auth';
 import { productReducer } from '../reducers/product';
 import rootSaga from "../sagas";
+import { subCategoryReducer } from "../reducers/subCategory";
 
 const sagaMiddleware = createSagaMiddleware();
 
 const rootReducer = combineReducers({
     authentication: authReducer,
     product: productReducer,
+    subCategory: subCategoryReducer,
 });
 
 const configureStore = () => {
