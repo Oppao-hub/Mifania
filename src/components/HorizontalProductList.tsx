@@ -15,7 +15,11 @@ const HorizontalProductList: React.FC<HorizontalProductListProps> = ({ products 
     <ScrollView 
       horizontal 
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 10 }}
+      style={{ marginHorizontal: -16 }} // Expands scroll area to screen edges
+      contentContainerStyle={{ 
+        paddingBottom: 10,
+        paddingHorizontal: 16 // Re-aligns items with screen padding
+      }}
     >
       {products.map((item) => (
         <TouchableOpacity 
