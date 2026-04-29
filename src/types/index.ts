@@ -31,6 +31,17 @@ export interface ProductState {
     error: string | null;
 }
 
+export interface Category {
+    id: number | string;
+    name: string;
+}
+
+export interface CategoryState {
+    items: Category[];
+    isLoading: boolean;
+    error: string | null;
+}
+
 export interface SubCategory {
     id: number | string;
     name: string;
@@ -46,6 +57,7 @@ export interface SubCategoryState {
 export interface RootState {
     authentication: AuthState;
     product: ProductState;
+    category: CategoryState;
     subCategory: SubCategoryState;
 }
 
