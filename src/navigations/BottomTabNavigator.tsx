@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import CartScreen from '../screens/CartScreen';
 import WishlistScreen from '../screens/WishlistScreen';
+import OrderScreen from '../screens/OrderScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -88,7 +89,7 @@ const BottomTabNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Wishlist"
-        component={CartScreen}
+        component={WishlistScreen}
         options={{
           tabBarLabel: 'Wishlist',
           tabBarIcon: ({ color, focused }) => (
@@ -104,7 +105,19 @@ const BottomTabNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="My Order"
-        component={WishlistScreen}
+        component={OrderScreen}
+        options={{
+          tabBarLabel: 'My Order',
+          tabBarIcon: ({ color, focused }) => (
+            <View className="items-center justify-center w-12 h-12">
+              <Icon 
+                name={focused ? "document-text" : "document-text-outline"}
+                color={color}
+                size={24} 
+              />
+            </View>
+          ),
+        }}
       />
       <Tab.Screen
         name="Profile"
