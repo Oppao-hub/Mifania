@@ -5,39 +5,89 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 
 import { RootState } from '../types';
-import HomeHeader from '../components/HeaderComponent';
+import Header from '../components/Header';
 import SectionHeader from '../components/SectionHeader';
 import ProductCard from '../components/ProductCard';
 import CategoriesList from '../components/CategoriesList';
 import HorizontalProductList from '../components/HorizontalProductList';
 import { getProducts } from '../app/reducers/product';
 import { getCategories } from '../app/reducers/category';
+import { getSubCategories } from '../app/reducers/subCategory';
 import { ASSET_URL } from '../app/api/client';
 
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const dispatch = useDispatch();
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>('all');
+  const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | string | null>(null);
   
   const { items, isLoading: isProductsLoading } = useSelector((state: RootState) => state.product);
   const { items: categories, isLoading: isCategoriesLoading } = useSelector((state: RootState) => state.category);
+  const { items: subCategories, isLoading: isSubCategoriesLoading } = useSelector((state: RootState) => state.subCategory);
 
   useEffect(() => {
     dispatch(getProducts());
     dispatch(getCategories());
+    dispatch(getSubCategories());
   }, [dispatch]);
+
+  // Combine "All" with categories from API
+  const allCategories = [{ id: 'all', name: 'All' }, ...categories];
+
+  // Filter subcategories based on the selected parent category
+  const activeSubCategories = selectedCategoryId && selectedCategoryId !== 'all' 
+    ? subCategories.filter(sub => sub.category.id === selectedCategoryId)
+    : [];
+
+  // Reset subcategory when category changes
+  const handleCategoryPress = (category: any) => {
+    setSelectedCategoryId(category.id);
+    setSelectedSubCategoryId(null); // Reset sub-filter when parent changes
+  };
+
+  // Filter products based on selected category, subcategory, and search query
+  const filteredProducts = items.filter((product) => {
+    // 1. Get the subcategory object for this product from the state
+    const productSubCat = subCategories.find(sc => `/api/sub_categories/${sc.id}` === product.subCategory);
+
+    // 2. Category Filter: Match the parent category of the product's subcategory
+    const matchesCategory = !selectedCategoryId || selectedCategoryId === 'all' || 
+                           productSubCat?.category.id === selectedCategoryId;
+
+    // 3. SubCategory Filter: Match the subcategory ID directly
+    const matchesSubCategory = !selectedSubCategoryId || productSubCat?.id === selectedSubCategoryId;
+
+    // 4. Search Filter
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesCategory && matchesSubCategory && matchesSearch;
+  });
 
   const trendingProducts = items.slice(0, 5);
 
   const renderHeader = () => (
     <View className="mb-4">
       {/* Categories Section */}
-      <SectionHeader title="Categories" />
       <CategoriesList 
-        categories={categories} 
+        categories={allCategories} 
         isLoading={isCategoriesLoading} 
-        onCategoryPress={(category) => console.log('Category pressed:', category.name)}
+        activeId={selectedCategoryId}
+        onCategoryPress={handleCategoryPress}
       />
+
+      {/* Sub-Categories Section (Only shown if a category is selected and has children) */}
+      {activeSubCategories.length > 0 && (
+        <View className="mt-2 mb-4">
+          <Text className="text-xs font-montserrat-bold text-gray mb-2">Refine Search</Text>
+          <CategoriesList 
+            categories={activeSubCategories} 
+            isLoading={isSubCategoriesLoading} 
+            activeId={selectedSubCategoryId}
+            onCategoryPress={(sub) => setSelectedSubCategoryId(sub.id)}
+          />
+        </View>
+      )}
 
       {/* Trending Products Section */}
       <SectionHeader title="Trending Products" onPress={() => console.log('See all trending')} />
@@ -50,7 +100,7 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-      <HomeHeader searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
 
       <View className="flex-1 px-4">
         {isProductsLoading && items.length === 0 ? (
@@ -59,7 +109,7 @@ const HomeScreen = () => {
           </View>
         ) : (
           <FlatList
-            data={items}
+            data={filteredProducts}
             numColumns={2}
             keyExtractor={(item) => item.id.toString()}
             columnWrapperStyle={{ justifyContent: 'space-between' }}
