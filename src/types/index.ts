@@ -22,7 +22,8 @@ export interface Product {
     image: string;
     imageUrl?: string;
     description?: string;
-    price?: number;
+    price?: string;
+    subCategory?: string; // This is the IRI like "/api/sub_categories/1"
 }
 
 export interface ProductState {
@@ -45,7 +46,11 @@ export interface CategoryState {
 export interface SubCategory {
     id: number | string;
     name: string;
-    icon: string;
+    icon?: string;
+    category: {
+        id: number | string;
+        name: string;
+    };
 }
 
 export interface SubCategoryState {
