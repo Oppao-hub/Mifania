@@ -8,6 +8,7 @@ import { loginReset } from '../app/reducers/auth';
 import { RootState } from '../types';
 import { AlertMsg } from '../components/AlertMsg';
 import ConfirmationModal from '../components/ConfirmationModal';
+import auth from '@react-native-firebase/auth';
 
 const ProfileScreen = () => {
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
@@ -23,16 +24,24 @@ const ProfileScreen = () => {
     setIsLogoutModalVisible(true);
   };
 
-  const confirmLogout = () => {
-    setIsLogoutModalVisible(false);
-    dispatch(loginReset());
+  const confirmLogout = async () => {
+    try {
+      setIsLogoutModalVisible(false);
+      // Sign out of Firebase to clear persistent session
+      await auth().signOut();
+      // Clear Redux state
+      dispatch(loginReset());
+    } catch (error) {
+      console.log("Logout failed:", error);
+      dispatch(loginReset()); // Still clear local state
+    }
   };
 
  const displayName = data?.user?.first_name ? `${data.user.first_name} ${data.user.last_name || ''}` : 'Fashion Enthusiast';
   const displayEmail = data?.user?.email || 'mifania.user@email.com';
 
   return (
-    <SafeAreaView className="flex-1 bg-black" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-app" edges={['top']}>
       <ScrollView 
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
@@ -44,21 +53,21 @@ const ProfileScreen = () => {
             resizeMode="contain"
           />
 
-          <Text className="text-white text-2xl font-bold mb-1">{displayName}</Text>
+          <Text className="text-brand text-2xl font-bold mb-1">{displayName}</Text>
           <Text className="text-gray-400 text-sm mb-8">{displayEmail}</Text>
 
           <TouchableOpacity
-            className="w-full h-14 rounded-xl bg-indigo-600 justify-center items-center mb-4 shadow-lg"
+            className="w-full h-14 rounded-xl bg-brand-light justify-center items-center mb-4 shadow-lg"
             onPress={handleEdit}
           >
             <Text className="text-white font-bold text-lg">Edit Profile</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="w-full h-14 rounded-xl bg-zinc-900 justify-center items-center border border-zinc-800"
+            className="w-full h-14 rounded-xl bg-red-500 justify-center items-center border border-zinc-800"
             onPress={handleLogout}
           >
-            <Text className="text-red-500 font-bold text-lg">Logout</Text>
+            <Text className="text-white font-bold text-lg">Logout</Text>
           </TouchableOpacity>
         </View> 
       </ScrollView>
