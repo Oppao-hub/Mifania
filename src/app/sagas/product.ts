@@ -9,7 +9,9 @@ function* fetchProductsWorker(): Generator<any, void, any> {
         const data = yield response.json();
 
         if (response.ok) {
-            yield put({ type: Type.GET_PRODUCTS_COMPLETED, payload: data });
+            // Robust check: handle flat array OR object with member/data key
+            const products = Array.isArray(data) ? data : (data.member || data.data || []);
+            yield put({ type: Type.GET_PRODUCTS_COMPLETED, payload: products });
         } else {
             yield put({ type: Type.GET_PRODUCTS_ERROR, payload: data.message || 'Error fetching products.' });
         }

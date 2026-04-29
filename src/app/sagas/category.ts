@@ -7,10 +7,13 @@ function* fetchCategoriesWorker(): Generator<any, void, any> {
     try {
         const response = yield call(fetchCategories);
         const data = yield response.json();
+
         if (response.ok) {
-            yield put({ type: Type.GET_CATEGORIES_COMPLETED, payload: data });
+            // Robust check: handle flat array OR object with member/data key
+            const categories = Array.isArray(data) ? data : (data.member || data.data || []);
+            yield put({ type: Type.GET_CATEGORIES_COMPLETED, payload: categories });
         } else {
-            yield put({ type: Type.GET_CATEGORIES_ERROR, payload: data.message || 'Error fetching sub categories.' });
+            yield put({ type: Type.GET_CATEGORIES_ERROR, payload: data.message || 'Error fetching categories.' });
         }
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";

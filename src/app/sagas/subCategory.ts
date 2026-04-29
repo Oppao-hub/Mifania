@@ -9,7 +9,9 @@ function* fetchSubCategoriesWorker(): Generator<any, void, any> {
         const data = yield response.json();
 
         if (response.ok) {
-            yield put({ type: Type.GET_SUB_CATEGORIES_COMPLETED, payload: data });
+            // Robust check: handle flat array OR object with member/data key
+            const subCategories = Array.isArray(data) ? data : (data.member || data.data || []);
+            yield put({ type: Type.GET_SUB_CATEGORIES_COMPLETED, payload: subCategories });
         } else {
             yield put({ type: Type.GET_SUB_CATEGORIES_ERROR, payload: data.message || 'Error fetching sub categories.' });
         }
