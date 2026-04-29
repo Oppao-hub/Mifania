@@ -90,6 +90,21 @@ const BottomTabNavigator: React.FC = () => {
         }}
       />
       <Tab.Screen
+        name="Wishlist"
+        component={CartScreen}
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <View className={`items-center justify-center w-12 h-12 rounded-full ${focused ? "bg-brand/10" : ""}`}>
+              <Icon 
+                name={focused ? "heart" : "heart-outline"} 
+                color={color} 
+                size={24} 
+              />
+            </View>
+          ),
+        }}
+      />
+      <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
