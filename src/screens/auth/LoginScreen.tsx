@@ -114,112 +114,107 @@ const LoginScreen = () => {
                     showsVerticalScrollIndicator={false}
                     className="flex-1 px-6"
                 >
-                    {/* Hero Section */}
-                    <View className="mt-12 mb-10 items-center">
-                        <View className="w-24 h-24 bg-white rounded-[30px] items-center justify-center shadow-sm border border-border-color mb-6">
-                            <Image 
-                                source={IMG.LOGO} 
-                                className="w-16 h-16"
-                                resizeMode="contain"
-                            />
-                        </View>
-                        <Text className="text-3xl font-extrabold text-brand-dark tracking-tight">Mifania</Text>
-                        <Text className="text-gray mt-2 text-center px-4 font-montserrat">
-                            Experience the future of fashion.
-                        </Text>
-                    </View>
-
-                    {/* Form Section */}
-                    <View className="space-y-4">
-                        {/* Email Input */}
-                        <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm mb-4">
-                            <Icon name="mail-outline" size={20} color="#6A7282" />
-                            <TextInput
-                                value={email}
-                                onChangeText={(text) => {
-                                    setEmail(text);
-                                    if (isError) dispatch(loginReset());
-                                }}
-                                placeholder="Email Address"
-                                className="flex-1 ml-3 text-sm font-bold text-brand-dark"
-                                keyboardType="email-address"
-                                autoCapitalize="none"
-                                editable={!isLoading}
-                                placeholderTextColor="#9CA3AF"
-                            />
+                    <View className="my-24">
+                        {/* Hero Section */}
+                        <View className="my-16 gap-4 items-center">
+                            <Text className="text-3xl font-extrabold text-brand-dark tracking-tight">Sign In</Text>
+                            <Text className="text-gray text-center font-montserrat">
+                                Experience the future of fashion.
+                            </Text>
                         </View>
 
-                        {/* Password Input */}
-                        <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
-                            <Icon name="lock-closed-outline" size={20} color="#6A7282" />
-                            <TextInput
-                                value={password}
-                                onChangeText={(text) => {
-                                    setPassword(text);
-                                    if (isError) dispatch(loginReset());
-                                }}
-                                placeholder="Password"
-                                className="flex-1 ml-3 text-sm font-bold text-brand-dark"
-                                secureTextEntry={!isPasswordVisible}
-                                editable={!isLoading}
-                                placeholderTextColor="#9CA3AF"
-                            />
-                            <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                                <Icon 
-                                    name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-                                    size={20} 
-                                    color="#6A7282" 
+                        {/* Form Section */}
+                        <View className="space-y-4">
+                            {/* Email Input */}
+                            <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm mb-6">
+                                <Icon name="mail-outline" size={20} color="#6A7282" />
+                                <TextInput
+                                    value={email}
+                                    onChangeText={(text) => {
+                                        setEmail(text);
+                                        if (isError) dispatch(loginReset());
+                                    }}
+                                    placeholder="Email Address"
+                                    className="flex-1 ml-3 text-sm font-bold text-brand-dark"
+                                    keyboardType="email-address"
+                                    autoCapitalize="none"
+                                    editable={!isLoading}
+                                    placeholderTextColor="#9CA3AF"
                                 />
+                            </View>
+
+                            {/* Password Input */}
+                            <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
+                                <Icon name="lock-closed-outline" size={20} color="#6A7282" />
+                                <TextInput
+                                    value={password}
+                                    onChangeText={(text) => {
+                                        setPassword(text);
+                                        if (isError) dispatch(loginReset());
+                                    }}
+                                    placeholder="Password"
+                                    className="flex-1 ml-3 text-sm font-bold text-brand-dark"
+                                    secureTextEntry={!isPasswordVisible}
+                                    editable={!isLoading}
+                                    placeholderTextColor="#9CA3AF"
+                                />
+                                <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                                    <Icon 
+                                        name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
+                                        size={20} 
+                                        color="#6A7282" 
+                                    />
+                                </TouchableOpacity>
+                            </View>
+
+                            {/* Forgot Password */}
+                            <TouchableOpacity 
+                                onPress={() => AlertMsg.customInfo({ title: "Reset Password", message: "Coming soon!" })}
+                                className="items-end mt-3"
+                            >
+                                <Text className="text-xs font-bold text-brand tracking-wider">Forgot Password?</Text>
                             </TouchableOpacity>
                         </View>
 
-                        {/* Forgot Password */}
-                        <TouchableOpacity 
-                            onPress={() => AlertMsg.customInfo({ title: "Reset Password", message: "Coming soon!" })}
-                            className="items-end mt-3"
-                        >
-                            <Text className="text-xs font-bold text-brand tracking-wider">Forgot Password?</Text>
-                        </TouchableOpacity>
-                    </View>
+                        {/* Action Buttons */}
+                        <View className="mt-10">
+                            <TouchableOpacity 
+                                onPress={handleLogin}
+                                disabled={isLoading}
+                                className={`w-full h-16 rounded-2xl items-center justify-center shadow-lg ${isLoading ? 'bg-brand-light' : 'bg-brand'}`}
+                            >
+                                {isLoading ? (
+                                    <ActivityIndicator color="#ffffff" />
+                                ) : (
+                                    <Text className="text-white text-base font-bold tracking-widest uppercase">Sign In</Text>
+                                )}
+                            </TouchableOpacity>
 
-                    {/* Action Buttons */}
-                    <View className="mt-10">
-                        <TouchableOpacity 
-                            onPress={handleLogin}
-                            disabled={isLoading}
-                            className={`w-full h-16 rounded-2xl items-center justify-center shadow-lg ${isLoading ? 'bg-brand-light' : 'bg-brand'}`}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator color="#ffffff" />
-                            ) : (
-                                <Text className="text-white text-base font-bold tracking-widest uppercase">Sign In</Text>
-                            )}
-                        </TouchableOpacity>
+                            {/* Social Login */}
+                            <View className="flex-row items-center my-8">
+                                <View className="flex-1 h-[1px] bg-border-color" />
+                                <Text className="mx-4 text-gray text-[10px] font-bold tracking-widest uppercase">Or continue with</Text>
+                                <View className="flex-1 h-[1px] bg-border-color" />
+                            </View>
 
-                        {/* Social Login */}
-                        <View className="flex-row items-center my-8">
-                            <View className="flex-1 h-[1px] bg-border-color" />
-                            <Text className="mx-4 text-gray text-[10px] font-bold tracking-widest uppercase">Or continue with</Text>
-                            <View className="flex-1 h-[1px] bg-border-color" />
+                            <TouchableOpacity 
+                                onPress={handleGoogleSignIn}
+                                className="w-full h-16 flex-row items-center justify-center rounded-2xl border border-border-color bg-white shadow-sm"
+                                disabled={isLoading}
+                            >
+                                <Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>
+                                <Text className="text-dark-gray font-bold text-sm">Google Account</Text>
+                            </TouchableOpacity>
                         </View>
 
-                        <TouchableOpacity 
-                            onPress={handleGoogleSignIn}
-                            className="w-full h-16 flex-row items-center justify-center rounded-2xl border border-border-color bg-white shadow-sm"
-                            disabled={isLoading}
-                        >
-                            <Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>
-                            <Text className="text-dark-gray font-bold text-sm">Google Account</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {/* Footer */}
-                    <View className="mt-auto py-10 items-center">
-                        <TouchableOpacity onPress={() => navigation.navigate(ROUTES.REGISTER)} disabled={isLoading}>
-                            <Text className="text-sm text-gray font-medium">
-                                Don't have an account? <Text className="font-bold text-brand">Create Account</Text>
-                            </Text>
-                        </TouchableOpacity>
+                        {/* Footer */}
+                        <View className="mt-auto py-10 items-center">
+                            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.REGISTER)} disabled={isLoading}>
+                                <Text className="text-sm text-gray font-medium">
+                                    Don't have an account? <Text className="font-bold text-brand">Create Account</Text>
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
