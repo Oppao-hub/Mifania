@@ -1,5 +1,5 @@
 import * as Types from "../actions";
-import { AuthState, User } from "../../types";
+import { AuthState, User } from "../../utils/types";
 
 const initialState: AuthState = {
     isLoading: false, 
