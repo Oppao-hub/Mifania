@@ -1,5 +1,5 @@
 import * as Types from '../actions';
-import { ProductState } from '../../types';
+import { ProductState } from '../../utils/types';
 
 const initialState: ProductState = {
     items: [],
