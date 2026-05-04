@@ -10,7 +10,13 @@ Mifania is a modern **React Native** mobile application designed for fashion and
 - **Navigation:** React Navigation (Stack and Bottom Tabs)
 - **Styling:** NativeWind (Tailwind CSS for React Native)
 - **Icons:** Lucide-React-Native and React-Native-Vector-Icons
-- **API Client:** Fetch-based custom client with Pexels API integration
+- **API Client:** Fetch-based custom client with Symfony API Platform (API Resource) integration.
+
+## 🛠️ Backend Architecture
+
+- **Framework:** Symfony
+- **API Library:** API Platform (API Resource)
+- **Response Format:** JSON-LD / Hydra. When extracting collections in sagas, always look for the `hydra:member` key.
 
 ## 📂 Project Structure
 
@@ -52,4 +58,4 @@ Mifania is a modern **React Native** mobile application designed for fashion and
 - **Navigation:** Define new routes in `src/utils/routes.js` (if applicable) and add screens to the appropriate navigator in `src/navigations/`.
 - **Type Safety:** The project uses **TypeScript**. Ensure new components and functions are properly typed.
 - **Theming:** Custom colors (brand, mocha, cream, terracotta) and fonts (montserrat) are defined in `tailwind.config.js`. Use these custom values to maintain brand consistency.
-- **Components:** Before creating a new component, check `src/components/` to see if a reusable one already exists (e.g., `CustomButton`, `FormInput`).
+- **Components:** Before creating a new component, check `src/components/` to see if a reusable one already exists (e.g., `Button`, `FormInput`, `CustomTextInput`).
