@@ -74,10 +74,10 @@ export default function AppNavigator() {
 
   if (initializing) {
     return (
-      <View className="flex-1 justify-center items-center bg-white">
+      <View className="flex-1 items-center bg-white mt-48 ">
         <Image
-          source={IMG.LOGO}
-          className="w-64 h-64 -mt-20"
+          source={IMG.LOADING_LOGO}
+          className="w-48 h-48 mt-20"
           resizeMode="contain"
         />
         <Text className="text-4xl font-montserrat-bold text-brand">Mifania</Text>
