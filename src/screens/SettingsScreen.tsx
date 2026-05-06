@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { View, Button } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import ConfirmationModal from '../components/ConfirmationModal';
+import Header from '../components/Header';
 
 const SettingsScreen = () => {
   const [modalConfig, setModalConfig] = useState({
@@ -42,19 +44,24 @@ const SettingsScreen = () => {
   };
 
   return (
-    <View className="flex-1 justify-center p-4">
-      <Button title="Logout" onPress={handleLogoutPress} color="#4A3428" />
-      <View className="h-4" />
-      <Button title="Delete Account" onPress={handleDeleteAccountPress} color="red" />
+    <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+      <Header title="Settings" />
+      <View className="flex-1 justify-center p-4">
+        <Button title="Logout" onPress={handleLogoutPress} color="#4A3428" />
+        <View className="h-4" />
+        <Button title="Delete Account" onPress={handleDeleteAccountPress} color="red" />
 
-      <ConfirmationModal 
-        visible={modalConfig.visible}
-        title={modalConfig.title}
-        message={modalConfig.message}
-        onConfirm={modalConfig.onConfirm}
-        onCancel={closeConfirm}
-        isDanger={modalConfig.isDanger}
-      />
-    </View>
+        <ConfirmationModal 
+          visible={modalConfig.visible}
+          title={modalConfig.title}
+          message={modalConfig.message}
+          onConfirm={modalConfig.onConfirm}
+          onCancel={closeConfirm}
+          isDanger={modalConfig.isDanger}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
+
+export default SettingsScreen;
