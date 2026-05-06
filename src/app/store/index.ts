@@ -5,6 +5,8 @@ import { productReducer } from '../reducers/product';
 import rootSaga from "../sagas";
 import { categoryReducer } from "../reducers/category";
 import { subCategoryReducer } from "../reducers/subCategory";
+import { cartReducer } from "../reducers/cart";
+import { wishlistReducer } from "../reducers/wishlist";
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -13,6 +15,8 @@ const rootReducer = combineReducers({
     product: productReducer,
     category: categoryReducer,
     subCategory: subCategoryReducer,
+    cart: cartReducer,
+    wishlist: wishlistReducer,
 });
 
 const configureStore = () => {
