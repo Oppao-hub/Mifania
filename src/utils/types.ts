@@ -96,15 +96,31 @@ export interface SubCategoryState {
     error: string | null;
 }
 
-export interface CartItem extends Product {
-    size: string;
-    color: string;
-    qty: number;
-    selected: boolean;
+export interface CartItem {
+    id: number | string;
+    product: Product;
+    quantity: number;
+    price: string;
+    subtotal: string;
+    selected?: boolean;
+}
+
+export interface Collection {
+    id: number | string;
+    name: string;
+    isMain: boolean;
+    totalPrice: string;
+    totalQuantity: number;
+    cartItems?: CartItem[];
 }
 
 export interface CartState {
     items: CartItem[];
+    collections: Collection[];
+    isLoading: boolean;
+    error: string | null;
+    totalPrice: string;
+    totalQuantity: number;
 }
 
 export interface WishlistState {
