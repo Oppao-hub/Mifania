@@ -6,15 +6,23 @@ export const ASSET_URL: string = Platform.OS === 'android'
 
 const BASE_URL: string = `${ASSET_URL}/api`;
 
-const sharedHeaders = {
-    "Accept": "application/json",
-    "Content-Type": "application/json"
+const getHeaders = (token?: string) => {
+    const headers: any = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    };
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
 };
 
-export const postRequest = async <T>(endpoint: string, body: object): Promise<T> => {
+export const postRequest = async <T>(endpoint: string, body: object, token?: string): Promise<T> => {
+    const headers = getHeaders(token);
+    console.log(`POST Request: ${BASE_URL}${endpoint}`, { headers });
     const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: "POST",
-        headers: sharedHeaders,
+        headers: headers,
         body: JSON.stringify(body)
     });
 
@@ -26,11 +34,52 @@ export const postRequest = async <T>(endpoint: string, body: object): Promise<T>
     return await response.json();
 };
 
-export const getRequest = async <T>(endpoint: string): Promise<T> => {
-    console.log(`GET Request: ${BASE_URL}${endpoint}`);
+export const patchRequest = async <T>(endpoint: string, body: object, token?: string): Promise<T> => {
+    const headers = {
+        ...getHeaders(token),
+        "Content-Type": "application/merge-patch+json"
+    };
+    console.log(`PATCH Request: ${BASE_URL}${endpoint}`, { headers });
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+        method: "PATCH",
+        headers: headers,
+        body: JSON.stringify(body)
+    });
+
+    if(!response.ok){
+        const errorData = await response.json().catch(() => ({})); 
+        throw new Error(errorData.message || `Error: ${response.status}. Request Failed`);
+    }
+
+    return await response.json();
+};
+
+export const deleteRequest = async <T>(endpoint: string, token?: string): Promise<T> => {
+    const headers = getHeaders(token);
+    console.log(`DELETE Request: ${BASE_URL}${endpoint}`, { headers });
+    const response = await fetch(`${BASE_URL}${endpoint}`, {
+        method: "DELETE",
+        headers: headers
+    });
+
+    if(!response.ok){
+        const errorData = await response.json().catch(() => ({})); 
+        throw new Error(errorData.message || `Error: ${response.status}. Request Failed`);
+    }
+
+    if (response.status === 204) {
+        return {} as T;
+    }
+
+    return await response.json();
+};
+
+export const getRequest = async <T>(endpoint: string, token?: string): Promise<T> => {
+    const headers = getHeaders(token);
+    console.log(`GET Request: ${BASE_URL}${endpoint}`, { headers });
     const response = await fetch(`${BASE_URL}${endpoint}`, {
         method: "GET",
-        headers: { "Accept": "application/json" }
+        headers: headers
     });
 
     if(!response.ok){
