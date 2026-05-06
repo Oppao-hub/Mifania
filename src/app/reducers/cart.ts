@@ -1,43 +1,70 @@
 import * as Types from '../actions';
-import { CartState, CartItem } from '../../utils/types';
+import { CartState } from '../../utils/types';
 
 const initialState: CartState = {
     items: [],
+    collections: [],
+    isLoading: false,
+    error: null,
+    totalPrice: '0.00',
+    totalQuantity: 0,
 };
 
 export const cartReducer = (state = initialState, action: { type: string; payload?: any }): CartState => {
     switch (action.type) {
-        case Types.ADD_TO_CART:
-            const existingItem = state.items.find(item => item.id === action.payload.id);
-            if (existingItem) {
-                return {
-                    ...state,
-                    items: state.items.map(item =>
-                        item.id === action.payload.id
-                            ? { ...item, qty: item.qty + (action.payload.qty || 1) }
-                            : item
-                    ),
-                };
-            }
+        case Types.GET_CART_REQUEST:
+        case Types.ADD_TO_CART_REQUEST:
+        case Types.UPDATE_CART_QTY_REQUEST:
+        case Types.REMOVE_FROM_CART_REQUEST:
+        case Types.GET_COLLECTIONS_REQUEST:
+        case Types.CREATE_COLLECTION_REQUEST:
+        case Types.SWITCH_COLLECTION_REQUEST:
+        case Types.DELETE_COLLECTION_REQUEST:
             return {
                 ...state,
-                items: [...state.items, { ...action.payload, qty: action.payload.qty || 1, selected: true }],
+                isLoading: true,
+                error: null
             };
 
-        case Types.REMOVE_FROM_CART:
+        case Types.GET_CART_COMPLETED:
             return {
                 ...state,
-                items: state.items.filter(item => item.id !== action.payload),
+                isLoading: false,
+                items: action.payload.cartItems || [],
+                totalPrice: action.payload.totalPrice || '0.00',
+                totalQuantity: action.payload.totalQuantity || 0,
             };
 
-        case Types.UPDATE_CART_QTY:
+        case Types.GET_COLLECTIONS_COMPLETED:
             return {
                 ...state,
-                items: state.items.map(item =>
-                    item.id === action.payload.id
-                        ? { ...item, qty: action.payload.qty }
-                        : item
-                ),
+                isLoading: false,
+                collections: action.payload['hydra:member'] || action.payload || [],
+            };
+
+        case Types.ADD_TO_CART_COMPLETED:
+        case Types.UPDATE_CART_QTY_COMPLETED:
+        case Types.REMOVE_FROM_CART_COMPLETED:
+        case Types.CREATE_COLLECTION_COMPLETED:
+        case Types.SWITCH_COLLECTION_COMPLETED:
+        case Types.DELETE_COLLECTION_COMPLETED:
+            return {
+                ...state,
+                isLoading: false,
+            };
+
+        case Types.GET_CART_ERROR:
+        case Types.ADD_TO_CART_ERROR:
+        case Types.UPDATE_CART_QTY_ERROR:
+        case Types.REMOVE_FROM_CART_ERROR:
+        case Types.GET_COLLECTIONS_ERROR:
+        case Types.CREATE_COLLECTION_ERROR:
+        case Types.SWITCH_COLLECTION_ERROR:
+        case Types.DELETE_COLLECTION_ERROR:
+            return {
+                ...state,
+                isLoading: false,
+                error: action.payload
             };
 
         case Types.TOGGLE_CART_ITEM_SELECTION:
@@ -51,29 +78,50 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
             };
 
         case Types.CLEAR_CART:
-            return {
-                ...state,
-                items: [],
-            };
+            return initialState;
 
         default:
             return state;
     }
 };
 
-export const addToCart = (product: any) => ({
+// Action creators
+export const getCart = () => ({
+    type: Types.GET_CART
+});
+
+export const getCollections = () => ({
+    type: Types.GET_COLLECTIONS
+});
+
+export const createCollection = (name: string) => ({
+    type: Types.CREATE_COLLECTION,
+    payload: name
+});
+
+export const switchCollection = (cartId: string | number) => ({
+    type: Types.SWITCH_COLLECTION,
+    payload: cartId
+});
+
+export const deleteCollection = (cartId: string | number) => ({
+    type: Types.DELETE_COLLECTION,
+    payload: cartId
+});
+
+export const addToCart = (productId: string | number, quantity: number = 1) => ({
     type: Types.ADD_TO_CART,
-    payload: product
+    payload: { productId, quantity }
 });
 
-export const removeFromCart = (id: string | number) => ({
+export const removeFromCart = (cartItemId: string | number) => ({
     type: Types.REMOVE_FROM_CART,
-    payload: id
+    payload: cartItemId
 });
 
-export const updateCartQty = (id: string | number, qty: number) => ({
+export const updateCartQty = (cartItemId: string | number, quantity: number) => ({
     type: Types.UPDATE_CART_QTY,
-    payload: { id, qty }
+    payload: { cartItemId, quantity }
 });
 
 export const toggleCartItemSelection = (id: string | number) => ({
