@@ -193,7 +193,7 @@ const LoginScreen = () => {
                             {/* Social Login */}
                             <View className="flex-row items-center my-8">
                                 <View className="flex-1 h-[1px] bg-border-color" />
-                                <Text className="mx-4 text-gray text-[10px] font-bold tracking-widest uppercase">Or continue with</Text>
+                                <Text className="mx-4 text-gray text-[10px] font-bold tracking-widest uppercase">Or</Text>
                                 <View className="flex-1 h-[1px] bg-border-color" />
                             </View>
 
