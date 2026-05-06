@@ -1,5 +1,5 @@
 import * as Types from '../actions';
-import { SubCategoryState } from '../../types';
+import { SubCategoryState } from '../../utils/types';
 
 const initialState: SubCategoryState = {
     items: [],
