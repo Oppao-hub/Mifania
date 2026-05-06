@@ -5,10 +5,11 @@ import IMG from '../utils/image';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { loginReset } from '../app/reducers/auth';
-import { RootState } from '../types';
+import { RootState } from '../utils/types';
 import { AlertMsg } from '../components/AlertMsg';
 import ConfirmationModal from '../components/ConfirmationModal';
-import auth from '@react-native-firebase/auth';
+import { getAuth, signOut } from '@react-native-firebase/auth';
+import Header from '../components/Header';
 
 const ProfileScreen = () => {
   const [isLogoutModalVisible, setIsLogoutModalVisible] = useState(false);
@@ -28,7 +29,8 @@ const ProfileScreen = () => {
     try {
       setIsLogoutModalVisible(false);
       // Sign out of Firebase to clear persistent session
-      await auth().signOut();
+      const authInstance = getAuth();
+      await signOut(authInstance);
       // Clear Redux state
       dispatch(loginReset());
     } catch (error) {
@@ -42,11 +44,12 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-app" edges={['top']}>
+      <Header title="Profile" />
       <ScrollView 
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-1 items-center pt-16 px-6">
+        <View className="flex-1 items-center pt-8 px-6">
           <Image
             source={IMG.LOGO}
             className="w-32 h-32 rounded-full mb-5"
