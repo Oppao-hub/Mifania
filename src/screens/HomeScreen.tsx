@@ -4,7 +4,7 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 
-import { RootState } from '../types';
+import { RootState } from '../utils/types';
 import Header from '../components/Header';
 import SectionHeader from '../components/SectionHeader';
 import ProductCard from '../components/ProductCard';
@@ -64,31 +64,16 @@ const HomeScreen = () => {
     return matchesCategory && matchesSubCategory && matchesSearch;
   });
 
+  console.log('Total Products:', items.length);
+  console.log('Filtered Products:', filteredProducts.length);
+  if (items.length > 0 && filteredProducts.length === 0) {
+    console.log('Filter debug - selectedCategoryId:', selectedCategoryId, 'selectedSubCategoryId:', selectedSubCategoryId);
+  }
+
   const trendingProducts = items.slice(0, 5);
 
   const renderHeader = () => (
     <View className="mb-4">
-      {/* Categories Section */}
-      <CategoriesList 
-        categories={allCategories} 
-        isLoading={isCategoriesLoading} 
-        activeId={selectedCategoryId}
-        onCategoryPress={handleCategoryPress}
-      />
-
-      {/* Sub-Categories Section (Only shown if a category is selected and has children) */}
-      {activeSubCategories.length > 0 && (
-        <View className="mt-2 mb-4">
-          <Text className="text-xs font-montserrat-bold text-gray mb-2">Refine Search</Text>
-          <CategoriesList 
-            categories={activeSubCategories} 
-            isLoading={isSubCategoriesLoading} 
-            activeId={selectedSubCategoryId}
-            onCategoryPress={(sub) => setSelectedSubCategoryId(sub.id)}
-          />
-        </View>
-      )}
-
       {/* Trending Products Section */}
       <SectionHeader title="Trending Products" onPress={() => console.log('See all trending')} />
       <HorizontalProductList products={trendingProducts} />
@@ -100,7 +85,20 @@ const HomeScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-      <Header searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
+      <Header 
+        isHome
+        showSearch
+        searchQuery={searchQuery} 
+        setSearchQuery={setSearchQuery}
+        categories={allCategories}
+        isCategoriesLoading={isCategoriesLoading}
+        activeCategoryId={selectedCategoryId}
+        onCategoryPress={handleCategoryPress}
+        subCategories={activeSubCategories}
+        isSubCategoriesLoading={isSubCategoriesLoading}
+        activeSubCategoryId={selectedSubCategoryId}
+        onSubCategoryPress={(sub) => setSelectedSubCategoryId(sub.id)}
+      />
 
       <View className="flex-1 px-4">
         {isProductsLoading && items.length === 0 ? (
@@ -117,8 +115,7 @@ const HomeScreen = () => {
             ListHeaderComponent={renderHeader}
             renderItem={({ item }) => (
               <ProductCard
-                productName={item.name}
-                productImage={`${ASSET_URL}${item.imageUrl}`}
+                product={item}
                 onPress={() => navigation.navigate('ProductDetails', { product: item })}
               />
             )}
