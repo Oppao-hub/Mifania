@@ -5,16 +5,9 @@ import * as Type from '../actions';
 function* fetchSubCategoriesWorker(): Generator<any, void, any> {
     yield put({ type: Type.GET_SUB_CATEGORIES_REQUEST});
     try {
-        const response = yield call(fetchSubCategories);
-        const data = yield response.json();
-
-        if (response.ok) {
-            // Robust check: handle flat array OR object with member/data key
-            const subCategories = Array.isArray(data) ? data : (data.member || data.data || []);
-            yield put({ type: Type.GET_SUB_CATEGORIES_COMPLETED, payload: subCategories });
-        } else {
-            yield put({ type: Type.GET_SUB_CATEGORIES_ERROR, payload: data.message || 'Error fetching sub categories.' });
-        }
+        const data = yield call(fetchSubCategories);
+        const subCategories = Array.isArray(data) ? data : (data.member || data.data ||[]);
+        yield put({ type: Type.GET_SUB_CATEGORIES_COMPLETED, payload: subCategories });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
         yield put({ type: Type.GET_SUB_CATEGORIES_ERROR, payload: message });
