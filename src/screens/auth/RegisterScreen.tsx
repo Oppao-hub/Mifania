@@ -18,7 +18,7 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { userRegister, loginReset } from '../../app/reducers/auth';
 import { IMG, ROUTES } from '../../utils';
-import { RootState } from '../../types';
+import { RootState } from '../../utils/types';
 import { AlertMsg } from '../../components/AlertMsg';
 
 const RegisterScreen = () => {
