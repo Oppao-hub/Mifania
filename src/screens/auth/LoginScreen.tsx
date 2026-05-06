@@ -18,7 +18,7 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 import { userLogin, loginReset, userLoginCompleted } from '../../app/reducers/auth';
 import { IMG, ROUTES } from '../../utils';
-import { RootState } from '../../types';
+import { RootState } from '../../utils/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import { userGoogleLoginApi } from '../../app/api/auth';
@@ -60,7 +60,10 @@ const LoginScreen = () => {
             return;
         }
         
-        dispatch(userLogin({ email: email, password: password }));
+        dispatch(userLogin({ 
+            email: email, 
+            password: password 
+        }));
     };
 
     const handleGoogleSignIn = async () => {
@@ -78,21 +81,18 @@ const LoginScreen = () => {
             const idToken = signInResponse.data.idToken;
             if (!idToken) throw new Error("No ID token found.");
 
-            const response = await userGoogleLoginApi(idToken);
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || "Failed to verify account.");
-            }
-
-            const serverData = await response.json();
+            // The API call now returns the parsed data directly
+            const serverData = await userGoogleLoginApi(idToken);
+            
             const authInstance = getAuth();
             const googleCredential = GoogleAuthProvider.credential(idToken);
             const userCredential = await signInWithCredential(authInstance, googleCredential);
             
             dispatch(userLoginCompleted({
                 user: {
+                    id: userCredential.user.uid,
                     email: userCredential.user.email || '',
-                    first_name: userCredential.user.displayName || 'Google User',
+                    firstName: userCredential.user.displayName || 'Google User',
                 },
                 token: serverData.token || idToken
             }));
