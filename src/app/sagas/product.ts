@@ -5,16 +5,9 @@ import * as Type from '../actions';
 function* fetchProductsWorker(): Generator<any, void, any> {
     yield put({ type: Type.GET_PRODUCTS_REQUEST});
     try {
-        const response = yield call(fetchProducts);
-        const data = yield response.json();
-
-        if (response.ok) {
-            // Robust check: handle flat array OR object with member/data key
-            const products = Array.isArray(data) ? data : (data.member || data.data || []);
-            yield put({ type: Type.GET_PRODUCTS_COMPLETED, payload: products });
-        } else {
-            yield put({ type: Type.GET_PRODUCTS_ERROR, payload: data.message || 'Error fetching products.' });
-        }
+        const data = yield call(fetchProducts);
+        const products = Array.isArray(data) ? data : (data.member || data.data || []);
+        yield put({ type: Type.GET_PRODUCTS_COMPLETED, payload: products});
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
         yield put({ type: Type.GET_PRODUCTS_ERROR, payload: message });
