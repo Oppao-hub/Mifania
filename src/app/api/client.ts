@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
 
 export const ASSET_URL: string = Platform.OS === 'android' 
-    ? "http://10.0.2.2:8000" 
-    : "http://localhost:8000";
+    ? "http://10.0.2.2:8000" // Use 10.0.2.2 for Android Emulator to reach host loopback
+    : "http://localhost:8000"; // Use localhost for iOS Simulator or physical devices on same network (via IP)
 
 const BASE_URL: string = `${ASSET_URL}/api`;
 
