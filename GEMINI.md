@@ -9,7 +9,7 @@ Mifania is a modern **React Native** mobile application designed for fashion and
 - **State Management:** Redux with Redux-Saga
 - **Navigation:** React Navigation (Stack and Bottom Tabs)
 - **Styling:** NativeWind (Tailwind CSS for React Native)
-- **Icons:** Lucide-React-Native and React-Native-Vector-Icons
+- **Icons:** React-Native-Vector-Icons (Ionicons)
 - **API Client:** Fetch-based custom client with Symfony API Platform (API Resource) integration.
 
 ## 🛠️ Backend Architecture
