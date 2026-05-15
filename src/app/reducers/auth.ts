@@ -31,6 +31,7 @@ export function authReducer(state = initialState, action: { type: string; payloa
                 isError: true, 
                 error: action.payload 
             };
+        case Types.USER_LOGOUT:
         case Types.USER_LOGIN_RESET:
             return { 
                 ...state, 
