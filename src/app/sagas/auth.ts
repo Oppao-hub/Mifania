@@ -1,34 +1,40 @@
 import { takeEvery, call, put } from 'redux-saga/effects';
 import { userLoginApi, userRegisterApi } from '../api/auth';
 import * as Type from '../../app/actions';
-import auth from '@react-native-firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
 
 export function* userLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
-    yield put({ type: Type.USER_LOGIN_REQUEST });
+  yield put({ type: Type.USER_LOGIN_REQUEST });
   try {
-    const response = yield call(userLoginApi, action.payload);
-    if (response.ok) {
-      const data = yield response.json(); 
-      
-      // Persist session via Firebase if not already authenticated
-      // This satisfies the "No AsyncStorage" requirement as Firebase handles its own persistence
-      try {
-        const currentUser = auth().currentUser;
-        if (!currentUser) {
-          // You might need to adjust this if your API and Firebase passwords aren't the same
-          // or if you want to use signInAnonymously() just for persistence
-          yield call([auth(), auth().signInWithEmailAndPassword], action.payload.email, action.payload.password);
-        }
-      } catch (firebaseError) {
-        console.log("Firebase sync failed, but API login succeeded:", firebaseError);
-      }
+    const data = yield call(userLoginApi, action.payload);
+    console.log("📍 Login API Response:", JSON.stringify(data));
 
-      yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
-    } else {
-      const errorData = yield response.json();
-      throw new Error(errorData.message || "Invalid Email or Password");
+    const roles = data.user?.roles || [];
+    
+    // Check if the user has the required customer role
+    if(!roles.includes('ROLE_USER')){
+      throw new Error("Access Denied: This account is not a customer account.");
     }
+    
+    // Check if it's an admin trying to login to mobile
+    if(roles.includes('ROLE_ADMIN') || roles.includes('ROLE_SUPER_ADMIN')){
+       console.log("⚠️ Admin account detected on mobile.");
+    }
+
+    try {
+      const authInstance = getAuth();
+      const currentUser = authInstance.currentUser;
+      if (!currentUser) {
+        yield call(signInWithEmailAndPassword, authInstance, action.payload.email, action.payload.password);
+        console.log("✅ Firebase synced.");
+      }
+    } catch (firebaseError) {
+      console.log("⚠️ Firebase sync skipped or failed:", firebaseError);
+    }
+
+    yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
   } catch (error: unknown) {
+    console.log("❌ Login Saga Error:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred";
     yield put({ type: Type.USER_LOGIN_ERROR, payload: message });
   }
@@ -37,25 +43,29 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
 export function* userRegister(action: { type: string; payload: any }): Generator<any, void, any>{
   yield put({ type: Type.USER_REGISTER_REQUEST });
   try{
-    const response = yield call(userRegisterApi, action.payload);
-    if(response.ok){
-      const data = yield response.json();
+    const data = yield call(userRegisterApi, action.payload);
+    
+    yield put({ type: Type.USER_REGISTER_COMPLETED, payload: data});
 
-      // Create Firebase account for persistence
-      try {
-        yield call([auth(), auth().createUserWithEmailAndPassword], action.payload.email, action.payload.password);
-      } catch (firebaseError) {
-        console.log("Firebase registration sync failed:", firebaseError);
-      }
-
-      yield put({ type: Type.USER_REGISTER_COMPLETED, payload: data});
-    } else {
-      const errorData = yield response.json();
-      throw new Error(errorData.message || "Registration failed");
+    try {
+      const authInstance = getAuth();
+      yield call(createUserWithEmailAndPassword, authInstance, action.payload.email, action.payload.password);
+    } catch (firebaseError) {
+      console.log("Firebase registration sync failed:", firebaseError);
     }
+
   }catch(error: unknown){
     const message = error instanceof Error ? error.message : "An unknown error occurred";
     yield put({ type: Type.USER_REGISTER_ERROR, payload: message });
+  }
+}
+
+export function* userLogout(): Generator<any, void, any> {
+  try {
+    const authInstance = getAuth();
+    yield call([authInstance, authInstance.signOut]);
+  } catch (error) {
+    console.log("Logout sync failed:", error);
   }
 }
 
@@ -65,4 +75,8 @@ export function* watchLogin() {
 
 export function* watchRegister(){
   yield takeEvery(Type.USER_REGISTER, userRegister)
+}
+
+export function* watchLogout() {
+  yield takeEvery(Type.USER_LOGOUT, userLogout);
 }

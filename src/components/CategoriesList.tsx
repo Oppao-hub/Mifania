@@ -1,20 +1,20 @@
 import React from 'react';
 import { ScrollView, ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
-import { Category } from '../types';
+import { Category } from '../utils/types';
 
-interface CategoriesListProps {
-  categories: Category[];
+interface CategoriesListProps<T extends Category = Category> {
+  categories: T[];
   isLoading: boolean;
   activeId?: number | string | null; // Controlled from parent (HomeScreen)
-  onCategoryPress?: (category: Category) => void;
+  onCategoryPress?: (category: T) => void;
 }
 
-const CategoriesList: React.FC<CategoriesListProps> = ({ 
+function CategoriesList<T extends Category>({ 
   categories, 
   isLoading, 
   activeId,
   onCategoryPress 
-}) => {
+}: CategoriesListProps<T>) {
   return (
     <View>
       <ScrollView 
@@ -57,6 +57,6 @@ const CategoriesList: React.FC<CategoriesListProps> = ({
       </ScrollView>
     </View>
   );
-};
+}
 
 export default CategoriesList;

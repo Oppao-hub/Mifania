@@ -7,6 +7,8 @@ export const ROUTES = {
     PROFILE: 'Profile' as const,
     LOGIN: 'Login' as const,
     REGISTER: 'Register' as const,
+    NOTIFICATION: 'Notification' as const,
+    ORDER_SUCCESS: 'OrderSuccess' as const,
 };
 
 export default ROUTES;

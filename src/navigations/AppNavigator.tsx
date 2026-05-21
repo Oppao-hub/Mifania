@@ -1,53 +1,82 @@
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useDispatch, useSelector } from 'react-redux';
-import auth from '@react-native-firebase/auth';
+import { useSelector } from 'react-redux';
+import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
+import notifee, { EventType } from '@notifee/react-native';
 
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
-import { RootState } from '../types';
-import { userLoginCompleted } from '../app/reducers/auth';
-import { View, ActivityIndicator } from 'react-native';
+import { RootState } from '../utils/types';
+import IMG from '../utils/image';
+import { View, ActivityIndicator, Alert, Image, Text } from 'react-native';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
-  const dispatch = useDispatch();
   const [initializing, setInitializing] = useState(true);
-  const { data } = useSelector((state: RootState) => state.authentication || {data: null, isLoading: false});
+  const data = useSelector((state: RootState) => state.authentication?.data);
 
-  // Handle user state changes
   useEffect(() => {
-    const subscriber = auth().onAuthStateChanged((user) => {
-      if (user && data === null) {
-        // Firebase has a user but Redux doesn't - Sync them!
-        dispatch(userLoginCompleted({
-          user: {
-            email: user.email || '',
-            first_name: user.displayName || 'User',
-          },
-          token: 'firebase_session' // Or get token via user.getIdToken()
-        }));
-      }
-      if (initializing) setInitializing(false);
+    const authInstance = getAuth();
+    
+    const subscriber = onAuthStateChanged(authInstance, (_user) => {
+      setInitializing(false);
     });
-    return subscriber; // unsubscribe on unmount
-  }, [data, initializing, dispatch]);
+
+    return subscriber;
+  }, []);
+
+  // Notification Foreground Handler
+  useEffect(() => {
+    const unsubscribeForeground = notifee.onForegroundEvent(({ type, detail }) => {
+      switch (type) {
+        case EventType.DISMISSED:
+          console.log('User dismissed notification');
+          break;
+        case EventType.PRESS:
+          console.log('User pressed notification', detail.notification);
+          if (detail.notification?.body) {
+            Alert.alert('Notification', detail.notification.body);
+          }
+          break;
+      }
+    });
+
+    return () => {
+      unsubscribeForeground();
+    };
+  }, []);
 
   if (initializing) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#52622E" />
+      <View className="flex-1 items-center bg-white mt-48 ">
+        <Image
+          source={IMG.LOADING_LOGO}
+          className="w-48 h-48 mt-20"
+          resizeMode="contain"
+        />
+        <Text className="text-4xl font-montserrat-bold text-brand">Mifania</Text>
+        
+        <View className="absolute bottom-24">
+          <ActivityIndicator 
+            size="large" 
+            color="#52622E" 
+            style={{ transform: [{ scale: 2 }] }}
+          />
+        </View>
       </View>
     );
   }
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {data === null ? (
-        <Stack.Screen name="Auth" component={AuthNavigator} />
+      {data && data.token ? (
+        <Stack.Screen name="Main" component={MainNavigator} />
       ) : (
-        <Stack.Screen name="App" component={MainNavigator} />
+        <>
+          <Stack.Screen name="Main" component={MainNavigator} />
+          <Stack.Screen name="Auth" component={AuthNavigator} />
+        </>
       )}
     </Stack.Navigator>
   );

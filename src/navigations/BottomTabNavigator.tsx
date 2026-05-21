@@ -2,11 +2,14 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View } from 'react-native';
+import { useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
+import { RootState } from '../utils/types';
 import HomeScreen from '../screens/HomeScreen';
 import CartScreen from '../screens/CartScreen';
 import WishlistScreen from '../screens/WishlistScreen';
 import OrderScreen from '../screens/OrderScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import AccountScreen from '../screens/AccountScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const Tab = createBottomTabNavigator();
@@ -23,7 +26,43 @@ function HomeStackScreen() {
   );
 }
 
+const TabIcon = ({ name, color, focused }: { name: string; color: string; focused: boolean }) => (
+  <View className="items-center justify-center w-12 h-12">
+    <Icon 
+      name={focused ? name : `${name}-outline`} 
+      color={color} 
+      size={24} 
+    />
+  </View>
+);
+
 const BottomTabNavigator: React.FC = () => {
+  const token = useSelector((state: RootState) => state.authentication?.data?.token);
+  const navigation = useNavigation<any>();
+
+  // Redirect to Home when logging out from a protected tab
+  React.useEffect(() => {
+    if (!token) {
+      // Find current route name
+      const state = navigation.getState();
+      const currentRoute = state?.routes[state.index];
+      const protectedTabs = ['Cart', 'My Order', 'Account'];
+      
+      if (currentRoute && protectedTabs.includes(currentRoute.name)) {
+        navigation.navigate('HomeTab');
+      }
+    }
+  }, [token, navigation]);
+
+  const protectedTabListener = ({ navigation: tabNav, route }: any) => ({
+    tabPress: (e: any) => {
+      if (!token) {
+        e.preventDefault();
+        navigation.navigate('Auth'); // Redirect to Auth stack
+      }
+    },
+  });
+
   return (
     <Tab.Navigator
       safeAreaInsets={{ bottom: 0 }} // Forces the navigator to ignore system safe area padding
@@ -60,31 +99,16 @@ const BottomTabNavigator: React.FC = () => {
         component={HomeStackScreen}
         options={{
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <View className="items-center justify-center w-12 h-12">
-              <Icon 
-                name={focused ? "home" : "home-outline"} 
-                color={color} 
-                size={24} 
-              />
-            </View>
-          ),
+          tabBarIcon: ({ color, focused }) => <TabIcon name="home" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
         name="Cart"
         component={CartScreen}
+        listeners={protectedTabListener}
         options={{
           tabBarLabel: 'Cart',
-          tabBarIcon: ({ color, focused }) => (
-            <View className="items-center justify-center w-12 h-12">
-              <Icon 
-                name={focused ? "cart" : "cart-outline"} 
-                color={color} 
-                size={24} 
-              />
-            </View>
-          ),
+          tabBarIcon: ({ color, focused }) => <TabIcon name="cart" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
@@ -92,20 +116,13 @@ const BottomTabNavigator: React.FC = () => {
         component={WishlistScreen}
         options={{
           tabBarLabel: 'Wishlist',
-          tabBarIcon: ({ color, focused }) => (
-            <View className="items-center justify-center w-12 h-12">
-              <Icon 
-                name={focused ? "heart" : "heart-outline"} 
-                color={color} 
-                size={24} 
-              />
-            </View>
-          ),
+          tabBarIcon: ({ color, focused }) => <TabIcon name="heart" color={color} focused={focused} />,
         }}
       />
       <Tab.Screen
         name="My Order"
         component={OrderScreen}
+        listeners={protectedTabListener}
         options={{
           tabBarLabel: 'My Order',
           tabBarIcon: ({ color, focused }) => (
@@ -120,19 +137,12 @@ const BottomTabNavigator: React.FC = () => {
         }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
+        name="Account"
+        component={AccountScreen}
+        listeners={protectedTabListener}
         options={{
            tabBarLabel: 'Account',
-          tabBarIcon: ({ color, focused }) => (
-            <View className="items-center justify-center w-12 h-12">
-              <Icon 
-                name={focused ? "person" : "person-outline"} 
-                color={color} 
-                size={24} 
-              />
-            </View>
-          ),
+          tabBarIcon: ({ color, focused }) => <TabIcon name="person" color={color} focused={focused} />,
         }}
       />
     </Tab.Navigator>

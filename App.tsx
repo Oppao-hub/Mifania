@@ -1,77 +1,35 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Provider } from 'react-redux';
-import { SafeAreaProvider } from 'react-native-safe-area-context';  
+import { PersistGate } from 'redux-persist/integration/react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
-import Toast, { BaseToast, ErrorToast, InfoToast, ToastConfig } from 'react-native-toast-message'; 
-import configureStore from './src/app/store'; 
+import store, { persistor } from './src/app/store'; 
 import AppNavigation from './src/navigations';
+import { toastConfig } from './src/utils/toastConfig';
+import NetworkBanner from './src/components/NetworkBanner';
 
-const { store } = configureStore();
-
-const toastConfig: ToastConfig = {
-  success: (props) => (
-    <BaseToast
-      {...props}
-      style={{ borderLeftColor: '#52622E', backgroundColor: '#FFFFFF', borderRadius: 8, height: 70 }}
-      contentContainerStyle={{ paddingHorizontal: 15 }}
-      text1Style={{
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#3F4C23',
-        fontFamily: 'Montserrat-Bold'
-      }}
-      text2Style={{
-        fontSize: 13,
-        color: '#6A7282',
-        fontFamily: 'Montserrat-Regular'
-      }}
-    />
-  ),
-  error: (props) => (
-    <ErrorToast
-      {...props}
-      style={{ borderLeftColor: '#DC3545', backgroundColor: '#FFFFFF', borderRadius: 8, height: 70 }}
-      text1Style={{
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#DC3545',
-        fontFamily: 'Montserrat-Bold'
-      }}
-      text2Style={{
-        fontSize: 13,
-        color: '#6A7282',
-        fontFamily: 'Montserrat-Regular'
-      }}
-    />
-  ),
-  info: (props) => (
-    <InfoToast
-      {...props}
-      style={{ borderLeftColor: '#52622E', backgroundColor: '#FFFFFF', borderRadius: 8, height: 70 }}
-      text1Style={{
-        fontSize: 16,
-        fontWeight: '700',
-        color: '#3F4C23',
-        fontFamily: 'Montserrat-Bold'
-      }}
-      text2Style={{
-        fontSize: 13,
-        color: '#6A7282',
-        fontFamily: 'Montserrat-Regular'
-      }}
-    />
-  )
-};
+// Configure Google Sign-In at the very top level
+console.log("📍 App: Configuring Google Sign-In...");
+GoogleSignin.configure({
+  webClientId: '300896200734-ti08h9ju74onbmmsl1v9oq011qtvgj1e.apps.googleusercontent.com',
+  offlineAccess: true,
+  forceCodeForRefreshToken: true,
+});
 
 const App = () => {
   return (
     <SafeAreaProvider>
       <Provider store={store}>
-        <View style={{ flex: 1 }}>
-          <AppNavigation />
-          <Toast config={toastConfig} />
-        </View>
+        <PersistGate loading={null} persistor={persistor}>
+          <View style={{ flex: 1 }}>
+            <NetworkBanner />
+            <AppNavigation />
+            <Toast config={toastConfig} />
+          </View>
+        </PersistGate>
       </Provider>
     </SafeAreaProvider>
   );
