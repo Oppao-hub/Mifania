@@ -16,69 +16,79 @@ const CartItemComponent: React.FC<CartItemProps> = ({
     item, 
     onToggleSelection, 
     onRemove,
-    onUpdateQty,
     onEdit
 }) => {
-    const { product, quantity, price } = item;
+    const { product, quantity, price, selected } = item;
     
+    const getImageUrl = (url?: string) => {
+        if (!url) return null;
+        if (url.startsWith('http')) return url;
+        const separator = url.startsWith('/') ? '' : '/';
+        return `${ASSET_URL}${separator}${url}`;
+    };
+
     const imageSource = product.imageUrl 
-        ? { uri: `${ASSET_URL}${product.imageUrl}` }
-        : { uri: product.image };
+        ? { uri: getImageUrl(product.imageUrl) }
+        : product.image 
+            ? { uri: getImageUrl(product.image) }
+            : require('../assets/logos/logo.png');
 
     return (
-        <View 
-            className="flex-row bg-white rounded-lg p-3 mb-4 shadow-sm relative"
-        >
-            {/* Action Buttons (Upper Right - Vertical) */}
-            <View className="absolute top-3 right-3 flex-col space-y-4 z-20">
-                <TouchableOpacity onPress={() => onEdit?.(item)} className="p-1">
-                    <Icon name="pencil-outline" size={20} color="#6A7282" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => onRemove(item.id)} className="p-1">
-                    <Icon name="trash-can-outline" size={20} color="#EF4444" />
-                </TouchableOpacity>
-            </View>
-
-            {/* Product Image Container */}
-            <View className="relative w-36 h-44 rounded-lg overflow-hidden bg-gray-100">
+        <View className="flex-row bg-white rounded-[24px] p-3 mb-4 shadow-sm border border-border-color">
+            
+            {/* Checkbox & Image Container */}
+            <View className="flex-row items-center">
+              <TouchableOpacity onPress={() => onToggleSelection(item.id)} className="mr-3">
+                {selected ? (
+                    <View className="w-6 h-6 rounded-md bg-brand items-center justify-center">
+                        <Icon name="check" size={16} color="#FFFFFF" />
+                    </View>
+                ) : (
+                    <View className="w-6 h-6 rounded-md border-[1.5px] border-gray-300" />
+                )}
+              </TouchableOpacity>
+              
+              <View className="w-20 h-28 rounded-2xl bg-gray-100 overflow-hidden">
                 <Image 
                     source={imageSource} 
                     className="w-full h-full"
                     resizeMode="cover"
                 />
-
-                {/* Checkbox (Inside Image, Upper Left - Rounded Square) */}
-                <TouchableOpacity 
-                    onPress={() => onToggleSelection(item.id)}
-                    className="absolute top-2 left-2 z-10"
-                >
-                    <Icon 
-                        name={item.selected ? "checkbox-marked" : "checkbox-blank-outline"} 
-                        size={26} 
-                        color={item.selected ? "#52622E" : "rgba(255,255,255,0.9)"} 
-                    />
-                </TouchableOpacity>
+              </View>
             </View>
 
-            {/* Product Details (Right Side) */}
-            <View className="flex-1 ml-4 pr-10 justify-between py-1">
-                <View>
-                    <Text className="text-base font-bold text-gray-900 mb-1" numberOfLines={1}>
-                        {product.name}
-                    </Text>
-
-                    <View className="space-y-1">
-                        {/* Size and Color might need to be added to CartItem if backend supports them */}
-                        {/* <Text className="text-xs text-gray-500 font-medium">Size: {item.size}</Text>
-                        <Text className="text-xs text-gray-500 font-medium">Color: {item.color}</Text> */}
-                        <Text className="text-sm text-gray-600 font-bold mt-1">Qty: {quantity}</Text>
-                    </View>
-                </View>
-
-                <Text className="text-lg font-bold text-brand mt-1">
-                    ${parseFloat(price || '0').toFixed(2)}
+            {/* Product Details */}
+            <View className="flex-1 ml-4 py-1 justify-between">
+              <View>
+                <Text className="text-sm font-bold text-gray-900 mb-1 pr-2" numberOfLines={2}>
+                  {product.name}
                 </Text>
+                <View className="space-y-1.5 mt-1">
+                  {/* Note: size and color are placeholders as they aren't in the current CartItem type yet */}
+                  <Text className="text-[11px] text-gray-500 font-medium">Size: L</Text>
+                  <View className="flex-row items-center">
+                    <Text className="text-[11px] text-gray-500 font-medium mr-1">Color: Black</Text>
+                    <View className="w-2.5 h-2.5 rounded-full bg-[#111827]" />
+                  </View>
+                  <Text className="text-[11px] text-gray-500 font-medium">Qty: {quantity}</Text>
+                </View>
+              </View>
+              <Text className="text-sm font-bold text-brand">
+                ₱{parseFloat(price || '0').toFixed(2)}
+              </Text>
             </View>
+
+            {/* Action Buttons - Pushed to top and bottom */}
+            <View className="justify-between items-end py-1 ml-1">
+              <TouchableOpacity onPress={() => onEdit?.(item)} className="p-1 mb-2">
+                <Icon name="pencil-outline" size={20} color="#6B7280" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity onPress={() => onRemove(item.id)} className="p-1 mt-2">
+                <Icon name="trash-can-outline" size={22} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+
         </View>
     );
 };
