@@ -22,6 +22,7 @@ export function* getCartAsync(): Generator<any, void, any> {
     yield put({ type: Type.GET_CART_REQUEST });
     try {
         const data = yield call(getCartApi, token);
+        console.log("🛒 Cart API Response:", JSON.stringify(data).substring(0, 500));
         yield put({ type: Type.GET_CART_COMPLETED, payload: data });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
@@ -92,7 +93,10 @@ export function* deleteCollectionAsync(action: { type: string; payload: number |
 
 export function* addToCartAsync(action: { type: string; payload: any }): Generator<any, void, any> {
     const token = yield select(getToken);
-    if (!token) return;
+    if (!token) {
+        yield put({ type: Type.ADD_TO_CART_ERROR, payload: "Please log in to add items to your cart." });
+        return;
+    }
 
     yield put({ type: Type.ADD_TO_CART_REQUEST });
     try {
