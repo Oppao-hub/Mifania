@@ -7,7 +7,12 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
   yield put({ type: Type.USER_LOGIN_REQUEST });
   try {
     const data = yield call(userLoginApi, action.payload);
-    
+    const roles = data.user?.roles || [];
+
+    if(!roles.includes('ROLE_USER') || roles.includes('ROLE_ADMIN') || roles.includes('ROLE_SUPER_ADMIN')){
+      throw new Error("Access Denied: Only customer can log in to this app.");
+    }
+
     try {
       const authInstance = getAuth();
       const currentUser = authInstance.currentUser;
@@ -45,10 +50,23 @@ export function* userRegister(action: { type: string; payload: any }): Generator
   }
 }
 
+export function* userLogout(): Generator<any, void, any> {
+  try {
+    const authInstance = getAuth();
+    yield call([authInstance, authInstance.signOut]);
+  } catch (error) {
+    console.log("Logout sync failed:", error);
+  }
+}
+
 export function* watchLogin() {
   yield takeEvery(Type.USER_LOGIN, userLoginAsync);
 }
 
 export function* watchRegister(){
   yield takeEvery(Type.USER_REGISTER, userRegister)
+}
+
+export function* watchLogout() {
+  yield takeEvery(Type.USER_LOGOUT, userLogout);
 }
