@@ -4,6 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
+import { getAuth, signOut } from '@react-native-firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
 import { ROUTES } from '../utils';
 import { RootState } from '../utils/types';
 import * as Types from '../app/actions';
@@ -56,8 +59,28 @@ const AccountScreen = () => {
         { 
           text: "Logout", 
           style: "destructive", 
-          onPress: () => {
-            dispatch({ type: Types.USER_LOGOUT });
+          onPress: async () => {
+            try {
+              // Step 1: Sign out from Firebase
+              const authInstance = getAuth();
+              await signOut(authInstance);
+
+              // Step 2: Sign out from Google to avoid "auto-login" loop
+              try {
+                await GoogleSignin.signOut();
+              } catch (e) {
+                // Ignore if not a Google user
+              }
+
+              // Step 3: Clear Redux state
+              dispatch({ type: Types.USER_LOGOUT });
+              
+              console.log("✅ Successfully logged out from all providers");
+            } catch (error) {
+              console.error("❌ Logout failed:", error);
+              // Fallback: Clear Redux anyway so UI resets
+              dispatch({ type: Types.USER_LOGOUT });
+            }
           }
         }
       ]
