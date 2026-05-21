@@ -26,6 +26,7 @@ export const addToCartApi = async (productId: number | string, quantity: number,
         product: `/api/products/${productId}`,
         quantity: quantity
     };
+    console.log("📤 Add to Cart API Payload:", JSON.stringify(body));
     return await postRequest("/cart_items", body, token);
 };
 
