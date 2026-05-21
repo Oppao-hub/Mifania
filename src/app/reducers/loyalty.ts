@@ -24,8 +24,21 @@ export function loyaltyReducer(state = initialState, action: { type: string; pay
         case Types.GET_WALLET_REQUEST:
         case Types.GET_REWARDS_REQUEST:
         case Types.GET_REDEMPTIONS_REQUEST:
-        case Types.CREATE_REDEMPTION_REQUEST:
             return { ...state, isLoading: true, isError: false };
+            
+        case Types.CREATE_REDEMPTION_REQUEST:
+            // Optimistic UI Update: Deduct points immediately
+            const pointsToDeduct = action.payload?.pointsCost || 0;
+            return { 
+                ...state, 
+                isLoading: true, 
+                isError: false,
+                wallet: state.wallet ? {
+                    ...state.wallet,
+                    rewardPoints: Math.max(0, state.wallet.rewardPoints - pointsToDeduct)
+                } : null
+            };
+            
         case Types.GET_WALLET_COMPLETED:
             return { ...state, isLoading: false, wallet: action.payload, isError: false };
         case Types.GET_REWARDS_COMPLETED:
@@ -33,11 +46,26 @@ export function loyaltyReducer(state = initialState, action: { type: string; pay
         case Types.GET_REDEMPTIONS_COMPLETED:
             return { ...state, isLoading: false, redemptions: action.payload, isError: false };
         case Types.CREATE_REDEMPTION_COMPLETED:
+            // The wallet might be refreshed via saga anyway, but we mark it complete
             return { ...state, isLoading: false, isError: false };
+            
+        case Types.CREATE_REDEMPTION_ERROR:
+            // Rollback optimistic update on error
+            const pointsToRefund = action.payload?.pointsCost || 0;
+            return { 
+                ...state, 
+                isLoading: false, 
+                isError: true, 
+                error: action.payload?.message || action.payload,
+                wallet: state.wallet ? {
+                    ...state.wallet,
+                    rewardPoints: state.wallet.rewardPoints + pointsToRefund
+                } : null
+            };
+            
         case Types.GET_WALLET_ERROR:
         case Types.GET_REWARDS_ERROR:
         case Types.GET_REDEMPTIONS_ERROR:
-        case Types.CREATE_REDEMPTION_ERROR:
             return { ...state, isLoading: false, isError: true, error: action.payload };
         default:
             return state;
