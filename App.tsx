@@ -9,6 +9,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import store, { persistor } from './src/app/store'; 
 import AppNavigation from './src/navigations';
 import { toastConfig } from './src/utils/toastConfig';
+import NetworkBanner from './src/components/NetworkBanner';
 
 // Configure Google Sign-In at the very top level
 GoogleSignin.configure({
@@ -23,6 +24,7 @@ const App = () => {
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
           <View style={{ flex: 1 }}>
+            <NetworkBanner />
             <AppNavigation />
             <Toast config={toastConfig} />
           </View>
