@@ -17,6 +17,26 @@ const getHeaders = (token?: string) => {
     return headers;
 };
 
+const handleResponseError = async (response: Response) => {
+    let errorData: any = {};
+    try {
+        errorData = await response.json();
+    } catch {
+        // ignore parse error
+    }
+
+    if (response.status === 422) {
+        // Return detailed validation errors if available (Symfony/API Platform format)
+        if (errorData.violations && errorData.violations.length > 0) {
+            throw new Error(errorData.violations[0].message);
+        } else if (errorData.detail) {
+            throw new Error(errorData.detail);
+        }
+    }
+    
+    throw new Error(errorData.message || errorData.detail || `Error: ${response.status}. Request Failed`);
+};
+
 export const postRequest = async <T>(endpoint: string, body: object, token?: string): Promise<T> => {
     const headers = getHeaders(token);
     console.log(`POST Request: ${BASE_URL}${endpoint}`, { headers });
@@ -26,9 +46,8 @@ export const postRequest = async <T>(endpoint: string, body: object, token?: str
         body: JSON.stringify(body)
     });
 
-    if(!response.ok){
-        const errorData = await response.json().catch(() => ({})); 
-        throw new Error(errorData.message || `Error: ${response.status}. Request Failed`);
+    if(!response.ok) {
+        await handleResponseError(response);
     }
 
     return await response.json();
@@ -46,9 +65,8 @@ export const patchRequest = async <T>(endpoint: string, body: object, token?: st
         body: JSON.stringify(body)
     });
 
-    if(!response.ok){
-        const errorData = await response.json().catch(() => ({})); 
-        throw new Error(errorData.message || `Error: ${response.status}. Request Failed`);
+    if(!response.ok) {
+        await handleResponseError(response);
     }
 
     return await response.json();
@@ -62,9 +80,8 @@ export const deleteRequest = async <T>(endpoint: string, token?: string): Promis
         headers: headers
     });
 
-    if(!response.ok){
-        const errorData = await response.json().catch(() => ({})); 
-        throw new Error(errorData.message || `Error: ${response.status}. Request Failed`);
+    if(!response.ok) {
+        await handleResponseError(response);
     }
 
     if (response.status === 204) {
@@ -82,10 +99,9 @@ export const getRequest = async <T>(endpoint: string, token?: string): Promise<T
         headers: headers
     });
 
-    if(!response.ok){
-        const errorData = await response.json().catch(() => ({})); 
-        console.error(`GET Error: ${response.status}`, errorData);
-        throw new Error(errorData.message || `Error: ${response.status}. Request Failed`);
+    if(!response.ok) {
+        console.error(`GET Error: ${response.status}`);
+        await handleResponseError(response);
     }
 
     const data = await response.json();
