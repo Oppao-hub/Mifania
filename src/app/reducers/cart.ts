@@ -27,12 +27,13 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
             };
 
         case Types.GET_CART_COMPLETED:
+            const cartData = action.payload['hydra:member'] ? action.payload['hydra:member'][0] : action.payload;
             return {
                 ...state,
                 isLoading: false,
-                items: action.payload.cartItems || [],
-                totalPrice: action.payload.totalPrice || '0.00',
-                totalQuantity: action.payload.totalQuantity || 0,
+                items: cartData.cartItems || cartData.items || [],
+                totalPrice: cartData.totalPrice || '0.00',
+                totalQuantity: cartData.totalQuantity || 0,
             };
 
         case Types.GET_COLLECTIONS_COMPLETED:
@@ -51,6 +52,7 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
             return {
                 ...state,
                 isLoading: false,
+                error: null
             };
 
         case Types.GET_CART_ERROR:
