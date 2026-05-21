@@ -1,9 +1,12 @@
 export interface User {
     id?: number | string;
+    customerId?: number;
     firstName?: string;
     lastName?: string;
     email: string;
     token?: string;
+    roles?: string[];
+    verified?: boolean;
 }
 
 export interface LoginCredentials {
@@ -13,14 +16,55 @@ export interface LoginCredentials {
 
 export interface LoginResponse {
     token: string,
-    user: {
-        id: number;
-        email: string;
-        roles: string [];
-        verified: boolean;
-    }
-    code: number;
-    message: string;
+    user: User;
+    code?: number;
+    message?: string;
+}
+
+export interface Customer {
+    id: number;
+    firstName: string;
+    lastName: string;
+    contactNumber?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    state?: string;
+    postalCode?: string;
+    avatar?: string;
+    wallet?: Wallet;
+}
+
+export interface Wallet {
+    id: number;
+    balance: string;
+    rewardPoints: number;
+    walletTransactions?: WalletTransaction[];
+}
+
+export interface WalletTransaction {
+    id: number;
+    amount: string;
+    type: string;
+    description?: string;
+    createdAt: string;
+}
+
+export interface Reward {
+    id: number;
+    name: string;
+    description?: string;
+    pointsRequired: number;
+    isActive: boolean;
+    createdAt: string;
+}
+
+export interface Redemption {
+    id: number;
+    reward: Reward;
+    pointSpent: number;
+    redeemedAt: string;
+    status: string;
 }
 
 export interface RegisterCredentials {
@@ -70,7 +114,7 @@ export interface ProductState {
 }
 
 export interface Category {
-    id: number;
+    id: number | string;
     name: string;
 }
 
@@ -81,11 +125,11 @@ export interface CategoryState {
 }
 
 export interface SubCategory {
-    id: number;
+    id: number | string;
     name: string;
     icon?: string;
     category: {
-        id: number;
+        id: number | string;
         name: string;
     };
 }
@@ -127,6 +171,20 @@ export interface WishlistState {
     items: Product[];
 }
 
+export interface Notification {
+    id: number | string;
+    title: string;
+    message?: string;
+    body?: string; // Kept for local UI mapping compatibility
+    type: string;
+    isRead: boolean;
+    createdAt: string;
+    targetUrl?: string;
+    // UI-only properties
+    icon?: string;
+    emoji?: string;
+}
+
 export interface RootState {
     authentication: AuthState;
     product: ProductState;
@@ -134,4 +192,29 @@ export interface RootState {
     subCategory: SubCategoryState;
     cart: CartState;
     wishlist: WishlistState;
+    customer: {
+        data: Customer | null;
+        isLoading: boolean;
+        isError: boolean;
+        error: string | null;
+    };
+    loyalty: {
+        wallet: Wallet | null;
+        rewards: Reward[];
+        redemptions: Redemption[];
+        isLoading: boolean;
+        isError: boolean;
+        error: string | null;
+    };
+    order: {
+        items: any[];
+        isLoading: boolean;
+        isError: boolean;
+        error: string | null;
+    };
+    notification: {
+        items: Notification[];
+        isLoading: boolean;
+        error: string | null;
+    };
 }

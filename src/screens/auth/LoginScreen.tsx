@@ -4,7 +4,6 @@ import {
     Text, 
     TextInput, 
     TouchableOpacity, 
-    ActivityIndicator, 
     Image, 
     KeyboardAvoidingView, 
     Platform, 
@@ -23,15 +22,13 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import { userGoogleLoginApi } from '../../app/api/auth';
 import { AlertMsg } from '../../components/AlertMsg';
-
-GoogleSignin.configure({
-    webClientId: '300896200734-ti08h9ju74onbmmsl1v9oq011qtvgj1e.apps.googleusercontent.com',
-});
+import CustomModal from '../../components/CustomModal';
 
 const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     
     const navigation = useNavigation<NavigationProp<any>>();
     const dispatch = useDispatch();
@@ -39,8 +36,12 @@ const LoginScreen = () => {
     const { isLoading, isError, error } = useSelector((state: RootState) => state.authentication);
 
     useEffect(() => {
-        dispatch(loginReset());
-    }, [dispatch]);
+        GoogleSignin.configure({
+            webClientId: '300896200734-ti08h9ju74onbmmsl1v9oq011qtvgj1e.apps.googleusercontent.com',
+            offlineAccess: true,
+            forceCodeForRefreshToken: true,
+        });
+    }, []);
 
     useEffect(() => {
         if (isError && error) {
@@ -68,26 +69,36 @@ const LoginScreen = () => {
 
     const handleGoogleSignIn = async () => {
         try {
+            console.log("📍 Google Sign-In: Checking Play Services...");
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-            const hasPrevious = await GoogleSignin.hasPreviousSignIn();
-            if (hasPrevious) {
+            
+            try {
                 await GoogleSignin.signOut();
-                await new Promise(resolve => setTimeout(() => resolve(null), 500));
+            } catch {
+                // Ignore sign out errors
             }
 
+            console.log("📍 Google Sign-In: Opening account picker...");
             const signInResponse = await GoogleSignin.signIn();
-            if (signInResponse.type === 'cancelled') return;
+            if (signInResponse.type === 'cancelled') {
+                console.log("📍 Google Sign-In: Cancelled by user.");
+                return;
+            }
+
+            setIsGoogleLoading(true);
 
             const idToken = signInResponse.data.idToken;
-            if (!idToken) throw new Error("No ID token found.");
+            if (!idToken) throw new Error("No ID token found from Google.");
 
-            // The API call now returns the parsed data directly
+            console.log("📍 Google Sign-In: Exchanging token with backend...");
             const serverData = await userGoogleLoginApi(idToken);
             
+            console.log("📍 Google Sign-In: Syncing with Firebase...");
             const authInstance = getAuth();
             const googleCredential = GoogleAuthProvider.credential(idToken);
             const userCredential = await signInWithCredential(authInstance, googleCredential);
             
+            console.log("📍 Google Sign-In: Login completed.");
             dispatch(userLoginCompleted({
                 user: {
                     id: userCredential.user.uid,
@@ -97,13 +108,35 @@ const LoginScreen = () => {
                 token: serverData.token || idToken
             }));
             
-        } catch (error: any) { 
-            AlertMsg.customError({ title: "Google Sign-In Failed", message: error.message || "An unknown error occurred." });
+        } catch (signInError: any) { 
+            console.log("❌ Google Sign-In Error details:", signInError);
+            const errorCode = signInError.code || "unknown";
+            const errorMessage = signInError.message || "An unknown error occurred.";
+            
+            let extraInfo = "";
+            if (errorCode === '10') {
+                extraInfo = "\n\n(Developer Error: This usually means the SHA-1 fingerprint of your app doesn't match the one registered in the Google/Firebase Console.)";
+            } else if (errorMessage.toLowerCase().includes('network')) {
+                extraInfo = "\n\n(Network Error: Please check your internet connection or verify if your backend server is running and accessible.)";
+            }
+            
+            AlertMsg.customError({ 
+                title: "Google Sign-In Failed", 
+                message: `[Code: ${errorCode}] ${errorMessage}${extraInfo}` 
+            });
+        } finally {
+            setIsGoogleLoading(false);
         }
     };
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+            <CustomModal 
+                visible={isLoading || isGoogleLoading}
+                isLoading={true}
+                message="Signing in..."
+            />
+            
             <KeyboardAvoidingView 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
@@ -138,7 +171,7 @@ const LoginScreen = () => {
                                     className="flex-1 ml-3 text-sm font-bold text-brand-dark"
                                     keyboardType="email-address"
                                     autoCapitalize="none"
-                                    editable={!isLoading}
+                                    editable={!isLoading && !isGoogleLoading}
                                     placeholderTextColor="#9CA3AF"
                                 />
                             </View>
@@ -155,7 +188,7 @@ const LoginScreen = () => {
                                     placeholder="Password"
                                     className="flex-1 ml-3 text-sm font-bold text-brand-dark"
                                     secureTextEntry={!isPasswordVisible}
-                                    editable={!isLoading}
+                                    editable={!isLoading && !isGoogleLoading}
                                     placeholderTextColor="#9CA3AF"
                                 />
                                 <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
@@ -180,14 +213,10 @@ const LoginScreen = () => {
                         <View className="mt-10">
                             <TouchableOpacity 
                                 onPress={handleLogin}
-                                disabled={isLoading}
-                                className={`w-full h-16 rounded-2xl items-center justify-center shadow-lg ${isLoading ? 'bg-brand-light' : 'bg-brand'}`}
+                                disabled={isLoading || isGoogleLoading}
+                                className={`w-full h-16 rounded-2xl items-center justify-center shadow-lg ${(isLoading || isGoogleLoading) ? 'bg-brand-light' : 'bg-brand'}`}
                             >
-                                {isLoading ? (
-                                    <ActivityIndicator color="#ffffff" />
-                                ) : (
-                                    <Text className="text-white text-base font-bold tracking-widest uppercase">Sign In</Text>
-                                )}
+                                <Text className="text-white text-base font-bold tracking-widest uppercase">Sign In</Text>
                             </TouchableOpacity>
 
                             {/* Social Login */}
@@ -200,7 +229,7 @@ const LoginScreen = () => {
                             <TouchableOpacity 
                                 onPress={handleGoogleSignIn}
                                 className="w-full h-16 flex-row items-center justify-center rounded-2xl border border-border-color bg-white shadow-sm"
-                                disabled={isLoading}
+                                disabled={isLoading || isGoogleLoading}
                             >
                                 <Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>
                                 <Text className="text-dark-gray font-bold text-sm">Google Account</Text>
@@ -209,7 +238,7 @@ const LoginScreen = () => {
 
                         {/* Footer */}
                         <View className="mt-auto py-10 items-center">
-                            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.REGISTER)} disabled={isLoading}>
+                            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.REGISTER)} disabled={isLoading || isGoogleLoading}>
                                 <Text className="text-sm text-gray font-medium">
                                     Don't have an account? <Text className="font-bold text-brand">Create Account</Text>
                                 </Text>

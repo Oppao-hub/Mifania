@@ -8,34 +8,34 @@ interface AlertMsgConfig {
 const AlertMsg = {
     customError: ({ title, message }: AlertMsgConfig) => {
         Toast.show({
-            type: 'error',
+            type: 'modalError',
             text1: title,
             text2: message,
-            position: 'top',
-            visibilityTime: 4000,
-            autoHide: true,
+            position: 'top', 
+            topOffset: 0,
+            autoHide: false,
         });
     },
 
     customSuccess: ({ title, message }: AlertMsgConfig) => {
         Toast.show({
-            type: 'success',
+            type: 'modalSuccess',
             text1: title,
             text2: message,
             position: 'top',
-            visibilityTime: 4000,
-            autoHide: true,
+            topOffset: 0,
+            autoHide: false,
         });
     },
 
     customInfo: ({ title, message }: AlertMsgConfig) => {
         Toast.show({
-            type: 'info',
+            type: 'modalInfo',
             text1: title,
             text2: message,
             position: 'top',
-            visibilityTime: 4000,
-            autoHide: true,
+            topOffset: 0,
+            autoHide: false,
         });
     }
 };

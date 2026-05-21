@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { Platform, StatusBar, useColorScheme } from 'react-native';
 import AppNavigator from './AppNavigator';
+import { navigationRef } from '../utils/navigation';
 
 const RootNavigation: React.FC = () => {
   const isDarkMode = useColorScheme() === 'dark';
@@ -15,7 +16,7 @@ const RootNavigation: React.FC = () => {
   }, [isDarkMode]);
 
   return (
-    <NavigationContainer theme={theme}>
+    <NavigationContainer theme={theme} ref={navigationRef}>
       <AppNavigator/>
     </NavigationContainer>
   );

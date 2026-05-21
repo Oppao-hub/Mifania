@@ -8,12 +8,11 @@ import { RootState } from '../utils/types';
 import Header from '../components/Header';
 import SectionHeader from '../components/SectionHeader';
 import ProductCard from '../components/ProductCard';
-import CategoriesList from '../components/CategoriesList';
 import HorizontalProductList from '../components/HorizontalProductList';
 import { getProducts } from '../app/reducers/product';
 import { getCategories } from '../app/reducers/category';
 import { getSubCategories } from '../app/reducers/subCategory';
-import { ASSET_URL } from '../app/api/client';
+
 
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<any>>();

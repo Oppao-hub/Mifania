@@ -2,6 +2,8 @@ import { takeEvery, call, put, select } from 'redux-saga/effects';
 import { getOrdersApi, createOrderApi } from '../api/order';
 import * as Type from '../../app/actions';
 import { RootState } from '../../utils/types';
+import { navigate } from '../../utils/navigation';
+import { ROUTES } from '../../utils';
 
 const getToken = (state: RootState) => state.authentication.data?.token;
 
@@ -30,14 +32,25 @@ export function* createOrderAsync(action: { type: string; payload: { data: any; 
     const data = yield call(createOrderApi, action.payload.data, action.payload.token);
     yield put({ type: Type.CREATE_ORDER_COMPLETED, payload: data });
     
-    // Clear the cart after successful order
+    // 1. Clear the cart state locally
     yield put({ type: Type.CLEAR_CART });
     
-    // Refresh orders after creation
+    // 2. Refresh orders after creation
     yield put({ type: Type.GET_ORDERS, payload: action.payload.token });
 
+    // 3. Refresh Wallet (Reward Points) and Active Cart from Server
+    const authData: { user: { customerId: number } } = yield select((state: RootState) => state.authentication.data);
+    if (authData?.user?.customerId) {
+        yield put({ type: Type.GET_WALLET, payload: { id: authData.user.customerId, token: action.payload.token } });
+    }
+    yield put({ type: Type.GET_CART });
+
     console.log("✅ Order created successfully:", data.id);
+    
+    // Navigate to success screen
+    yield call(navigate, ROUTES.ORDER_SUCCESS);
   } catch (error: unknown) {
+    console.log("❌ Order Creation Failed:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred";
     yield put({ type: Type.CREATE_ORDER_ERROR, payload: message });
   }

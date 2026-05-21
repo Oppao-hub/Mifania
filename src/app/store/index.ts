@@ -45,8 +45,9 @@ const appReducer = combineReducers({
 
 const rootReducer = (state: any, action: any) => {
     if (action.type === Types.USER_LOGOUT) {
-        // clear local storage for auth since it's nested
-        secureStorage.removeItem('auth');
+        // We purge the auth storage specifically first
+        secureStorage.removeItem('persist:auth');
+        // Setting state to undefined will reset all reducers to initial state
         state = undefined;
     }
     return appReducer(state, action);

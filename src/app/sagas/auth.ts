@@ -7,10 +7,18 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
   yield put({ type: Type.USER_LOGIN_REQUEST });
   try {
     const data = yield call(userLoginApi, action.payload);
-    const roles = data.user?.roles || [];
+    console.log("📍 Login API Response:", JSON.stringify(data));
 
-    if(!roles.includes('ROLE_USER') || roles.includes('ROLE_ADMIN') || roles.includes('ROLE_SUPER_ADMIN')){
-      throw new Error("Access Denied: Only customer can log in to this app.");
+    const roles = data.user?.roles || [];
+    
+    // Check if the user has the required customer role
+    if(!roles.includes('ROLE_USER')){
+      throw new Error("Access Denied: This account is not a customer account.");
+    }
+    
+    // Check if it's an admin trying to login to mobile
+    if(roles.includes('ROLE_ADMIN') || roles.includes('ROLE_SUPER_ADMIN')){
+       console.log("⚠️ Admin account detected on mobile.");
     }
 
     try {
@@ -18,13 +26,15 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
       const currentUser = authInstance.currentUser;
       if (!currentUser) {
         yield call(signInWithEmailAndPassword, authInstance, action.payload.email, action.payload.password);
+        console.log("✅ Firebase synced.");
       }
     } catch (firebaseError) {
-      console.log("Firebase sync failed:", firebaseError);
+      console.log("⚠️ Firebase sync skipped or failed:", firebaseError);
     }
 
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
   } catch (error: unknown) {
+    console.log("❌ Login Saga Error:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred";
     yield put({ type: Type.USER_LOGIN_ERROR, payload: message });
   }

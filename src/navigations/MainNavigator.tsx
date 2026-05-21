@@ -9,6 +9,8 @@ import Wishlist from '../screens/WishlistScreen';
 import Order from '../screens/OrderScreen';
 import ProductDetails from '../screens/ProductDetailsScreen';
 import Profile from '../screens/ProfileScreen';
+import Notification from '../screens/NotificationScreen';
+import OrderSuccess from '../screens/OrderSuccessScreen';
 
 const Stack = createStackNavigator();
 
@@ -22,6 +24,8 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen name={ROUTES.ORDER} component={Order} />
       <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetails} />
       <Stack.Screen name={ROUTES.PROFILE} component={Profile} />
+      <Stack.Screen name={ROUTES.NOTIFICATION} component={Notification} />
+      <Stack.Screen name={ROUTES.ORDER_SUCCESS} component={OrderSuccess} />
     </Stack.Navigator>
   );
 };

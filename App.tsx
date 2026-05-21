@@ -12,6 +12,7 @@ import { toastConfig } from './src/utils/toastConfig';
 import NetworkBanner from './src/components/NetworkBanner';
 
 // Configure Google Sign-In at the very top level
+console.log("📍 App: Configuring Google Sign-In...");
 GoogleSignin.configure({
   webClientId: '300896200734-ti08h9ju74onbmmsl1v9oq011qtvgj1e.apps.googleusercontent.com',
   offlineAccess: true,

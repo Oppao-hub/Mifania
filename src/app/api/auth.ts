@@ -2,7 +2,12 @@ import { LoginCredentials, RegisterCredentials, LoginResponse, RegisterResponse 
 import { postRequest } from './client';
 
 export const userLoginApi = async (credentials: LoginCredentials) => {
-    return await postRequest<LoginResponse>("/login", credentials);
+    const body = {
+        ...credentials,
+        username: credentials.email // Symfony often expects 'username' key
+    };
+    console.log("📤 Login API Payload:", JSON.stringify(body));
+    return await postRequest<LoginResponse>("/login", body);
 };
 
 export const userGoogleLoginApi = async (idToken: string) => {

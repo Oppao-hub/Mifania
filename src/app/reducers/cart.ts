@@ -73,7 +73,7 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
             return {
                 ...state,
                 items: state.items.map(item =>
-                    item.id === action.payload
+                    String(item.id) === String(action.payload)
                         ? { ...item, selected: !item.selected }
                         : item
                 ),

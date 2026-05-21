@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -6,17 +6,20 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Dimensions,
-  StatusBar
+  StatusBar,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Toast from 'react-native-toast-message';
 import { ASSET_URL } from '../app/api/client';
 import Button from '../components/Button';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../app/reducers/cart';
 import { toggleWishlist } from '../app/reducers/wishlist';
 import { RootState } from '../utils/types';
+import * as Types from '../app/actions';
 
 const { width } = Dimensions.get('window');
 
@@ -25,6 +28,7 @@ export default function ProductDetailScreen() {
   const route = useRoute();
   const dispatch = useDispatch();
   const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
+  const { isLoading: isCartLoading, error: cartError } = useSelector((state: RootState) => state.cart);
   
   const { product }: any = route.params || {};
   const isWishlisted = wishlistItems.some(item => item.id === product?.id);
@@ -32,6 +36,7 @@ export default function ProductDetailScreen() {
   const [selectedSize, setSelectedSize] = useState('L');
   const [selectedColor, setSelectedColor] = useState('Black');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   const sizes = ['XS', 'S', 'M', 'L', 'XL'];
   const colors = [
@@ -42,19 +47,47 @@ export default function ProductDetailScreen() {
     { name: 'Indigo', hex: '#4B0082' },
   ];
 
+  const getImageUrl = (url?: string) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    const separator = url.startsWith('/') ? '' : '/';
+    return `${ASSET_URL}${separator}${url}`;
+  };
+
   // Map API product fields to display fields
   const displayProduct = {
     id: product?.id,
     name: product?.name || 'Loading...',
     price: product?.price || '0',
     description: product?.description || '',
-    image: product?.imageUrl ? `${ASSET_URL}${product.imageUrl}` : (product?.image || ''),
+    image: product?.imageUrl ? getImageUrl(product.imageUrl) : getImageUrl(product?.image),
     rating: product?.rating || 0,
     totalReviews: product?.totalReviews || 0,
     sold: product?.sold || '0'
   };
 
+  // Handle Cart Success/Error
+  useEffect(() => {
+    if (isAddingToCart && !isCartLoading) {
+      if (cartError) {
+        Toast.show({
+          type: 'modalError',
+          text1: 'Oops!',
+          text2: cartError,
+        });
+      } else {
+        Toast.show({
+          type: 'modalSuccess',
+          text1: 'Success!',
+          text2: `${displayProduct.name} has been added to your cart.`,
+        });
+      }
+      setIsAddingToCart(false);
+    }
+  }, [isCartLoading, cartError, isAddingToCart, displayProduct.name]);
+
   const handleAddToCart = () => {
+    setIsAddingToCart(true);
     dispatch(addToCart(displayProduct.id, 1));
   };
 
@@ -120,7 +153,7 @@ export default function ProductDetailScreen() {
         {/* PRODUCT IMAGE CAROUSEL */}
         <View style={{ width: width, height: width * 1.1 }} className="bg-light-gray relative">
           <Image 
-            source={{ uri: displayProduct.image }} 
+            source={{ uri: displayProduct.image || '' }} 
             className="w-full h-full"
             resizeMode="cover"
           />
@@ -302,7 +335,8 @@ export default function ProductDetailScreen() {
           <Button 
             label="Add to Cart" 
             onPress={handleAddToCart}
-            className="h-12 px-2 shadow-lg bg-brand"
+            isLoading={isAddingToCart}
+            className="h-12 px-2 shadow-lg"
             textClassName="text-[12px] font-bold"
           />
         </View>

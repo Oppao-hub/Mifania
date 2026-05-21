@@ -7,8 +7,7 @@ import {
     Image, 
     ScrollView, 
     KeyboardAvoidingView, 
-    Platform, 
-    ActivityIndicator 
+    Platform 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -19,6 +18,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { userRegister, loginReset } from '../../app/reducers/auth';
 import { IMG, ROUTES } from '../../utils';
 import { RootState } from '../../utils/types';
+import CustomModal from '../../components/CustomModal';
 import { AlertMsg } from '../../components/AlertMsg';
 
 const RegisterScreen = () => {
@@ -35,12 +35,6 @@ const RegisterScreen = () => {
     useEffect(() => {
         dispatch(loginReset());
     }, [dispatch]);
-
-    useEffect(() => {
-        if (isError && error && !isLoading) {
-            AlertMsg.customError({ title: "Registration Failed", message: error });
-        }
-    }, [isError, error, isLoading]);
 
     const handleRegister = () => {
         if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
@@ -64,6 +58,12 @@ const RegisterScreen = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+            <CustomModal 
+                visible={isLoading}
+                isLoading={true}
+                message="Creating account..."
+            />
+            
             <KeyboardAvoidingView 
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 className="flex-1"
@@ -94,7 +94,10 @@ const RegisterScreen = () => {
                             <Icon name="person-outline" size={20} color="#6A7282" />
                             <TextInput
                                 value={firstName}
-                                onChangeText={setFirstName}
+                                onChangeText={(text) => {
+                                    setFirstName(text);
+                                    if (isError) dispatch(loginReset());
+                                }}
                                 placeholder="First Name"
                                 className="flex-1 ml-3 text-sm font-bold text-brand-dark h-14"
                                 autoCapitalize="words"
@@ -108,7 +111,10 @@ const RegisterScreen = () => {
                             <Icon name="person-outline" size={20} color="#6A7282" />
                             <TextInput
                                 value={lastName}
-                                onChangeText={setLastName}
+                                onChangeText={(text) => {
+                                    setLastName(text);
+                                    if (isError) dispatch(loginReset());
+                                }}
                                 placeholder="Last Name"
                                 className="flex-1 ml-3 text-sm font-bold text-brand-dark h-14"
                                 autoCapitalize="words"
@@ -118,11 +124,14 @@ const RegisterScreen = () => {
                         </View>
 
                         {/* Email Input */}
-                        <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-15 shadow-sm mb-4">
-                            <Icon name="mail-outline" size={20} color="#6A7282" />
+                        <View className={`flex-row items-center bg-white border ${isError && error?.toLowerCase().includes('email') ? 'border-danger' : 'border-border-color'} rounded-2xl px-4 h-15 shadow-sm mb-4`}>
+                            <Icon name="mail-outline" size={20} color={isError && error?.toLowerCase().includes('email') ? '#DC3545' : '#6A7282'} />
                             <TextInput
                                 value={email}
-                                onChangeText={setEmail}
+                                onChangeText={(text) => {
+                                    setEmail(text);
+                                    if (isError) dispatch(loginReset());
+                                }}
                                 placeholder="Email Address"
                                 className="flex-1 ml-3 text-sm font-bold text-brand-dark h-14"
                                 keyboardType="email-address"
@@ -137,7 +146,10 @@ const RegisterScreen = () => {
                             <Icon name="lock-closed-outline" size={20} color="#6A7282" />
                             <TextInput
                                 value={password}
-                                onChangeText={setPassword}
+                                onChangeText={(text) => {
+                                    setPassword(text);
+                                    if (isError) dispatch(loginReset());
+                                }}
                                 placeholder="Password"
                                 className="flex-1 ml-3 text-sm font-bold text-brand-dark h-14"
                                 secureTextEntry={!isPasswordVisible}
@@ -152,6 +164,14 @@ const RegisterScreen = () => {
                                 />
                             </TouchableOpacity>
                         </View>
+
+                        {/* Inline Error Message */}
+                        {isError && error ? (
+                            <Text className="text-danger text-xs font-montserrat-medium mt-1 ml-1">
+                                {error}
+                            </Text>
+                        ) : null}
+
                     </View>
 
                     {/* Action Button */}
@@ -161,11 +181,7 @@ const RegisterScreen = () => {
                             disabled={isLoading}
                             className={`w-full h-16 rounded-2xl items-center justify-center shadow-lg ${isLoading ? 'bg-brand-light' : 'bg-brand'}`}
                         >
-                            {isLoading ? (
-                                <ActivityIndicator color="#ffffff" />
-                            ) : (
-                                <Text className="text-white text-base font-bold tracking-widest uppercase">Sign Up</Text>
-                            )}
+                            <Text className="text-white text-base font-bold tracking-widest uppercase">Sign Up</Text>
                         </TouchableOpacity>
                     </View>
 
