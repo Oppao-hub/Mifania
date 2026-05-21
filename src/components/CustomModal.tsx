@@ -5,17 +5,16 @@ import {
   Text, 
   TouchableOpacity, 
   Pressable, 
-  ActivityIndicator, 
-  StyleSheet 
+  ActivityIndicator 
 } from 'react-native';
-import { LucideIcon } from 'lucide-react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 interface CustomModalProps {
   visible: boolean;
   onClose?: () => void;
   title?: string;
   message?: string;
-  icon?: LucideIcon;
+  iconName?: string;
   iconColor?: string;
   children?: React.ReactNode;
   primaryButtonText?: string;
@@ -35,7 +34,7 @@ const CustomModal: React.FC<CustomModalProps> = ({
   onClose,
   title,
   message,
-  icon: Icon,
+  iconName,
   iconColor,
   children,
   primaryButtonText,
@@ -60,11 +59,8 @@ const CustomModal: React.FC<CustomModalProps> = ({
       visible={visible}
       onRequestClose={onClose}
     >
-      {/* Backdrop */}
-      <Pressable 
-        onPress={isLoading ? undefined : onClose} 
-        style={StyleSheet.absoluteFill}
-        className="flex-1 justify-center items-center bg-black/50 px-6"
+      <View 
+        className="flex-1 justify-center items-center bg-black/60 px-6"
       >
         {/* Modal Card - Pressable to stop propagation */}
         <Pressable 
@@ -82,9 +78,9 @@ const CustomModal: React.FC<CustomModalProps> = ({
           ) : (
             <>
               {/* Optional Icon */}
-              {Icon && (
+              {iconName && (
                 <View className="mb-5 p-5 rounded-full bg-light-gray">
-                  <Icon size={35} color={iconColor || (type === 'danger' ? '#DC3545' : '#52622E')} />
+                  <Icon name={iconName} size={35} color={iconColor || (type === 'danger' ? '#DC3545' : '#52622E')} />
                 </View>
               )}
 
@@ -138,7 +134,7 @@ const CustomModal: React.FC<CustomModalProps> = ({
             </>
           )}
         </Pressable>
-      </Pressable>
+      </View>
     </Modal>
   );
 };
