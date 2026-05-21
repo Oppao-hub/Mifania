@@ -6,7 +6,7 @@ function* fetchCategoriesWorker(): Generator<any, void, any> {
     yield put({ type: Type.GET_CATEGORIES_REQUEST});
     try {
         const data = yield call(fetchCategories);
-        const categories = Array.isArray(data) ? data : (data.member || data.data || []);
+        const categories = Array.isArray(data) ? data : (data['hydra:member'] || data.member || data.data || []);
         yield put({ type: Type.GET_CATEGORIES_COMPLETED, payload: categories});
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
