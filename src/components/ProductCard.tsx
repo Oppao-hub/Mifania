@@ -21,9 +21,18 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, containerSt
         dispatch(toggleWishlist(product));
     };
 
+    const getImageUrl = (url?: string) => {
+        if (!url) return null;
+        if (url.startsWith('http')) return url;
+        const separator = url.startsWith('/') ? '' : '/';
+        return `${ASSET_URL}${separator}${url}`;
+    };
+
     const imageSource = product.imageUrl 
-        ? { uri: `${ASSET_URL}${product.imageUrl}` }
-        : { uri: product.image };
+        ? { uri: getImageUrl(product.imageUrl) }
+        : product.image 
+            ? { uri: getImageUrl(product.image) }
+            : require('../assets/logos/logo.png');
 
     return (
         <TouchableOpacity
