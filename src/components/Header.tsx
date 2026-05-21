@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector } from 'react-redux';
 import { RootState, Category, SubCategory } from '../utils/types';
-import { IMG } from '../utils';
+import { IMG, ROUTES } from '../utils';
 import CategoriesList from './CategoriesList';
 
 interface HeaderProps {
@@ -27,7 +27,6 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({
   title,
-  showBack,
   showSearch = false,
   searchQuery = '',
   setSearchQuery,
@@ -41,7 +40,7 @@ const Header: React.FC<HeaderProps> = ({
   activeSubCategoryId,
   onSubCategoryPress,
 }) => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   
   // Get counts for specific screens
   const cartCount = useSelector((state: RootState) => state.cart.items.length);
@@ -50,6 +49,10 @@ const Header: React.FC<HeaderProps> = ({
   const displayTitle = isHome ? "Mifania" : title;
   const countToDisplay = title === 'Cart' ? cartCount : title === 'Wishlist' ? wishlistCount : null;
   const finalTitle = countToDisplay !== null ? `${displayTitle} (${countToDisplay})` : displayTitle;
+
+  const handleNotification = () => {
+    navigation.navigate(ROUTES.NOTIFICATION);
+  };
 
   return (
     <View className="bg-app-bg">
@@ -74,7 +77,7 @@ const Header: React.FC<HeaderProps> = ({
         </View>
 
         <View className="z-10 flex-row items-center w-10 justify-end">
-          <TouchableOpacity className="p-1">
+          <TouchableOpacity className="p-1" onPress={handleNotification}>
             <Icon name="notifications-outline" size={24} color="#4B5563" />
             <View className="absolute top-1 right-1 w-2 h-2 bg-terracotta rounded-full border border-white" />
           </TouchableOpacity>
