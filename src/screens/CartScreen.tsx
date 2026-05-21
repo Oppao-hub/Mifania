@@ -121,7 +121,7 @@ const CartScreen = () => {
             const subtotal = (parseFloat(price) * qty).toFixed(2);
             
             return {
-                product: `/api/products/${item.product?.id || item.productId}`, // IRI string
+                product: `/api/products/${item.product?.id}`, // IRI string
                 quantity: qty,                                                 // Integer
                 price: price,                                                  // String
                 subtotal: subtotal                                             // String

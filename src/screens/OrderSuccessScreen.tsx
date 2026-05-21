@@ -1,11 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { ROUTES } from '../utils';
 
 const OrderSuccessScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const { pointsEarned } = route.params || { pointsEarned: 0 };
 
   const handleGoHome = () => {
     navigation.navigate('HomeTab');
@@ -23,9 +25,18 @@ const OrderSuccessScreen = () => {
           <Icon name="checkmark-circle" size={80} color="#52622E" />
         </View>
         
-        <Text className="text-2xl font-montserrat-bold text-dark-gray text-center mb-4">
+        <Text className="text-2xl font-montserrat-bold text-dark-gray text-center mb-2">
           Order Placed Successfully!
         </Text>
+
+        {pointsEarned > 0 && (
+          <View className="bg-brand/5 px-6 py-3 rounded-2xl mb-6 flex-row items-center">
+            <Icon name="star" size={20} color="#52622E" />
+            <Text className="ml-2 text-brand font-montserrat-bold text-sm">
+              You earned {pointsEarned} points!
+            </Text>
+          </View>
+        )}
         
         <Text className="text-gray text-center font-montserrat mb-12 leading-6">
           Your order has been confirmed and is being processed. You can track your order status in the orders section.

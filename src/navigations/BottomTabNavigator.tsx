@@ -43,13 +43,26 @@ const BottomTabNavigator: React.FC = () => {
   // Redirect to Home when logging out from a protected tab
   React.useEffect(() => {
     if (!token) {
-      // Find current route name
+      // Find current route name by looking at the state of the navigator
       const state = navigation.getState();
-      const currentRoute = state?.routes[state.index];
+      
+      // We need to check both the current navigator and potentially nested navigators
+      const currentRouteName = state?.routes[state.index]?.name;
       const protectedTabs = ['Cart', 'My Order', 'Account'];
       
-      if (currentRoute && protectedTabs.includes(currentRoute.name)) {
-        navigation.navigate('HomeTab');
+      // If we are in the BottomTab, we might need to look deeper into its state
+      let activeTabName = currentRouteName;
+      if (currentRouteName === 'BottomTab' && state?.routes[state.index].state) {
+        const tabState = state.routes[state.index].state;
+        activeTabName = tabState?.routeNames?.[tabState.index || 0];
+      }
+      
+      if (activeTabName && protectedTabs.includes(activeTabName)) {
+        // Use a reset to clear the stack and ensure they go to Home
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'HomeTab' as never }],
+        });
       }
     }
   }, [token, navigation]);

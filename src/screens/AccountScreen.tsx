@@ -68,7 +68,7 @@ const AccountScreen = () => {
               // Step 2: Sign out from Google to avoid "auto-login" loop
               try {
                 await GoogleSignin.signOut();
-              } catch (e) {
+              } catch {
                 // Ignore if not a Google user
               }
 
@@ -76,6 +76,13 @@ const AccountScreen = () => {
               dispatch({ type: Types.USER_LOGOUT });
               
               console.log("✅ Successfully logged out from all providers");
+
+              // Step 4: Navigate to HomeTab (Homescreen)
+              // We use reset to ensure the navigation stack is cleared
+              navigation.reset({
+                index: 0,
+                routes: [{ name: 'HomeTab' as never }],
+              });
             } catch (error) {
               console.error("❌ Logout failed:", error);
               // Fallback: Clear Redux anyway so UI resets
