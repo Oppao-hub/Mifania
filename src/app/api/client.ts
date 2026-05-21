@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 export const ASSET_URL: string = "https://sflmifania-production.up.railway.app";
 
 const BASE_URL: string = `${ASSET_URL}/api`;
