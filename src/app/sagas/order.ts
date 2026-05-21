@@ -47,8 +47,9 @@ export function* createOrderAsync(action: { type: string; payload: { data: any; 
 
     console.log("✅ Order created successfully:", data.id);
     
-    // Navigate to success screen
-    yield call(navigate, ROUTES.ORDER_SUCCESS);
+    // Navigate to success screen with points earned
+    // data.totalPoints is expected from the backend as per instructions
+    yield call(navigate, ROUTES.ORDER_SUCCESS, { pointsEarned: data.totalPoints || 0 });
   } catch (error: unknown) {
     console.log("❌ Order Creation Failed:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred";
