@@ -33,6 +33,7 @@ export function authReducer(state = initialState, action: { type: string; payloa
             };
         case Types.USER_LOGOUT:
         case Types.USER_LOGIN_RESET:
+        case Types.USER_REGISTER_RESET:
             return { 
                 ...state, 
                 data: null, 
@@ -76,6 +77,10 @@ export const userLoginCompleted = (payload: { user: User; token?: string }) => (
 
 export const loginReset = () => ({
     type: Types.USER_LOGIN_RESET
+});
+
+export const registerReset = () => ({
+    type: Types.USER_REGISTER_RESET
 });
 
 export const userRegister = (payload: any) => ({
