@@ -1,5 +1,5 @@
 import { LoginCredentials, RegisterCredentials, LoginResponse, RegisterResponse } from '../../utils/types';
-import { postRequest } from './client';
+import { postRequest, patchRequest } from './client';
 
 export const userLoginApi = async (credentials: LoginCredentials) => {
     const body = {
@@ -16,8 +16,8 @@ export const userGoogleLoginApi = async (idToken: string) => {
 
 export const userRegisterApi = async (credentials: RegisterCredentials) => {
     const body = {
-        first_name: credentials.firstName,
-        last_name: credentials.lastName,
+        firstName: credentials.firstName,
+        lastName: credentials.lastName,
         email: credentials.email,
         password: credentials.password
     };
