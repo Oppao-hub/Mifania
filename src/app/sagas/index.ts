@@ -8,6 +8,7 @@ import { watchSocket } from './socket';
 import { watchCustomer } from './customer';
 import { watchLoyalty } from './loyalty';
 import { watchOrder } from './order';
+import { watchNotification } from './notification';
 
 export default function* rootSaga() {
     yield all([
@@ -22,5 +23,6 @@ export default function* rootSaga() {
         watchCustomer(),
         watchLoyalty(),
         watchOrder(),
+        watchNotification(),
     ]);
 }

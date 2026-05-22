@@ -24,23 +24,41 @@ const handleResponseError = async (response: Response) => {
 
     console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
 
+    if (response.status === 401) {
+        throw new Error("Unauthorized");
+    }
+
     if (response.status === 422) {
-        // Specifically return the 'detail' property for validation errors like "Out of Stock"
+        // Handle API Platform violations array
+        if (errorData.violations && errorData.violations.length > 0) {
+            throw new Error(errorData.violations[0].message);
+        }
+        // Fallback to detail
         if (errorData.detail) {
             throw new Error(errorData.detail);
-        } else if (errorData.violations && errorData.violations.length > 0) {
-            throw new Error(errorData.violations[0].message);
         }
     }
     
     throw new Error(errorData.message || errorData['hydra:description'] || errorData.detail || `Error: ${response.status}. Request Failed`);
 };
 
+const buildUrl = (endpoint: string): string => {
+    // If endpoint already starts with http, return it (external or full URL)
+    if (endpoint.startsWith('http')) return endpoint;
+    
+    // If endpoint already starts with '/api', append it to ASSET_URL
+    if (endpoint.startsWith('/api')) return `${ASSET_URL}${endpoint}`;
+    
+    // Otherwise append to BASE_URL (which includes /api)
+    return `${BASE_URL}${endpoint}`;
+};
+
 export const postRequest = async <T>(endpoint: string, body: object, token?: string): Promise<T> => {
     const headers = getHeaders(token);
-    console.log(`POST Request: ${BASE_URL}${endpoint}`, { headers });
+    const url = buildUrl(endpoint);
+    console.log(`POST Request: ${url}`, { headers });
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
+        const response = await fetch(url, {
             method: "POST",
             headers: headers,
             body: JSON.stringify(body)
@@ -64,9 +82,10 @@ export const patchRequest = async <T>(endpoint: string, body: object, token?: st
         ...getHeaders(token),
         "Content-Type": "application/merge-patch+json"
     };
-    console.log(`PATCH Request: ${BASE_URL}${endpoint}`, { headers });
+    const url = buildUrl(endpoint);
+    console.log(`PATCH Request: ${url}`, { headers });
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
+        const response = await fetch(url, {
             method: "PATCH",
             headers: headers,
             body: JSON.stringify(body)
@@ -87,9 +106,10 @@ export const patchRequest = async <T>(endpoint: string, body: object, token?: st
 
 export const deleteRequest = async <T>(endpoint: string, token?: string): Promise<T> => {
     const headers = getHeaders(token);
-    console.log(`DELETE Request: ${BASE_URL}${endpoint}`, { headers });
+    const url = buildUrl(endpoint);
+    console.log(`DELETE Request: ${url}`, { headers });
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
+        const response = await fetch(url, {
             method: "DELETE",
             headers: headers
         });
@@ -113,9 +133,10 @@ export const deleteRequest = async <T>(endpoint: string, token?: string): Promis
 
 export const getRequest = async <T>(endpoint: string, token?: string): Promise<T> => {
     const headers = getHeaders(token);
-    console.log(`GET Request: ${BASE_URL}${endpoint}`, { headers });
+    const url = buildUrl(endpoint);
+    console.log(`GET Request: ${url}`, { headers });
     try {
-        const response = await fetch(`${BASE_URL}${endpoint}`, {
+        const response = await fetch(url, {
             method: "GET",
             headers: headers
         });

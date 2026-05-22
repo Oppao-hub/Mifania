@@ -3,6 +3,7 @@ export const ROUTES = {
     CART: 'Cart' as const,
     WISHLIST: 'Wishlist' as const,
     ORDER: 'Order' as const,
+    ORDER_MANAGEMENT: 'OrderManagement' as const,
     PRODUCT_DETAILS: 'ProductDetails' as const,
     PROFILE: 'Profile' as const,
     LOGIN: 'Login' as const,

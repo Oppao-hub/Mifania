@@ -3,7 +3,7 @@ import { getRequest, postRequest } from './client';
 
 export const getRedemptionsApi = async (token: string) => {
     const response = await getRequest<any>("/redemptions", token);
-    return response['hydra:member'] || [];
+    return response['member'] || response['hydra:member'] || [];
 };
 
 export const createRedemptionApi = async (rewardIri: string, token: string) => {

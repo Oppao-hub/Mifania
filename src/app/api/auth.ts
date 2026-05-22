@@ -23,3 +23,12 @@ export const userRegisterApi = async (credentials: RegisterCredentials) => {
     };
     return await postRequest<RegisterResponse>("/register", body);
 };
+
+export const userUpdateDeviceTokenApi = async (customerIri: string, deviceToken: string, token: string) => {
+    const body = {
+        user: {
+            deviceToken: deviceToken
+        }
+    };
+    return await patchRequest<any>(customerIri, body, token);
+};

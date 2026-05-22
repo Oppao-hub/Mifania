@@ -45,6 +45,12 @@ export function notificationReducer(state = initialState, action: { type: string
                     item.id === action.payload ? { ...item, isRead: true } : item
                 ),
             };
+
+        case Types.MARK_ALL_NOTIFICATIONS_READ:
+            return {
+                ...state,
+                items: state.items.map(item => ({ ...item, isRead: true })),
+            };
             
         case Types.CLEAR_NOTIFICATIONS:
             return {

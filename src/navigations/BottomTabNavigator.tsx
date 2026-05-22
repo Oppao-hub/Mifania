@@ -43,18 +43,28 @@ const BottomTabNavigator: React.FC = () => {
   // Redirect to Home when logging out from a protected tab
   React.useEffect(() => {
     if (!token) {
-      // Find current route name
+      // Find current route name by looking at the state of the navigator
       const state = navigation.getState();
-      const currentRoute = state?.routes[state.index];
+      
+      // We need to check both the current navigator and potentially nested navigators
+      const currentRouteName = state?.routes[state.index]?.name;
       const protectedTabs = ['Cart', 'My Order', 'Account'];
       
-      if (currentRoute && protectedTabs.includes(currentRoute.name)) {
+      // If we are in the BottomTab, we might need to look deeper into its state
+      let activeTabName = currentRouteName;
+      if (currentRouteName === 'BottomTab' && state?.routes[state.index].state) {
+        const tabState = state.routes[state.index].state;
+        activeTabName = tabState?.routeNames?.[tabState.index || 0];
+      }
+      
+      if (activeTabName && protectedTabs.includes(activeTabName)) {
+        // Use jumpTo or navigate with the correct screen name
         navigation.navigate('HomeTab');
       }
     }
   }, [token, navigation]);
 
-  const protectedTabListener = ({ navigation: tabNav, route }: any) => ({
+  const protectedTabListener = ({ navigation: _tabNav, route: _route }: any) => ({
     tabPress: (e: any) => {
       if (!token) {
         e.preventDefault();
@@ -141,7 +151,7 @@ const BottomTabNavigator: React.FC = () => {
         component={AccountScreen}
         listeners={protectedTabListener}
         options={{
-           tabBarLabel: 'Account',
+          tabBarLabel: 'Account',
           tabBarIcon: ({ color, focused }) => <TabIcon name="person" color={color} focused={focused} />,
         }}
       />

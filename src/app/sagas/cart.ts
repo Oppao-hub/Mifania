@@ -22,10 +22,14 @@ export function* getCartAsync(): Generator<any, void, any> {
     yield put({ type: Type.GET_CART_REQUEST });
     try {
         const data = yield call(getCartApi, token);
-        console.log("🛒 Cart API Response:", JSON.stringify(data).substring(0, 500));
-        yield put({ type: Type.GET_CART_COMPLETED, payload: data });
+        const products = yield select((state: RootState) => state.product.items);
+        console.log("🛒 Cart API Response synchronized with products");
+        yield put({ type: Type.GET_CART_COMPLETED, payload: { data, products } });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
+        if (message === "Unauthorized") {
+            yield put({ type: Type.USER_LOGOUT });
+        }
         yield put({ type: Type.GET_CART_ERROR, payload: message });
     }
 }
@@ -40,6 +44,9 @@ export function* getCollectionsAsync(): Generator<any, void, any> {
         yield put({ type: Type.GET_COLLECTIONS_COMPLETED, payload: data });
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
+        if (message === "Unauthorized") {
+            yield put({ type: Type.USER_LOGOUT });
+        }
         yield put({ type: Type.GET_COLLECTIONS_ERROR, payload: message });
     }
 }
@@ -55,6 +62,9 @@ export function* createCollectionAsync(action: { type: string; payload: string }
         yield call(getCollectionsAsync);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
+        if (message === "Unauthorized") {
+            yield put({ type: Type.USER_LOGOUT });
+        }
         yield put({ type: Type.CREATE_COLLECTION_ERROR, payload: message });
     }
 }
@@ -72,6 +82,9 @@ export function* switchCollectionAsync(action: { type: string; payload: number |
         yield call(getCollectionsAsync);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
+        if (message === "Unauthorized") {
+            yield put({ type: Type.USER_LOGOUT });
+        }
         yield put({ type: Type.SWITCH_COLLECTION_ERROR, payload: message });
     }
 }
@@ -87,6 +100,9 @@ export function* deleteCollectionAsync(action: { type: string; payload: number |
         yield call(getCollectionsAsync);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
+        if (message === "Unauthorized") {
+            yield put({ type: Type.USER_LOGOUT });
+        }
         yield put({ type: Type.DELETE_COLLECTION_ERROR, payload: message });
     }
 }
@@ -106,6 +122,9 @@ export function* addToCartAsync(action: { type: string; payload: any }): Generat
         yield call(getCartAsync);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
+        if (message === "Unauthorized") {
+            yield put({ type: Type.USER_LOGOUT });
+        }
         yield put({ type: Type.ADD_TO_CART_ERROR, payload: message });
     }
 }
@@ -121,6 +140,9 @@ export function* updateCartQtyAsync(action: { type: string; payload: any }): Gen
         yield call(getCartAsync);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
+        if (message === "Unauthorized") {
+            yield put({ type: Type.USER_LOGOUT });
+        }
         yield put({ type: Type.UPDATE_CART_QTY_ERROR, payload: message });
     }
 }
@@ -136,6 +158,9 @@ export function* removeFromCartAsync(action: { type: string; payload: any }): Ge
         yield call(getCartAsync);
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
+        if (message === "Unauthorized") {
+            yield put({ type: Type.USER_LOGOUT });
+        }
         yield put({ type: Type.REMOVE_FROM_CART_ERROR, payload: message });
     }
 }

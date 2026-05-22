@@ -46,7 +46,9 @@ const EditVariantModal: React.FC<EditVariantModalProps> = ({
     }
   }, [item, isVisible]);
 
-  if (!item) return null;
+  if (!item || typeof item.product !== 'object') return null;
+
+  const product = item.product;
 
   const getImageUrl = (url?: string) => {
     if (!url) return null;
@@ -55,14 +57,16 @@ const EditVariantModal: React.FC<EditVariantModalProps> = ({
     return `${ASSET_URL}${separator}${url}`;
   };
 
-  const imageSource = item.product.imageUrl 
-    ? { uri: getImageUrl(item.product.imageUrl) }
-    : item.product.image 
-        ? { uri: getImageUrl(item.product.image) }
+  const imageSource = product.imageUrl 
+    ? { uri: getImageUrl(product.imageUrl) }
+    : product.image 
+        ? { uri: getImageUrl(product.image) }
         : require('../assets/logos/logo.png');
 
   const handleConfirm = () => {
-    onConfirm(item.id, qty, size, color);
+    if (item.id !== undefined) {
+      onConfirm(item.id, qty, size, color);
+    }
   };
 
   return (
@@ -87,7 +91,7 @@ const EditVariantModal: React.FC<EditVariantModalProps> = ({
             <View className="flex-1 justify-between h-28 py-1">
               <View>
                 <Text className="text-base font-montserrat-bold text-gray-900 mb-1" numberOfLines={1}>
-                  {item.product.name}
+                  {product.name}
                 </Text>
                 <Text className="text-xs text-gray-500 font-montserrat-medium mb-1">
                   Stock : Available

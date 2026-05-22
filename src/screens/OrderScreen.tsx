@@ -1,137 +1,160 @@
-import React, { useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  ActivityIndicator, 
-  TouchableOpacity 
-} from 'react-native';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, FlatList, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
+import OrderCard from '../components/OrderCard';
 import EmptyState from '../components/EmptyState';
 import { RootState } from '../utils/types';
 import * as Types from '../app/actions';
+import { ROUTES } from '../utils';
 
 const OrderScreen = () => {
   const dispatch = useDispatch();
-  const navigation = useNavigation();
-  const { items: orders, isLoading } = useSelector((state: RootState) => state.order);
+  const navigation = useNavigation<any>();
+  const [activeTab, setActiveTab] = useState<'Active' | 'Completed' | 'Cancelled'>('Active');
+  
+  const { items: orders, isLoading, isError, error } = useSelector((state: RootState) => state.order);
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const token = authData?.token;
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const fetchOrders = useCallback(() => {
     if (token) {
+      console.log('🔄 OrderScreen: Dispatching GET_ORDERS');
       dispatch({ type: Types.GET_ORDERS, payload: token });
     }
   }, [token, dispatch]);
 
-  const getStatusConfig = (status: string) => {
-    switch (status?.toUpperCase()) {
-      case 'COMPLETED':
-        return { 
-          color: '#10B981', 
-          bgColor: 'bg-green-50', 
-          icon: 'check-circle' 
-        };
-      case 'PENDING':
-        return { 
-          color: '#F59E0B', 
-          bgColor: 'bg-amber-50', 
-          icon: 'clock-outline' 
-        };
-      case 'CANCELLED':
-        return { 
-          color: '#EF4444', 
-          bgColor: 'bg-red-50', 
-          icon: 'close-circle' 
-        };
-      default:
-        return { 
-          color: '#6B7280', 
-          bgColor: 'bg-gray-50', 
-          icon: 'help-circle' 
-        };
-    }
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchOrders();
+    }, [fetchOrders])
+  );
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    fetchOrders();
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
-  const renderOrderItem = ({ item }: { item: any }) => {
-    const statusConfig = getStatusConfig(item.status);
+  const filteredOrders = useMemo(() => {
+    console.log('📊 OrderScreen: Total raw orders from state:', orders.length);
+    
+    if (orders.length > 0) {
+        // Log all unique statuses found in the data to help debug
+        const uniqueStatuses = [...new Set(orders.map(o => o.orderStatus))];
+        console.log('🔍 OrderScreen: Unique statuses in data:', JSON.stringify(uniqueStatuses));
+    }
+    
+    const filtered = orders.filter(o => {
+        // Safe check for orderStatus
+        const status = String(o.orderStatus || '').toLowerCase();
+        
+        if (activeTab === 'Active') {
+            return status === 'pending' || 
+                   status === 'processing' || 
+                   status === 'shipped';
+        } else if (activeTab === 'Completed') {
+            return status === 'completed' || 
+                   status === 'delivered';
+        } else {
+            return status === 'cancelled';
+        }
+    });
+    
+    console.log(`📍 OrderScreen: Filtered for tab [${activeTab}] -> Found ${filtered.length} items`);
+    return filtered;
+  }, [orders, activeTab]);
 
-    return (
-      <TouchableOpacity 
-        activeOpacity={0.7}
-        className="bg-white rounded-lg p-4 mb-4 shadow-sm border border-border-color"
-      >
-        <View className="flex-row justify-between items-start mb-4">
-          <View className="flex-row items-center">
-            <View className={`w-10 h-10 rounded-full ${statusConfig.bgColor} items-center justify-center mr-3`}>
-              <Icon name="package-variant-closed" size={20} color={statusConfig.color} />
-            </View>
-            <View>
-              <Text className="text-[10px] font-montserrat-medium text-gray-500 uppercase tracking-wider">Order ID</Text>
-              <Text className="text-sm font-montserrat-bold text-dark-gray">#{item.id}</Text>
-            </View>
-          </View>
-
-          <View className={`px-3 py-1.5 rounded-full ${statusConfig.bgColor} flex-row items-center`}>
-            <Icon name={statusConfig.icon} size={14} color={statusConfig.color} />
-            <Text 
-              className="text-[10px] font-montserrat-bold ml-1"
-              style={{ color: statusConfig.color }}
-            >
-              {item.status}
-            </Text>
-          </View>
-        </View>
-
-        <View className="flex-row justify-between items-end border-t border-gray-50 pt-4">
-          <View>
-            <Text className="text-[10px] font-montserrat-medium text-gray-500 uppercase tracking-wider">Placed on</Text>
-            <Text className="text-xs font-montserrat-medium text-gray-700 mt-0.5">
-              {new Date(item.createdAt).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </Text>
-          </View>
-
-          <View className="items-end">
-            <Text className="text-[10px] font-montserrat-medium text-gray-500 uppercase tracking-wider">Total Amount</Text>
-            <Text className="text-lg font-montserrat-bold text-brand">₱{parseFloat(item.totalAmount).toFixed(2)}</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
+  const handleOrderPress = (order: any) => {
+    navigation.navigate(ROUTES.ORDER_MANAGEMENT, { orderId: order.id, orderIri: order['@id'], initialTab: 'Details' });
   };
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
       <Header title="My Orders" />
 
+      {/* Segmented Control */}
+      <View className="px-6 my-2 pb-2">
+        <View className="flex-row bg-white border border-border-color p-1 rounded-2xl shadow-sm">
+          {['Active', 'Completed', 'Cancelled'].map((tab) => (
+            <TouchableOpacity 
+              key={tab}
+              onPress={() => setActiveTab(tab as any)}
+              className={`flex-1 py-2.5 rounded-xl items-center ${activeTab === tab ? 'bg-brand' : 'bg-transparent'}`}
+            >
+              <Text className={`font-montserrat-bold text-[11px] ${activeTab === tab ? 'text-white' : 'text-gray'}`}>
+                {tab}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Error State */}
+      {isError && orders.length === 0 && (
+        <View className="flex-1 justify-center items-center px-10">
+          <Icon name="alert-circle-outline" size={64} color="#EF4444" />
+          <Text className="text-lg font-montserrat-bold text-dark-gray mt-4 text-center">Failed to load orders</Text>
+          <Text className="text-sm font-montserrat text-gray mt-2 text-center">{error}</Text>
+          <TouchableOpacity 
+            onPress={fetchOrders}
+            className="mt-6 bg-brand px-8 py-3 rounded-xl"
+          >
+            <Text className="text-white font-montserrat-bold">Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Loading State (Initial) */}
       {isLoading && orders.length === 0 ? (
         <View className="flex-1 justify-center items-center">
           <ActivityIndicator size="large" color="#52622E" />
         </View>
-      ) : orders.length > 0 ? (
-        <FlatList
-          data={orders}
-          keyExtractor={(item) => item.id.toString()}
-          renderItem={renderOrderItem}
-          className="px-6 pt-2"
-          contentContainerStyle={{ paddingBottom: 100 }}
-          showsVerticalScrollIndicator={false}
-        />
       ) : (
-        <EmptyState 
-          iconName="package-variant"
-          title="No orders yet"
-          description="Your order history is empty. Start shopping to see your orders here!"
-          buttonText="Browse Products"
-          onButtonPress={() => navigation.navigate('HomeTab' as never)}
+        <FlatList 
+          data={filteredOrders}
+          keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+          renderItem={({ item }) => (
+            <OrderCard 
+              item={item} 
+              onPress={handleOrderPress} 
+              onActionPress={handleOrderPress} 
+            />
+          )}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 100 },
+            filteredOrders.length === 0 && { flexGrow: 1, justifyContent: 'center' }
+          ]}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#52622E']}
+              tintColor={'#52622E'}
+            />
+          }
+          ListEmptyComponent={
+            <EmptyState 
+              iconName="cube-outline"
+              title={orders.length > 0 
+                ? `${activeTab} Orders` 
+                : "No Orders Yet"}
+              description={orders.length > 0 
+                ? `You don't have any ${activeTab.toLowerCase()} orders at the moment.`
+                : "Looks like you haven't placed any orders yet. Start shopping to see them here!"}
+              buttonText={orders.length === 0 ? "Start Shopping" : undefined}
+              onButtonPress={orders.length === 0 ? () => navigation.navigate(ROUTES.HOME as any) : undefined}
+            />
+          }
         />
       )}
     </SafeAreaView>

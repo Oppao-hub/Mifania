@@ -19,7 +19,7 @@ export const productReducer = (state = initialState, action: { type: string; pay
             return {
                 ...state,
                 isLoading: false,
-                items: action.payload,
+                items: action.payload['hydra:member'] || action.payload || [],
             };
         case Types.GET_PRODUCTS_ERROR:
             return {

@@ -1,13 +1,17 @@
-import { Platform } from 'react-native';
 import { io, Socket } from 'socket.io-client';
 import notifee, { AndroidImportance, AuthorizationStatus } from '@notifee/react-native';
 
-// Use 10.0.2.2 for Android Emulator, otherwise use your machine's IP for physical devices
-const SOCKET_URL = "http://sflmifania-production.up.railway.app";
+// Use your Railway production URL - Nginx proxies /socket.io/ to port 3001
+const SOCKET_URL = "https://sflmifania-production.up.railway.app";
 
-export const setupSocket = (userId: string, onEvent?: (action: any) => void): Socket => {
+export const setupSocket = (authToken: string, userId: string | number, onEvent?: (action: any) => void): Socket => {
   const socket = io(SOCKET_URL, {
-    auth: { token: userId },
+    auth: { 
+      token: authToken,
+      userId: userId 
+    },
+    transports: ['websocket'], 
+    autoConnect: true,
   });
 
   socket.on("connect", () => {
