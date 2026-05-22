@@ -13,12 +13,12 @@ interface CartItemProps {
 }
 
 const CartItemComponent: React.FC<CartItemProps> = ({ 
-    item, 
+    item,
     onToggleSelection, 
     onRemove,
     onEdit
 }) => {
-    const { product, quantity, price, selected } = item;
+    const { product, quantity, price, selected, productName, productImageUrl } = item;
     
     const getImageUrl = (url?: string) => {
         if (!url) return null;
@@ -27,18 +27,21 @@ const CartItemComponent: React.FC<CartItemProps> = ({
         return `${ASSET_URL}${separator}${url}`;
     };
 
-    const imageSource = product.imageUrl 
-        ? { uri: getImageUrl(product.imageUrl) }
-        : product.image 
-            ? { uri: getImageUrl(product.image) }
-            : require('../assets/logos/logo.png');
+    // Use productImageUrl if product is just a string (IRI), or fallback to product.image
+    const imageUri = typeof product === 'string' ? productImageUrl : (product.imageUrl || product.image);
+    
+    const imageSource = imageUri 
+        ? { uri: getImageUrl(imageUri) }
+        : require('../assets/logos/logo.png');
+
+    const displayName = typeof product === 'string' ? productName : (product.name || productName);
 
     return (
         <View className="flex-row bg-white rounded-[24px] p-3 mb-4 shadow-sm border border-border-color">
             
             {/* Checkbox & Image Container */}
             <View className="flex-row items-center">
-              <TouchableOpacity onPress={() => onToggleSelection(item.id)} className="mr-3">
+              <TouchableOpacity onPress={() => onToggleSelection(item.id!)} className="mr-3">
                 {selected ? (
                     <View className="w-6 h-6 rounded-md bg-brand items-center justify-center">
                         <Icon name="check" size={16} color="#FFFFFF" />
@@ -60,8 +63,8 @@ const CartItemComponent: React.FC<CartItemProps> = ({
             {/* Product Details */}
             <View className="flex-1 ml-4 py-1 justify-between">
               <View>
-                <Text className="text-sm font-bold text-gray-900 mb-1 pr-2" numberOfLines={2}>
-                  {product.name}
+                <Text className="text-sm font-bold text-brand-dark mb-1 pr-2" numberOfLines={2}>
+                  {displayName}
                 </Text>
                 <View className="space-y-1.5 mt-1">
                   {/* Note: size and color are placeholders as they aren't in the current CartItem type yet */}
@@ -84,7 +87,7 @@ const CartItemComponent: React.FC<CartItemProps> = ({
                 <Icon name="pencil-outline" size={20} color="#6B7280" />
               </TouchableOpacity>
               
-              <TouchableOpacity onPress={() => onRemove(item.id)} className="p-1 mt-2">
+              <TouchableOpacity onPress={() => onRemove(item.id!)} className="p-1 mt-2">
                 <Icon name="trash-can-outline" size={22} color="#EF4444" />
               </TouchableOpacity>
             </View>

@@ -7,6 +7,7 @@ import Home from '../screens/HomeScreen';
 import Cart from '../screens/CartScreen';
 import Wishlist from '../screens/WishlistScreen';
 import Order from '../screens/OrderScreen';
+import OrderManagement from '../screens/OrderManagementScreen';
 import ProductDetails from '../screens/ProductDetailsScreen';
 import Profile from '../screens/ProfileScreen';
 import Notification from '../screens/NotificationScreen';
@@ -22,6 +23,7 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen name={ROUTES.CART} component={Cart} />
       <Stack.Screen name={ROUTES.WISHLIST} component={Wishlist} />
       <Stack.Screen name={ROUTES.ORDER} component={Order} />
+      <Stack.Screen name={ROUTES.ORDER_MANAGEMENT} component={OrderManagement} />
       <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetails} />
       <Stack.Screen name={ROUTES.PROFILE} component={Profile} />
       <Stack.Screen name={ROUTES.NOTIFICATION} component={Notification} />

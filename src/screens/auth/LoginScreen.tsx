@@ -100,10 +100,8 @@ const LoginScreen = () => {
             
             console.log("📍 Google Sign-In: Login completed.");
             dispatch(userLoginCompleted({
-                user: {
-                    id: userCredential.user.uid,
+                user: serverData.user || {
                     email: userCredential.user.email || '',
-                    firstName: userCredential.user.displayName || 'Google User',
                 },
                 token: serverData.token || idToken
             }));

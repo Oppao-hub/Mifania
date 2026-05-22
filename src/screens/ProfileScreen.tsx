@@ -8,8 +8,7 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
-  Alert
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -17,6 +16,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { RootState } from '../utils/types';
 import * as Types from '../app/actions';
 import Header from '../components/Header';
+import CustomModal from '../components/CustomModal';
 
 const ProfileScreen = () => {
   const dispatch = useDispatch();
@@ -35,20 +35,40 @@ const ProfileScreen = () => {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  
+  // 💡 TRACK IF WE ARE ACTUALLY PERFORMING AN UPDATE
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  // Local state for feedback modal
+  const [modalConfig, setModalConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'default' | 'danger' | 'success';
+    isLoading: boolean;
+    iconName?: string;
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'default',
+    isLoading: false,
+  });
 
   // Fetch data on mount
   useEffect(() => {
-    if (user?.customerId && token) {
+    if (user?.customer && token) {
       dispatch({ 
         type: Types.GET_CUSTOMER, 
-        payload: { id: user.customerId, token } 
+        payload: { id: user.customer, token } 
       });
       dispatch({
         type: Types.GET_WALLET,
-        payload: { id: user.customerId, token }
+        payload: { id: user.customer, token }
       });
     }
-  }, [user?.customerId, token, dispatch]);
+  }, [user?.customer, token, dispatch]);
 
   // Initialize form fields once when customer data arrives
   useEffect(() => {
@@ -59,40 +79,70 @@ const ProfileScreen = () => {
       setPhone(customer.contactNumber || '');
       setAddress(customer.address || '');
       setCity(customer.city || '');
+      setPostalCode(customer.postalCode || '');
       isInitialized.current = true;
-    } else if (user && !isInitialized.current) {
-      setFirstName(user.firstName || '');
-      setLastName(user.lastName || '');
+    } else if (user && !isInitialized.current && !customer) {
+      // If we only have user data, we can only set email
       setEmail(user.email || '');
     }
   }, [customer, user]);
 
-  // Handle errors
+  // Monitor loading/error states for feedback
   useEffect(() => {
-    if (isCustomerError && customerError) {
-      Alert.alert("Error", customerError);
+    // 💡 Only show "Updating" or "Success" modals if isUpdating is TRUE
+    if (isCustomerLoading && isUpdating) {
+      setModalConfig({
+        visible: true,
+        title: 'Updating',
+        message: 'Updating your profile...',
+        type: 'default',
+        isLoading: true,
+      });
+    } else if (isCustomerError && customerError && isUpdating) {
+      setModalConfig({
+        visible: true,
+        title: 'Error',
+        message: customerError,
+        type: 'danger',
+        isLoading: false,
+        iconName: 'alert-circle-outline'
+      });
+      setIsUpdating(false); // Reset update state
+    } else if (isInitialized.current && !isCustomerLoading && !isCustomerError && isUpdating && modalConfig.isLoading) {
+      setModalConfig({
+        visible: true,
+        title: 'Success',
+        message: 'Your profile has been updated successfully.',
+        type: 'success',
+        isLoading: false,
+        iconName: 'checkmark-circle-outline'
+      });
+      setIsUpdating(false); // Reset update state
     }
-  }, [isCustomerError, customerError]);
+  }, [isCustomerLoading, isCustomerError, customerError, isUpdating, modalConfig.isLoading]);
 
   const handleUpdateProfile = () => {
-    if (user?.customerId && token) {
+    if (user?.customer && token) {
+      setIsUpdating(true); // 💡 Start update flow
       dispatch({
         type: Types.UPDATE_CUSTOMER,
         payload: {
-          id: user.customerId,
+          id: user.customer,
           token,
           data: {
             firstName,
             lastName,
             contactNumber: phone,
             address,
-            city
+            city,
+            postalCode
           }
         }
       });
-      Alert.alert("Profile", "Updating your profile...");
     }
   };
+
+  const closeModal = () => setModalConfig({ ...modalConfig, visible: false });
 
   if (isCustomerLoading && !customer) {
     return (
@@ -232,6 +282,21 @@ const ProfileScreen = () => {
               </View>
             </View>
 
+            {/* Postal Code */}
+            <View className="mb-5">
+              <Text className="text-xs font-montserrat-medium text-gray-500 mb-2 ml-1">Postal Code</Text>
+              <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
+                <TextInput 
+                  value={postalCode}
+                  onChangeText={setPostalCode}
+                  keyboardType="numeric"
+                  className="flex-1 font-montserrat-bold text-brand-dark text-sm"
+                  placeholderTextColor="#9CA3AF"
+                  placeholder="e.g., 1000"
+                />
+              </View>
+            </View>
+
             <TouchableOpacity 
               onPress={handleUpdateProfile}
               className="bg-brand h-16 rounded-2xl items-center justify-center mt-4 shadow-md"
@@ -242,6 +307,18 @@ const ProfileScreen = () => {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CustomModal 
+        visible={modalConfig.visible}
+        onClose={closeModal}
+        title={modalConfig.title}
+        message={modalConfig.message}
+        type={modalConfig.type}
+        isLoading={modalConfig.isLoading}
+        iconName={modalConfig.iconName}
+        primaryButtonText={modalConfig.isLoading ? undefined : "Close"}
+        onPrimaryAction={closeModal}
+      />
     </SafeAreaView>
   );
 };

@@ -1,7 +1,8 @@
 import { takeEvery, call, put } from 'redux-saga/effects';
-import { userLoginApi, userRegisterApi } from '../api/auth';
+import { userLoginApi, userRegisterApi, userUpdateDeviceTokenApi } from '../api/auth';
 import * as Type from '../../app/actions';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
+import messaging from '@react-native-firebase/messaging';
 
 export function* userLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
   yield put({ type: Type.USER_LOGIN_REQUEST });
@@ -33,6 +34,18 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
     }
 
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
+
+    // --- PUSH NOTIFICATION TOKEN SYNC ---
+    try {
+      const deviceToken = yield call([messaging(), messaging().getToken]);
+      if (deviceToken && data.token) {
+        console.log("📲 FCM Token obtained:", deviceToken);
+        yield call(userUpdateDeviceTokenApi, deviceToken, data.token);
+        console.log("✅ Device token synced with backend.");
+      }
+    } catch (pushError) {
+      console.log("⚠️ Push token sync failed:", pushError);
+    }
   } catch (error: unknown) {
     console.log("❌ Login Saga Error:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred";
@@ -63,7 +76,9 @@ export function* userRegister(action: { type: string; payload: any }): Generator
 export function* userLogout(): Generator<any, void, any> {
   try {
     const authInstance = getAuth();
-    yield call([authInstance, authInstance.signOut]);
+    if (authInstance.currentUser) {
+      yield call([authInstance, authInstance.signOut]);
+    }
   } catch (error) {
     console.log("Logout sync failed:", error);
   }

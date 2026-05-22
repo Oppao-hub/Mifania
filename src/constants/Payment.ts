@@ -8,12 +8,16 @@ export const PaymentMethods = {
 export const PaymentStatuses = {
     PENDING: 'Pending',
     PAID: 'Paid',
+    REFUNDED: 'Refunded',
     FAILED: 'Failed',
 };
 
 export const OrderStatuses = {
     PENDING: 'Pending',
     PROCESSING: 'Processing',
+    SHIPPED: 'Shipped',
+    DELIVERED: 'Delivered',
+    CANCELLED: 'Cancelled',
     COMPLETED: 'Completed',
 };
 

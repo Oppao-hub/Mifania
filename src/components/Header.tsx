@@ -45,6 +45,7 @@ const Header: React.FC<HeaderProps> = ({
   // Get counts for specific screens
   const cartCount = useSelector((state: RootState) => state.cart.items.length);
   const wishlistCount = useSelector((state: RootState) => state.wishlist.items.length);
+  const unreadNotificationCount = useSelector((state: RootState) => state.notification.items.filter(n => !n.isRead).length);
 
   const displayTitle = isHome ? "Mifania" : title;
   const countToDisplay = title === 'Cart' ? cartCount : title === 'Wishlist' ? wishlistCount : null;
@@ -66,7 +67,16 @@ const Header: React.FC<HeaderProps> = ({
               resizeMode="contain" 
             />
           ) : (
-            <TouchableOpacity onPress={() => navigation.goBack()} className="p-1">
+            <TouchableOpacity 
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate('HomeTab');
+                }
+              }} 
+              className="p-1"
+            >
               <Icon name="arrow-back" size={24} color="#4B5563" />
             </TouchableOpacity>
           )}
@@ -79,7 +89,9 @@ const Header: React.FC<HeaderProps> = ({
         <View className="z-10 flex-row items-center w-10 justify-end">
           <TouchableOpacity className="p-1" onPress={handleNotification}>
             <Icon name="notifications-outline" size={24} color="#4B5563" />
-            <View className="absolute top-1 right-1 w-2 h-2 bg-terracotta rounded-full border border-white" />
+            {unreadNotificationCount > 0 && (
+              <View className="absolute top-1 right-1 w-2 h-2 bg-terracotta rounded-full border border-white" />
+            )}
           </TouchableOpacity>
         </View>
       </View>

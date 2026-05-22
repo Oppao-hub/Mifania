@@ -21,7 +21,7 @@ const WishlistScreen = () => {
           <FlatList
             data={wishlistItems}
             numColumns={2}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(item, index) => item.id?.toString() || index.toString()}
             columnWrapperStyle={{ justifyContent: 'space-between' }}
             contentContainerStyle={{ paddingBottom: 100, paddingTop: 10 }}
             renderItem={({ item }) => (

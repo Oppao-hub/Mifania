@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
-import { getAuth, signOut } from '@react-native-firebase/auth';
+import { getAuth } from '@react-native-firebase/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 import { ROUTES } from '../utils';
@@ -35,14 +35,14 @@ const ProfileOptionItem: React.FC<ProfileOptionItemProps> = ({ icon, label, isLo
 );
 
 const AccountScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const dispatch = useDispatch();
   
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const { data: customer } = useSelector((state: RootState) => state.customer);
   
   const user = authData?.user;
-  const displayName = customer ? `${customer.firstName} ${customer.lastName}` : (user?.firstName ? `${user.firstName} ${user.lastName || ''}` : 'Mifania User');
+  const displayName = customer ? `${customer.firstName} ${customer.lastName}` : 'Mifania User';
   const displayEmail = user?.email || 'user@mifania.com';
   const displayAvatar = customer?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg';
 
@@ -63,26 +63,22 @@ const AccountScreen = () => {
             try {
               // Step 1: Sign out from Firebase
               const authInstance = getAuth();
-              await signOut(authInstance);
+              if (authInstance.currentUser) {
+                await authInstance.signOut();
+              }
 
               // Step 2: Sign out from Google to avoid "auto-login" loop
               try {
                 await GoogleSignin.signOut();
               } catch {
-                // Ignore if not a Google user
+                // Ignore if not a Google user or error
               }
 
               // Step 3: Clear Redux state
               dispatch({ type: Types.USER_LOGOUT });
               
               console.log("✅ Successfully logged out from all providers");
-
-              // Step 4: Navigate to HomeTab (Homescreen)
-              // We use reset to ensure the navigation stack is cleared
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'HomeTab' as never }],
-              });
+              // AppNavigator will automatically switch to Auth stack because token is cleared
             } catch (error) {
               console.error("❌ Logout failed:", error);
               // Fallback: Clear Redux anyway so UI resets

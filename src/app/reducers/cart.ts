@@ -1,5 +1,5 @@
 import * as Types from '../actions';
-import { CartState } from '../../utils/types';
+import { CartState, Product } from '../../utils/types';
 
 const initialState: CartState = {
     items: [],
@@ -27,11 +27,36 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
             };
 
         case Types.GET_CART_COMPLETED:
-            const cartData = action.payload['hydra:member'] ? action.payload['hydra:member'][0] : action.payload;
+            const rawData = action.payload.data;
+            const cartData = rawData['member'] ? rawData['member'][0] : (rawData['hydra:member'] ? rawData['hydra:member'][0] : rawData);
+            const cartItems = cartData.cartItems || cartData.items || [];
+            const allProducts: Product[] = action.payload.products || [];
+            
+            // Map items to ensure we handle IRIs by looking up the full product from the store
+            const mappedItems = cartItems.map((item: any) => {
+                let productData = item.product;
+                
+                // If product is an IRI string (e.g., "/api/products/3"), try to find it in the products list
+                if (typeof productData === 'string') {
+                    const foundProduct = allProducts.find(p => 
+                        p['@id'] === productData || `/api/products/${p.id}` === productData
+                    );
+                    if (foundProduct) {
+                        productData = foundProduct;
+                    }
+                }
+
+                return {
+                    ...item,
+                    product: productData,
+                    selected: item.selected !== undefined ? item.selected : true 
+                };
+            });
+
             return {
                 ...state,
                 isLoading: false,
-                items: cartData.cartItems || cartData.items || [],
+                items: mappedItems,
                 totalPrice: cartData.totalPrice || '0.00',
                 totalQuantity: cartData.totalQuantity || 0,
             };
@@ -40,7 +65,7 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
             return {
                 ...state,
                 isLoading: false,
-                collections: action.payload['hydra:member'] || action.payload || [],
+                collections: action.payload['member'] || action.payload['hydra:member'] || action.payload || [],
             };
 
         case Types.ADD_TO_CART_COMPLETED:

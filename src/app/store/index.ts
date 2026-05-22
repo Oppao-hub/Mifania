@@ -27,7 +27,7 @@ const authPersistConfig = {
 const rootPersistConfig = {
     key: 'root',
     storage: AsyncStorage,
-    whitelist: ['cart', 'wishlist'] // Persist cart and wishlist, auth is handled separately
+    whitelist: ['cart', 'wishlist', 'notification'] // Persist cart, wishlist, and notifications locally
 };
 
 const appReducer = combineReducers({

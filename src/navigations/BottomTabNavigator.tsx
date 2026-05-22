@@ -58,16 +58,13 @@ const BottomTabNavigator: React.FC = () => {
       }
       
       if (activeTabName && protectedTabs.includes(activeTabName)) {
-        // Use a reset to clear the stack and ensure they go to Home
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'HomeTab' as never }],
-        });
+        // Use jumpTo or navigate with the correct screen name
+        navigation.navigate('HomeTab');
       }
     }
   }, [token, navigation]);
 
-  const protectedTabListener = ({ navigation: tabNav, route }: any) => ({
+  const protectedTabListener = ({ navigation: _tabNav, route: _route }: any) => ({
     tabPress: (e: any) => {
       if (!token) {
         e.preventDefault();
@@ -154,7 +151,7 @@ const BottomTabNavigator: React.FC = () => {
         component={AccountScreen}
         listeners={protectedTabListener}
         options={{
-           tabBarLabel: 'Account',
+          tabBarLabel: 'Account',
           tabBarIcon: ({ color, focused }) => <TabIcon name="person" color={color} focused={focused} />,
         }}
       />

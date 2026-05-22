@@ -19,7 +19,7 @@ export const subCategoryReducer = (state = initialState, action: { type: string;
             return {
                 ...state,
                 isLoading: false,
-                items: action.payload,
+                items: action.payload['hydra:member'] || action.payload || [],
             };
         case Types.GET_SUB_CATEGORIES_ERROR:
             return {

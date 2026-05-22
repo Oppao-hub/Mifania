@@ -6,8 +6,7 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Dimensions,
-  StatusBar,
-  ActivityIndicator
+  StatusBar
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -19,7 +18,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../app/reducers/cart';
 import { toggleWishlist } from '../app/reducers/wishlist';
 import { RootState } from '../utils/types';
-import * as Types from '../app/actions';
+import { ROUTES } from '../utils';
 
 const { width } = Dimensions.get('window');
 
@@ -91,6 +90,11 @@ export default function ProductDetailScreen() {
     dispatch(addToCart(displayProduct.id, 1));
   };
 
+  const handleBuyNow = () => {
+    dispatch(addToCart(displayProduct.id, 1));
+    navigation.navigate(ROUTES.CART as never);
+  };
+
   const handleToggleWishlist = () => {
     dispatch(toggleWishlist(product));
   };
@@ -132,7 +136,13 @@ export default function ProductDetailScreen() {
       {/* HEADER */}
       <View className="flex-row items-center justify-between px-4 h-14 bg-app-bg">
         <TouchableOpacity 
-          onPress={() => navigation.goBack()}
+          onPress={() => {
+            if (navigation.canGoBack()) {
+              navigation.goBack();
+            } else {
+              navigation.navigate('HomeTab' as never);
+            }
+          }}
           className="p-2"
         >
           <Icon name="arrow-back" color="#4B5563" size={24} />
@@ -325,7 +335,7 @@ export default function ProductDetailScreen() {
           <Button 
             label="Buy Now" 
             variant="ghost"
-            onPress={() => console.log('Buy Now')}
+            onPress={handleBuyNow}
             className="h-12 px-2 bg-brand/10 border border-brand/20"
             textClassName="text-brand text-[12px] font-bold"
           />

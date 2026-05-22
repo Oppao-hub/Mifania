@@ -10,7 +10,7 @@ const OrderSuccessScreen = () => {
   const { pointsEarned } = route.params || { pointsEarned: 0 };
 
   const handleGoHome = () => {
-    navigation.navigate('HomeTab');
+    navigation.navigate('BottomTab', { screen: 'HomeTab' });
   };
 
   const handleViewOrders = () => {
