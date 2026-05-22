@@ -35,6 +35,18 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
 
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
 
+    // --- FETCH CUSTOMER DATA & WALLET ---
+    if (data.user?.customer) {
+      yield put({ 
+        type: Type.GET_CUSTOMER, 
+        payload: { id: data.user.customer, token: data.token } 
+      });
+      yield put({
+        type: Type.GET_WALLET,
+        payload: { id: data.user.customer, token: data.token }
+      });
+    }
+
     // --- PUSH NOTIFICATION TOKEN SYNC ---
     try {
       const deviceToken = yield call([messaging(), messaging().getToken]);

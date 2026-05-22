@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
 import notifee, { EventType } from '@notifee/react-native';
 
@@ -9,12 +9,15 @@ import MainNavigator from './MainNavigator';
 import { RootState } from '../utils/types';
 import IMG from '../utils/image';
 import { View, ActivityIndicator, Alert, Image, Text } from 'react-native';
+import * as Types from '../app/actions';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
+  const dispatch = useDispatch();
   const [initializing, setInitializing] = useState(true);
-  const data = useSelector((state: RootState) => state.authentication?.data);
+  const authData = useSelector((state: RootState) => state.authentication?.data);
+  const { data: customerData, isLoading: isCustomerLoading, isError: isCustomerError } = useSelector((state: RootState) => state.customer);
 
   useEffect(() => {
     const authInstance = getAuth();
@@ -25,6 +28,21 @@ export default function AppNavigator() {
 
     return subscriber;
   }, []);
+
+  // 💡 Fetch missing global data on app start if already authenticated
+  useEffect(() => {
+    if (!initializing && authData?.token && authData?.user?.customer && !customerData && !isCustomerLoading && !isCustomerError) {
+        console.log("🔄 AppNavigator: Re-fetching global customer data...");
+        dispatch({ 
+            type: Types.GET_CUSTOMER, 
+            payload: { id: authData.user.customer, token: authData.token } 
+        });
+        dispatch({
+            type: Types.GET_WALLET,
+            payload: { id: authData.user.customer, token: authData.token }
+        });
+    }
+  }, [initializing, authData, customerData, isCustomerLoading, isCustomerError, dispatch]);
 
   // Notification Foreground Handler
   useEffect(() => {
@@ -70,7 +88,7 @@ export default function AppNavigator() {
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {data && data.token ? (
+      {authData && authData.token ? (
         <Stack.Screen name="Main" component={MainNavigator} />
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />
