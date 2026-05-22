@@ -21,11 +21,35 @@ export function customerReducer(state = initialState, action: { type: string; pa
         case Types.UPDATE_CUSTOMER_REQUEST:
             return { ...state, isLoading: true, isError: false };
         case Types.GET_CUSTOMER_COMPLETED:
+            console.log("📦 REDUCER: Saving customer data:", action.payload);
+            return { 
+                ...state, 
+                isLoading: false, 
+                data: action.payload,
+                isError: false 
+            };
         case Types.UPDATE_CUSTOMER_COMPLETED:
             return { ...state, isLoading: false, data: action.payload, isError: false };
         case Types.GET_CUSTOMER_ERROR:
+            return { ...state, isLoading: false, isError: true, error: action.payload };
         case Types.UPDATE_CUSTOMER_ERROR:
             return { ...state, isLoading: false, isError: true, error: action.payload };
+        
+        case Types.USER_LOGOUT:
+            return initialState;
+
+        // 💡 Listen for successful login and pick up nested customer data if present
+        case Types.USER_LOGIN_COMPLETED:
+            if (action.payload.user?.customer && typeof action.payload.user.customer === 'object') {
+                return {
+                    ...state,
+                    data: action.payload.user.customer,
+                    isLoading: false,
+                    isError: false
+                };
+            }
+            return state;
+            
         default:
             return state;
     }
