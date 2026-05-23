@@ -25,7 +25,7 @@ const ProfileScreen = () => {
 
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const { data: customerFromSlice, isLoading: isCustomerLoading, isError: isCustomerError, error: customerError } = useSelector((state: RootState) => state.customer);
-  const { wallet } = useSelector((state: RootState) => state.loyalty);
+  const { wallet } = useSelector((state: RootState) => state.wallet);
   
   const user = authData?.user;
   const token = authData?.token;

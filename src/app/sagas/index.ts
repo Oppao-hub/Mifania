@@ -6,7 +6,7 @@ import { watchSubCategory } from './subCategory';
 import { watchCart } from './cart';
 import { watchSocket } from './socket';
 import { watchCustomer } from './customer';
-import { watchLoyalty } from './loyalty';
+import { watchWallet } from './wallet';
 import { watchOrder } from './order';
 import { watchNotification } from './notification';
 
@@ -21,7 +21,7 @@ export default function* rootSaga() {
         watchCart(),
         watchSocket(),
         watchCustomer(),
-        watchLoyalty(),
+        watchWallet(),
         watchOrder(),
         watchNotification(),
     ]);

@@ -38,21 +38,17 @@ export function* getRedemptionsAsync(action: { type: string; payload: string }):
 }
 
 export function* createRedemptionAsync(action: { type: string; payload: { rewardIri: string; token: string, pointsCost?: number } }): Generator<any, void, any> {
-  // Pass the pointsCost to the request action for optimistic UI updates
   yield put({ type: Type.CREATE_REDEMPTION_REQUEST, payload: { pointsCost: action.payload.pointsCost } });
   try {
     const data = yield call(createRedemptionApi, action.payload.rewardIri, action.payload.token);
     yield put({ type: Type.CREATE_REDEMPTION_COMPLETED, payload: data });
-    // Note: We don't refresh the wallet here immediately to let the optimistic update shine,
-    // or we can refresh it if we had the customer ID to ensure sync.
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "An unknown error occurred";
-    // Pass pointsCost back to error so we can rollback
     yield put({ type: Type.CREATE_REDEMPTION_ERROR, payload: { message, pointsCost: action.payload.pointsCost } });
   }
 }
 
-export function* watchLoyalty() {
+export function* watchWallet() {
   yield takeEvery(Type.GET_WALLET, getWalletAsync);
   yield takeEvery(Type.GET_REWARDS, getRewardsAsync);
   yield takeEvery(Type.GET_REDEMPTIONS, getRedemptionsAsync);
