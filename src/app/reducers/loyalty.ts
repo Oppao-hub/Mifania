@@ -1,73 +1,60 @@
-import * as Types from "../actions";
-import { Wallet, Reward, Redemption } from "../../utils/types";
+import { takeEvery, call, put } from 'redux-saga/effects';
+import { getWalletApi } from '../api/wallet';
+import { getRewardsApi } from '../api/reward';
+import { getRedemptionsApi, createRedemptionApi } from '../api/redemption';
+import * as Type from '../../app/actions';
 
-interface LoyaltyState {
-    wallet: Wallet | null;
-    rewards: Reward[];
-    redemptions: Redemption[];
-    isLoading: boolean;
-    isError: boolean;
-    error: string | null;
+export function* getWalletAsync(action: { type: string; payload: { id: string | number; token: string } }): Generator<any, void, any> {
+  yield put({ type: Type.GET_WALLET_REQUEST });
+  try {
+    const data = yield call(getWalletApi, action.payload.id, action.payload.token);
+    yield put({ type: Type.GET_WALLET_COMPLETED, payload: data });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
+    yield put({ type: Type.GET_WALLET_ERROR, payload: message });
+  }
 }
 
-const initialState: LoyaltyState = {
-    wallet: null,
-    rewards: [],
-    redemptions: [],
-    isLoading: false,
-    isError: false,
-    error: null,
-};
+export function* getRewardsAsync(action: { type: string; payload: string }): Generator<any, void, any> {
+  yield put({ type: Type.GET_REWARDS_REQUEST });
+  try {
+    const data = yield call(getRewardsApi, action.payload);
+    yield put({ type: Type.GET_REWARDS_COMPLETED, payload: data });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
+    yield put({ type: Type.GET_REWARDS_ERROR, payload: message });
+  }
+}
 
-export function loyaltyReducer(state = initialState, action: { type: string; payload?: any }): LoyaltyState {
-    switch (action.type) {
-        case Types.GET_WALLET_REQUEST:
-        case Types.GET_REWARDS_REQUEST:
-        case Types.GET_REDEMPTIONS_REQUEST:
-            return { ...state, isLoading: true, isError: false };
-            
-        case Types.CREATE_REDEMPTION_REQUEST:
-            // Optimistic UI Update: Deduct points immediately
-            const pointsToDeduct = action.payload?.pointsCost || 0;
-            return { 
-                ...state, 
-                isLoading: true, 
-                isError: false,
-                wallet: state.wallet ? {
-                    ...state.wallet,
-                    rewardPoints: Math.max(0, state.wallet.rewardPoints - pointsToDeduct)
-                } : null
-            };
-            
-        case Types.GET_WALLET_COMPLETED:
-            return { ...state, isLoading: false, wallet: action.payload, isError: false };
-        case Types.GET_REWARDS_COMPLETED:
-            return { ...state, isLoading: false, rewards: action.payload, isError: false };
-        case Types.GET_REDEMPTIONS_COMPLETED:
-            return { ...state, isLoading: false, redemptions: action.payload, isError: false };
-        case Types.CREATE_REDEMPTION_COMPLETED:
-            // The wallet might be refreshed via saga anyway, but we mark it complete
-            return { ...state, isLoading: false, isError: false };
-            
-        case Types.CREATE_REDEMPTION_ERROR:
-            // Rollback optimistic update on error
-            const pointsToRefund = action.payload?.pointsCost || 0;
-            return { 
-                ...state, 
-                isLoading: false, 
-                isError: true, 
-                error: action.payload?.message || action.payload,
-                wallet: state.wallet ? {
-                    ...state.wallet,
-                    rewardPoints: state.wallet.rewardPoints + pointsToRefund
-                } : null
-            };
-            
-        case Types.GET_WALLET_ERROR:
-        case Types.GET_REWARDS_ERROR:
-        case Types.GET_REDEMPTIONS_ERROR:
-            return { ...state, isLoading: false, isError: true, error: action.payload };
-        default:
-            return state;
-    }
+export function* getRedemptionsAsync(action: { type: string; payload: string }): Generator<any, void, any> {
+  yield put({ type: Type.GET_REDEMPTIONS_REQUEST });
+  try {
+    const data = yield call(getRedemptionsApi, action.payload);
+    yield put({ type: Type.GET_REDEMPTIONS_COMPLETED, payload: data });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
+    yield put({ type: Type.GET_REDEMPTIONS_ERROR, payload: message });
+  }
+}
+
+export function* createRedemptionAsync(action: { type: string; payload: { rewardIri: string; token: string, pointsCost?: number } }): Generator<any, void, any> {
+  // Pass the pointsCost to the request action for optimistic UI updates
+  yield put({ type: Type.CREATE_REDEMPTION_REQUEST, payload: { pointsCost: action.payload.pointsCost } });
+  try {
+    const data = yield call(createRedemptionApi, action.payload.rewardIri, action.payload.token);
+    yield put({ type: Type.CREATE_REDEMPTION_COMPLETED, payload: data });
+    // Note: We don't refresh the wallet here immediately to let the optimistic update shine,
+    // or we can refresh it if we had the customer ID to ensure sync.
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "An unknown error occurred";
+    // Pass pointsCost back to error so we can rollback
+    yield put({ type: Type.CREATE_REDEMPTION_ERROR, payload: { message, pointsCost: action.payload.pointsCost } });
+  }
+}
+
+export function* watchLoyalty() {
+  yield takeEvery(Type.GET_WALLET, getWalletAsync);
+  yield takeEvery(Type.GET_REWARDS, getRewardsAsync);
+  yield takeEvery(Type.GET_REDEMPTIONS, getRedemptionsAsync);
+  yield takeEvery(Type.CREATE_REDEMPTION, createRedemptionAsync);
 }
