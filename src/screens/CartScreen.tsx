@@ -11,7 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { RootState, CartItem, Customer } from '../utils/types';
-import { getEmbeddedCustomer } from '../utils/apiResource';
+import { getEmbeddedCustomer, getCustomerRefFromUser } from '../utils/apiResource';
 import { 
     getCart,
     removeFromCart, 
@@ -36,7 +36,7 @@ const CartScreen = () => {
   
   const token = authData?.token;
   
-  // 💡 Fallback to nested customer data in user object if slice is empty
+  const customerRef = getCustomerRefFromUser(authData?.user);
   const customerData: Customer | null = customerFromSlice || getEmbeddedCustomer(authData?.user?.customer);
 
   // Modal State
@@ -60,18 +60,17 @@ const CartScreen = () => {
   useEffect(() => {
     dispatch(getCart());
     
-    // 💡 Fetch customer data if missing but logged in
-    if (!customerData && authData?.user?.customer && authData?.token) {
+    if (!customerData && customerRef && authData?.token) {
       dispatch({ 
         type: Types.GET_CUSTOMER, 
-        payload: { id: authData.user.customer, token: authData.token } 
+        payload: { id: customerRef, token: authData.token } 
       });
       dispatch({
         type: Types.GET_WALLET,
-        payload: { id: authData.user.customer, token: authData.token }
+        payload: { id: customerRef, token: authData.token }
       });
     }
-  }, [dispatch, authData, customerData]);
+  }, [dispatch, authData, customerData, customerRef]);
 
   // Handle Order Success/Error from Redux
   useEffect(() => {
