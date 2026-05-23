@@ -40,7 +40,7 @@ export function customerReducer(state = initialState, action: { type: string; pa
 
         // 💡 Listen for successful login and pick up nested customer data if present
         case Types.USER_LOGIN_COMPLETED:
-            if (action.payload.user?.customer && typeof action.payload.user.customer === 'object') {
+            if (action.payload.user?.customer && typeof action.payload.user.customer === 'object' && 'firstName' in action.payload.user.customer) {
                 return {
                     ...state,
                     data: action.payload.user.customer,
