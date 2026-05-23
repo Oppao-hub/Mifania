@@ -4,6 +4,7 @@ import * as Type from '../../app/actions';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
 import messaging from '@react-native-firebase/messaging';
 import { resolveResourceIri, getCustomerRefFromUser } from '../../utils/apiResource';
+import { disconnectSocket } from '../../services/socket'; // Adjust path if necessary
 
 export function* userLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
   yield put({ type: Type.USER_LOGIN_REQUEST });
@@ -94,8 +95,17 @@ export function* userLogout(): Generator<any, void, any> {
     if (authInstance.currentUser) {
       yield call([authInstance, authInstance.signOut]);
     }
+    
+    // 💡 1. Kill the websocket connection immediately
+    disconnectSocket();
+    console.log("✅ Socket disconnected on logout.");
+
   } catch (error) {
-    console.log("Logout sync failed:", error);
+    console.log("⚠️ Logout sync failed:", error);
+  } finally {
+    // 💡 2. Tell Redux the logout is done (even if Firebase fails)
+    // This clears the state and triggers AppNavigator to show the Login screen
+    yield put({ type: Type.USER_LOGIN_RESET });
   }
 }
 
