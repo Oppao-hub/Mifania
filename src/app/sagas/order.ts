@@ -2,6 +2,7 @@ import { takeEvery, call, put, select } from 'redux-saga/effects';
 import { getOrdersApi, createOrderApi, getOrderDetailsApi } from '../api/order';
 import * as Type from '../../app/actions';
 import { RootState } from '../../utils/types';
+import { getCustomerRefFromUser } from '../../utils/apiResource';
 import { navigate } from '../../utils/navigation';
 import { ROUTES } from '../../utils';
 
@@ -73,9 +74,10 @@ export function* createOrderAsync(action: { type: string; payload: { data: any; 
     yield put({ type: Type.GET_ORDERS, payload: action.payload.token });
 
     // 3. Refresh Wallet (Reward Points) and Active Cart from Server
-    const authData: { user: { customerId: number } } = yield select((state: RootState) => state.authentication.data);
-    if (authData?.user?.customerId) {
-        yield put({ type: Type.GET_WALLET, payload: { id: authData.user.customerId, token: action.payload.token } });
+    const authData = yield select((state: RootState) => state.authentication.data);
+    const customerRef = getCustomerRefFromUser(authData?.user);
+    if (customerRef) {
+        yield put({ type: Type.GET_WALLET, payload: { id: customerRef, token: action.payload.token } });
     }
     yield put({ type: Type.GET_CART });
 

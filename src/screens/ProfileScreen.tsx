@@ -14,14 +14,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector, useDispatch } from 'react-redux';
 import { RootState, Customer } from '../utils/types';
-import { getEmbeddedCustomer } from '../utils/apiResource';
+import { getEmbeddedCustomer, getCustomerRefFromUser } from '../utils/apiResource';
 import * as Types from '../app/actions';
 import Header from '../components/Header';
 import CustomModal from '../components/CustomModal';
 
 const ProfileScreen = () => {
   const dispatch = useDispatch();
-  const isInitialized = useRef(false);
+  const lastSyncedCustomerKey = useRef<string | null>(null);
 
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const { data: customerFromSlice, isLoading: isCustomerLoading, isError: isCustomerError, error: customerError } = useSelector((state: RootState) => state.customer);
@@ -29,8 +29,8 @@ const ProfileScreen = () => {
   
   const user = authData?.user;
   const token = authData?.token;
-  const customerRef = user?.customer;
-  const customer: Customer | null = customerFromSlice || getEmbeddedCustomer(customerRef);
+  const customerRef = getCustomerRefFromUser(user);
+  const customer: Customer | null = customerFromSlice || getEmbeddedCustomer(user?.customer);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -61,7 +61,7 @@ const ProfileScreen = () => {
 
   // Fetch customer data when not already loaded (handles IRI refs from API Platform)
   useEffect(() => {
-    if (customerRef && token && !customerFromSlice && !isCustomerLoading) {
+    if (customerRef && token && !customerFromSlice && !isCustomerLoading && !isCustomerError) {
       dispatch({ 
         type: Types.GET_CUSTOMER, 
         payload: { id: customerRef, token } 
@@ -71,24 +71,30 @@ const ProfileScreen = () => {
         payload: { id: customerRef, token }
       });
     }
-  }, [customerRef, token, customerFromSlice, isCustomerLoading, dispatch]);
+  }, [customerRef, token, customerFromSlice, isCustomerLoading, isCustomerError, dispatch]);
 
-  // Initialize form fields once when customer data arrives
+  // Sync form when customer profile loads or updates from API
   useEffect(() => {
-    if (customer && !isInitialized.current) {
+    if (isUpdating) return;
+
+    if (user?.email) setEmail(user.email);
+
+    if (customer) {
+      const syncKey = String(customer.id ?? customer['@id'] ?? '');
+      if (syncKey && syncKey === lastSyncedCustomerKey.current) return;
+
       setFirstName(customer.firstName || '');
       setLastName(customer.lastName || '');
-      setEmail(user?.email || '');
       setPhone(customer.contactNumber || '');
       setAddress(customer.address || '');
       setCity(customer.city || '');
       setPostalCode(customer.postalCode || '');
-      isInitialized.current = true;
-    } else if (user && !isInitialized.current && !customer) {
-      // If we only have user data, we can only set email
-      setEmail(user.email || '');
+      lastSyncedCustomerKey.current = syncKey || 'loaded';
+    } else if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
     }
-  }, [customer, user]);
+  }, [customer, user, isUpdating]);
 
   // Monitor loading/error states for feedback
   useEffect(() => {
@@ -111,7 +117,7 @@ const ProfileScreen = () => {
         iconName: 'alert-circle-outline'
       });
       setIsUpdating(false); // Reset update state
-    } else if (isInitialized.current && !isCustomerLoading && !isCustomerError && isUpdating && modalConfig.isLoading) {
+    } else if (lastSyncedCustomerKey.current && !isCustomerLoading && !isCustomerError && isUpdating && modalConfig.isLoading) {
       setModalConfig({
         visible: true,
         title: 'Success',

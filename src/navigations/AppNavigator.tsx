@@ -10,27 +10,32 @@ import { RootState } from '../utils/types';
 import IMG from '../utils/image';
 import { View, ActivityIndicator, Alert, Image, Text } from 'react-native';
 import * as Types from '../app/actions';
+import { getCustomerRefFromUser } from '../utils/apiResource';
 
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   const dispatch = useDispatch();
   const authData = useSelector((state: RootState) => state.authentication?.data);
+  
+  // 💡 1. Pull isError from the customer slice
   const { data: customerData, isLoading: isCustomerLoading, isError: isCustomerError } = useSelector((state: RootState) => state.customer);
+  
   const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
     const authInstance = getAuth();
     const subscriber = onAuthStateChanged(authInstance, () => {
-      // Once Firebase is checked, we mark initialization as complete
       setInitializing(false);
     });
     return subscriber;
   }, []);
 
-  // Re-fetch customer on app start when auth is persisted but customer slice is empty
   useEffect(() => {
-    const customerRef = authData?.user?.customer;
+    const customerRef = getCustomerRefFromUser(authData?.user);
+    
+    // 💡 2. Add !isCustomerError to the condition
+    // This acts as a circuit breaker. If the fetch fails once, it won't try again.
     if (!initializing && authData?.token && customerRef && !customerData && !isCustomerLoading && !isCustomerError) {
       dispatch({
         type: Types.GET_CUSTOMER,
@@ -41,7 +46,7 @@ export default function AppNavigator() {
         payload: { id: customerRef, token: authData.token },
       });
     }
-  }, [initializing, authData, customerData, isCustomerLoading, isCustomerError, dispatch]);
+  }, [initializing, authData, customerData, isCustomerLoading, isCustomerError, dispatch]); // 💡 3. Add isCustomerError to dependencies
   
   useEffect(() => {
     const unsubscribeForeground = notifee.onForegroundEvent(({ type, detail }) => {
@@ -52,7 +57,6 @@ export default function AppNavigator() {
     return unsubscribeForeground;
   }, []);
 
-  // 💡 Render Loading Screen if still initializing Firebase
   if (initializing) {
     return (
       <View className="flex-1 items-center bg-white justify-center">
