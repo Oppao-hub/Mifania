@@ -3,6 +3,7 @@ import { userLoginApi, userRegisterApi, userUpdateDeviceTokenApi } from '../api/
 import * as Type from '../../app/actions';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
 import messaging from '@react-native-firebase/messaging';
+import { resolveResourceIri } from '../../utils/apiResource';
 
 export function* userLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
   yield put({ type: Type.USER_LOGIN_REQUEST });
@@ -35,12 +36,25 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
 
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
 
+    // --- FETCH CUSTOMER DATA & WALLET ---
+    if (data.user?.customer) {
+      yield put({ 
+        type: Type.GET_CUSTOMER, 
+        payload: { id: data.user.customer, token: data.token } 
+      });
+      yield put({
+        type: Type.GET_WALLET,
+        payload: { id: data.user.customer, token: data.token }
+      });
+    }
+
     // --- PUSH NOTIFICATION TOKEN SYNC ---
+    const customerIri = resolveResourceIri(data.user?.customer, 'customers');
     try {
       const deviceToken = yield call([messaging(), messaging().getToken]);
-      if (deviceToken && data.token) {
+      if (deviceToken && data.token && customerIri) {
         console.log("📲 FCM Token obtained:", deviceToken);
-        yield call(userUpdateDeviceTokenApi, deviceToken, data.token);
+        yield call(userUpdateDeviceTokenApi, customerIri, deviceToken, data.token);
         console.log("✅ Device token synced with backend.");
       }
     } catch (pushError) {

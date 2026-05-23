@@ -10,7 +10,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { RootState, CartItem } from '../utils/types';
+import { RootState, CartItem, Customer } from '../utils/types';
+import { getEmbeddedCustomer } from '../utils/apiResource';
 import { 
     getCart,
     removeFromCart, 
@@ -30,11 +31,14 @@ const CartScreen = () => {
   const navigation = useNavigation();
   const { items: cartItems, isLoading } = useSelector((state: RootState) => state.cart);
   const { data: authData } = useSelector((state: RootState) => state.authentication);
-  const { data: customerData } = useSelector((state: RootState) => state.customer);
+  const { data: customerFromSlice, isLoading: isCustomerLoading } = useSelector((state: RootState) => state.customer);
   const { isLoading: isOrdering, isError: isOrderError, error: orderError } = useSelector((state: RootState) => state.order);
   
   const token = authData?.token;
   
+  // 💡 Fallback to nested customer data in user object if slice is empty
+  const customerData: Customer | null = customerFromSlice || getEmbeddedCustomer(authData?.user?.customer);
+
   // Modal State
   const [isModalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
@@ -55,7 +59,19 @@ const CartScreen = () => {
 
   useEffect(() => {
     dispatch(getCart());
-  }, [dispatch]);
+    
+    // 💡 Fetch customer data if missing but logged in
+    if (!customerData && authData?.user?.customer && authData?.token) {
+      dispatch({ 
+        type: Types.GET_CUSTOMER, 
+        payload: { id: authData.user.customer, token: authData.token } 
+      });
+      dispatch({
+        type: Types.GET_WALLET,
+        payload: { id: authData.user.customer, token: authData.token }
+      });
+    }
+  }, [dispatch, authData, customerData]);
 
   // Handle Order Success/Error from Redux
   useEffect(() => {
@@ -107,14 +123,22 @@ const CartScreen = () => {
       return;
     }
 
+    if (isCustomerLoading) {
+        setAlertConfig({
+            visible: true,
+            type: 'info',
+            message: 'Loading your profile information... Please try again in a moment.',
+        });
+        return;
+    }
+
     // 💡 Profile Completeness Check (Per Backend Requirements)
-    if (!customerData?.address || !customerData?.contactNumber) {
+    if (!customerData || !customerData?.address || !customerData?.contactNumber) {
       setAlertConfig({
         visible: true,
         type: 'warning',
-        message: 'Please complete your profile with an address and contact number before placing an order.',
+        message: 'Please complete your profile with an address and contact number in the Profile screen before placing an order.',
       });
-      // Option to navigate to profile: navigation.navigate(ROUTES.PROFILE as never);
       return;
     }
 

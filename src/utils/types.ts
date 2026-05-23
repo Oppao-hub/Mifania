@@ -304,6 +304,15 @@ export interface WishlistState {
   items: Product[];
 }
 
+export interface WalletSliceState {
+  wallet: Wallet | null;
+  rewards: Reward[];
+  redemptions: Redemption[];
+  isLoading: boolean;
+  isError: boolean;
+  error: string | null;
+}
+
 export interface RootState {
   authentication: AuthState;
   product: ProductState;
@@ -317,14 +326,7 @@ export interface RootState {
     isError: boolean;
     error: string | null;
   };
-  loyalty: {
-    wallet: Wallet | null;
-    rewards: Reward[];
-    redemptions: Redemption[];
-    isLoading: boolean;
-    isError: boolean;
-    error: string | null;
-  };
+  wallet: WalletSliceState;
   order: {
     items: Order[];
     currentOrder: Order | null;

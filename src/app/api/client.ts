@@ -1,4 +1,4 @@
-export const ASSET_URL: string = "https://sflmifania-production.up.railway.app";
+export const ASSET_URL: string = "https://sfl-mifania.up.railway.app";
 
 const BASE_URL: string = `${ASSET_URL}/api`;
 

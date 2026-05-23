@@ -15,7 +15,7 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 
 // Redux Imports
 import { useDispatch, useSelector } from 'react-redux';
-import { userRegister, loginReset } from '../../app/reducers/auth';
+import { userRegister, registerReset } from '../../app/reducers/auth';
 import { IMG, ROUTES } from '../../utils';
 import { RootState } from '../../utils/types';
 import CustomModal from '../../components/CustomModal';
@@ -30,11 +30,21 @@ const RegisterScreen = () => {
     
     const navigation = useNavigation<NavigationProp<any>>();
     const dispatch = useDispatch();
-    const { isLoading, isError, error } = useSelector((state: RootState) => state.authentication);
+    const { isLoading, isError, error, data } = useSelector((state: RootState) => state.authentication);
 
     useEffect(() => {
-        dispatch(loginReset());
+        dispatch(registerReset());
     }, [dispatch]);
+
+    useEffect(() => {
+        if (data && !isLoading && !isError) {
+            AlertMsg.customSuccess({ 
+                title: "Registration Successful", 
+                message: "Your account has been created. Please sign in." 
+            });
+            navigation.navigate(ROUTES.LOGIN);
+        }
+    }, [data, isLoading, isError, navigation]);
 
     const handleRegister = () => {
         if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
@@ -96,7 +106,7 @@ const RegisterScreen = () => {
                                 value={firstName}
                                 onChangeText={(text) => {
                                     setFirstName(text);
-                                    if (isError) dispatch(loginReset());
+                                    if (isError) dispatch(registerReset());
                                 }}
                                 placeholder="First Name"
                                 className="flex-1 ml-3 text-sm font-bold text-brand-dark h-14"
@@ -113,7 +123,7 @@ const RegisterScreen = () => {
                                 value={lastName}
                                 onChangeText={(text) => {
                                     setLastName(text);
-                                    if (isError) dispatch(loginReset());
+                                    if (isError) dispatch(registerReset());
                                 }}
                                 placeholder="Last Name"
                                 className="flex-1 ml-3 text-sm font-bold text-brand-dark h-14"
@@ -130,7 +140,7 @@ const RegisterScreen = () => {
                                 value={email}
                                 onChangeText={(text) => {
                                     setEmail(text);
-                                    if (isError) dispatch(loginReset());
+                                    if (isError) dispatch(registerReset());
                                 }}
                                 placeholder="Email Address"
                                 className="flex-1 ml-3 text-sm font-bold text-brand-dark h-14"
@@ -148,7 +158,7 @@ const RegisterScreen = () => {
                                 value={password}
                                 onChangeText={(text) => {
                                     setPassword(text);
-                                    if (isError) dispatch(loginReset());
+                                    if (isError) dispatch(registerReset());
                                 }}
                                 placeholder="Password"
                                 className="flex-1 ml-3 text-sm font-bold text-brand-dark h-14"

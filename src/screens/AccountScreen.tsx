@@ -9,6 +9,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 import { ROUTES } from '../utils';
 import { RootState } from '../utils/types';
+import { getEmbeddedCustomer } from '../utils/apiResource';
 import * as Types from '../app/actions';
 import Header from '../components/Header';
 
@@ -39,9 +40,10 @@ const AccountScreen = () => {
   const dispatch = useDispatch();
   
   const { data: authData } = useSelector((state: RootState) => state.authentication);
-  const { data: customer } = useSelector((state: RootState) => state.customer);
+  const { data: customerFromSlice } = useSelector((state: RootState) => state.customer);
   
   const user = authData?.user;
+  const customer = customerFromSlice || getEmbeddedCustomer(user?.customer);
   const displayName = customer ? `${customer.firstName} ${customer.lastName}` : 'Mifania User';
   const displayEmail = user?.email || 'user@mifania.com';
   const displayAvatar = customer?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg';

@@ -1,16 +1,7 @@
 import * as Types from "../actions";
-import { Wallet, Reward, Redemption } from "../../utils/types";
+import { WalletSliceState } from "../../utils/types";
 
-interface LoyaltyState {
-    wallet: Wallet | null;
-    rewards: Reward[];
-    redemptions: Redemption[];
-    isLoading: boolean;
-    isError: boolean;
-    error: string | null;
-}
-
-const initialState: LoyaltyState = {
+const initialState: WalletSliceState = {
     wallet: null,
     rewards: [],
     redemptions: [],
@@ -19,7 +10,7 @@ const initialState: LoyaltyState = {
     error: null,
 };
 
-export function loyaltyReducer(state = initialState, action: { type: string; payload?: any }): LoyaltyState {
+export const walletReducer = (state = initialState, action: { type: string; payload?: any }): WalletSliceState => {
     switch (action.type) {
         case Types.GET_WALLET_REQUEST:
         case Types.GET_REWARDS_REQUEST:
@@ -46,11 +37,9 @@ export function loyaltyReducer(state = initialState, action: { type: string; pay
         case Types.GET_REDEMPTIONS_COMPLETED:
             return { ...state, isLoading: false, redemptions: action.payload, isError: false };
         case Types.CREATE_REDEMPTION_COMPLETED:
-            // The wallet might be refreshed via saga anyway, but we mark it complete
             return { ...state, isLoading: false, isError: false };
             
         case Types.CREATE_REDEMPTION_ERROR:
-            // Rollback optimistic update on error
             const pointsToRefund = action.payload?.pointsCost || 0;
             return { 
                 ...state, 
@@ -70,4 +59,4 @@ export function loyaltyReducer(state = initialState, action: { type: string; pay
         default:
             return state;
     }
-}
+};
