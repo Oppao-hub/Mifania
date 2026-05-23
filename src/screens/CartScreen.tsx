@@ -11,6 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { RootState, CartItem, Customer } from '../utils/types';
+import { getEmbeddedCustomer } from '../utils/apiResource';
 import { 
     getCart,
     removeFromCart, 
@@ -36,7 +37,7 @@ const CartScreen = () => {
   const token = authData?.token;
   
   // 💡 Fallback to nested customer data in user object if slice is empty
-  const customerData: Customer | null = customerFromSlice || (typeof authData?.user?.customer === 'object' ? authData.user.customer : null);
+  const customerData: Customer | null = customerFromSlice || getEmbeddedCustomer(authData?.user?.customer);
 
   // Modal State
   const [isModalVisible, setModalVisible] = useState(false);

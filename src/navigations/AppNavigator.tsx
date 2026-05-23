@@ -15,73 +15,59 @@ const Stack = createStackNavigator();
 
 export default function AppNavigator() {
   const dispatch = useDispatch();
-  const [initializing, setInitializing] = useState(true);
   const authData = useSelector((state: RootState) => state.authentication?.data);
   const { data: customerData, isLoading: isCustomerLoading, isError: isCustomerError } = useSelector((state: RootState) => state.customer);
+  const [initializing, setInitializing] = useState(true);
 
   useEffect(() => {
     const authInstance = getAuth();
-    
-    const subscriber = onAuthStateChanged(authInstance, (_user) => {
+    const subscriber = onAuthStateChanged(authInstance, () => {
+      // Once Firebase is checked, we mark initialization as complete
       setInitializing(false);
     });
-
     return subscriber;
   }, []);
 
-  // 💡 Fetch missing global data on app start if already authenticated
+  // Re-fetch customer on app start when auth is persisted but customer slice is empty
   useEffect(() => {
-    if (!initializing && authData?.token && authData?.user?.customer && !customerData && !isCustomerLoading && !isCustomerError) {
-        console.log("🔄 AppNavigator: Re-fetching global customer data...");
-        dispatch({ 
-            type: Types.GET_CUSTOMER, 
-            payload: { id: authData.user.customer, token: authData.token } 
-        });
-        dispatch({
-            type: Types.GET_WALLET,
-            payload: { id: authData.user.customer, token: authData.token }
-        });
+    const customerRef = authData?.user?.customer;
+    if (!initializing && authData?.token && customerRef && !customerData && !isCustomerLoading && !isCustomerError) {
+      dispatch({
+        type: Types.GET_CUSTOMER,
+        payload: { id: customerRef, token: authData.token },
+      });
+      dispatch({
+        type: Types.GET_WALLET,
+        payload: { id: customerRef, token: authData.token },
+      });
     }
   }, [initializing, authData, customerData, isCustomerLoading, isCustomerError, dispatch]);
-
-  // Notification Foreground Handler
+  
   useEffect(() => {
     const unsubscribeForeground = notifee.onForegroundEvent(({ type, detail }) => {
-      switch (type) {
-        case EventType.DISMISSED:
-          console.log('User dismissed notification');
-          break;
-        case EventType.PRESS:
-          console.log('User pressed notification', detail.notification);
-          if (detail.notification?.body) {
-            Alert.alert('Notification', detail.notification.body);
-          }
-          break;
+      if (type === EventType.PRESS && detail.notification?.body) {
+        Alert.alert('Notification', detail.notification.body);
       }
     });
-
-    return () => {
-      unsubscribeForeground();
-    };
+    return unsubscribeForeground;
   }, []);
 
+  // 💡 Render Loading Screen if still initializing Firebase
   if (initializing) {
     return (
-      <View className="flex-1 items-center bg-white mt-48 ">
+      <View className="flex-1 items-center bg-white justify-center">
         <Image
           source={IMG.LOADING_LOGO}
-          className="w-48 h-48 mt-20"
+          className="w-48 h-48"
           resizeMode="contain"
         />
-        <Text className="text-4xl font-montserrat-bold text-brand">Mifania</Text>
-        
-        <View className="absolute bottom-24">
-          <ActivityIndicator 
-            size="large" 
-            color="#52622E" 
-            style={{ transform: [{ scale: 2 }] }}
-          />
-        </View>
+        <Text className="text-4xl font-montserrat-bold text-brand mt-4">Mifania</Text>
+        <ActivityIndicator 
+          size="large" 
+          color="#52622E" 
+          className="mt-10"
+          style={{ transform: [{ scale: 2 }] }}
+        />
       </View>
     );
   }

@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../utils/types';
+import { RootState, Customer } from '../utils/types';
+import { getEmbeddedCustomer } from '../utils/apiResource';
 import * as Types from '../app/actions';
 import Header from '../components/Header';
 import CustomModal from '../components/CustomModal';
@@ -23,11 +24,13 @@ const ProfileScreen = () => {
   const isInitialized = useRef(false);
 
   const { data: authData } = useSelector((state: RootState) => state.authentication);
-  const { data: customer, isLoading: isCustomerLoading, isError: isCustomerError, error: customerError } = useSelector((state: RootState) => state.customer);
+  const { data: customerFromSlice, isLoading: isCustomerLoading, isError: isCustomerError, error: customerError } = useSelector((state: RootState) => state.customer);
   const { wallet } = useSelector((state: RootState) => state.loyalty);
   
   const user = authData?.user;
   const token = authData?.token;
+  const customerRef = user?.customer;
+  const customer: Customer | null = customerFromSlice || getEmbeddedCustomer(customerRef);
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -56,19 +59,19 @@ const ProfileScreen = () => {
     isLoading: false,
   });
 
-  // Fetch data on mount
+  // Fetch customer data when not already loaded (handles IRI refs from API Platform)
   useEffect(() => {
-    if (user?.customer && token) {
+    if (customerRef && token && !customerFromSlice && !isCustomerLoading) {
       dispatch({ 
         type: Types.GET_CUSTOMER, 
-        payload: { id: user.customer, token } 
+        payload: { id: customerRef, token } 
       });
       dispatch({
         type: Types.GET_WALLET,
-        payload: { id: user.customer, token }
+        payload: { id: customerRef, token }
       });
     }
-  }, [user?.customer, token, dispatch]);
+  }, [customerRef, token, customerFromSlice, isCustomerLoading, dispatch]);
 
   // Initialize form fields once when customer data arrives
   useEffect(() => {
@@ -122,12 +125,12 @@ const ProfileScreen = () => {
   }, [isCustomerLoading, isCustomerError, customerError, isUpdating, modalConfig.isLoading]);
 
   const handleUpdateProfile = () => {
-    if (user?.customer && token) {
+    if (customerRef && token) {
       setIsUpdating(true); // 💡 Start update flow
       dispatch({
         type: Types.UPDATE_CUSTOMER,
         payload: {
-          id: user.customer,
+          id: customerRef,
           token,
           data: {
             firstName,
@@ -144,7 +147,7 @@ const ProfileScreen = () => {
 
   const closeModal = () => setModalConfig({ ...modalConfig, visible: false });
 
-  if (isCustomerLoading && !customer) {
+  if (isCustomerLoading && !customer && customerRef) {
     return (
       <View className="flex-1 justify-center items-center bg-app-bg">
         <ActivityIndicator size="large" color="#52622E" />

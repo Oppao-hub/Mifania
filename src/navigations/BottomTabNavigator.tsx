@@ -3,7 +3,6 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { View } from 'react-native';
 import { useSelector } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
 import { RootState } from '../utils/types';
 import HomeScreen from '../screens/HomeScreen';
 import CartScreen from '../screens/CartScreen';
@@ -38,40 +37,16 @@ const TabIcon = ({ name, color, focused }: { name: string; color: string; focuse
 
 const BottomTabNavigator: React.FC = () => {
   const token = useSelector((state: RootState) => state.authentication?.data?.token);
-  const navigation = useNavigation<any>();
 
-  // Redirect to Home when logging out from a protected tab
-  React.useEffect(() => {
+  const protectedTabListener = ({ navigation }: any) => ({
+  tabPress: (e: any) => {
     if (!token) {
-      // Find current route name by looking at the state of the navigator
-      const state = navigation.getState();
-      
-      // We need to check both the current navigator and potentially nested navigators
-      const currentRouteName = state?.routes[state.index]?.name;
-      const protectedTabs = ['Cart', 'My Order', 'Account'];
-      
-      // If we are in the BottomTab, we might need to look deeper into its state
-      let activeTabName = currentRouteName;
-      if (currentRouteName === 'BottomTab' && state?.routes[state.index].state) {
-        const tabState = state.routes[state.index].state;
-        activeTabName = tabState?.routeNames?.[tabState.index || 0];
-      }
-      
-      if (activeTabName && protectedTabs.includes(activeTabName)) {
-        // Use jumpTo or navigate with the correct screen name
-        navigation.navigate('HomeTab');
-      }
+      e.preventDefault();
+      navigation.navigate('Auth'); 
     }
-  }, [token, navigation]);
+  },
+});
 
-  const protectedTabListener = ({ navigation: _tabNav, route: _route }: any) => ({
-    tabPress: (e: any) => {
-      if (!token) {
-        e.preventDefault();
-        navigation.navigate('Auth'); // Redirect to Auth stack
-      }
-    },
-  });
 
   return (
     <Tab.Navigator
