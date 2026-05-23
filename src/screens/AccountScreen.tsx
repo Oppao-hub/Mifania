@@ -44,7 +44,11 @@ const AccountScreen = () => {
   
   const user = authData?.user;
   const customer = customerFromSlice || getEmbeddedCustomer(user?.customer);
-  const displayName = customer ? `${customer.firstName} ${customer.lastName}` : 'Mifania User';
+  const displayName = customer
+    ? `${customer.firstName} ${customer.lastName}`
+    : user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : 'Mifania User';
   const displayEmail = user?.email || 'user@mifania.com';
   const displayAvatar = customer?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg';
 

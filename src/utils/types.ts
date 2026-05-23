@@ -182,8 +182,12 @@ export interface User extends HydraResource {
   password?: string;
   status?: AccountStatus;
   isVerified: boolean;
+  verified?: boolean;
   verificationToken?: string;
   lastActiveAt?: string;
+  firstName?: string;
+  lastName?: string;
+  customerId?: number;
   customer?: string | Customer;
 }
 
