@@ -4,7 +4,7 @@ import { getRewardsApi } from '../api/reward';
 import { getRedemptionsApi, createRedemptionApi } from '../api/redemption';
 import * as Type from '../../app/actions';
 
-export function* getWalletAsync(action: { type: string; payload: { id: number; token: string } }): Generator<any, void, any> {
+export function* getWalletAsync(action: { type: string; payload: { id: string | number; token: string } }): Generator<any, void, any> {
   yield put({ type: Type.GET_WALLET_REQUEST });
   try {
     const data = yield call(getWalletApi, action.payload.id, action.payload.token);
