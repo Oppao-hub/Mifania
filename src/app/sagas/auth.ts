@@ -3,8 +3,11 @@ import { userLoginApi, userRegisterApi, userGoogleLoginApi, userUpdateDeviceToke
 import * as Type from '../../app/actions';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import messaging from '@react-native-firebase/messaging';
-import { resolveResourceIri } from '../../utils/apiResource';
-import {AlertMsg} from '../../components/AlertMsg';
+// 💡 FIX 1: Added getCustomerRefFromUser to the imports
+import { resolveResourceIri, getCustomerRefFromUser } from '../../utils/apiResource'; 
+import { AlertMsg } from '../../components/AlertMsg';
+// 💡 FIX 2: Import your socket disconnect function (adjust the path if your socket.ts is somewhere else)
+import { disconnectSocket } from '../../services/socket'; 
 
 export function* userLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
   yield put({ type: Type.USER_LOGIN_REQUEST });
@@ -73,8 +76,8 @@ export function* userGoogleLoginAsync(action: { type: string; payload: any }): G
   yield put({ type: Type.USER_LOGIN_REQUEST });
   
   try {
-    // 1. Send the Google token to your Symfony API
-    const data = yield call(userGoogleLoginApi, action.payload);
+    // 💡 FIX 3: Pass ONLY the idToken string, not the whole payload object!
+    const data = yield call(userGoogleLoginApi, action.payload.idToken);
 
     try {
       const authInstance = getAuth();
@@ -85,7 +88,6 @@ export function* userGoogleLoginAsync(action: { type: string; payload: any }): G
       console.log("⚠️ Firebase sync failed:", firebaseError);
     }
 
-    // 💡 2. ADD THIS: Check the flag and show the correct alert
     if (data.is_new_user) {
       AlertMsg.customSuccess({ 
         title: "Welcome to Mifania!", 
@@ -98,17 +100,18 @@ export function* userGoogleLoginAsync(action: { type: string; payload: any }): G
       });
     }
 
-    // 3. Save the user data/token and finish the login flow
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
     
-    if (data.user?.customer) {
+    // 💡 FIX 4: Replaced data.user.customer with getCustomerRefFromUser for safety
+    const customerRef = getCustomerRefFromUser(data.user);
+    if (customerRef) {
       yield put({ 
         type: Type.GET_CUSTOMER, 
-        payload: { id: data.user.customer, token: data.token } 
+        payload: { id: customerRef, token: data.token } 
       });
       yield put({
         type: Type.GET_WALLET,
-        payload: { id: data.user.customer, token: data.token }
+        payload: { id: customerRef, token: data.token }
       });
     }
 
@@ -150,15 +153,12 @@ export function* userLogout(): Generator<any, void, any> {
       yield call([authInstance, authInstance.signOut]);
     }
     
-    // 💡 1. Kill the websocket connection immediately
     disconnectSocket();
     console.log("✅ Socket disconnected on logout.");
 
   } catch (error) {
     console.log("⚠️ Logout sync failed:", error);
   } finally {
-    // 💡 2. Tell Redux the logout is done (even if Firebase fails)
-    // This clears the state and triggers AppNavigator to show the Login screen
     yield put({ type: Type.USER_LOGIN_RESET });
   }
 }
