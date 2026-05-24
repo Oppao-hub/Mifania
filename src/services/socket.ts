@@ -1,101 +1,100 @@
 import { io, Socket } from 'socket.io-client';
 import notifee, { AndroidImportance, AuthorizationStatus } from '@notifee/react-native';
 
-// Use your Railway production URL - Nginx proxies /socket.io/ to port 3001
-const SOCKET_URL = "https://sflmifania-production.up.railway.app";
+const SOCKET_URL = "https://sfl-mifania.up.railway.app";
 
-export const setupSocket = (authToken: string, userId: string | number, onEvent?: (action: any) => void): Socket => {
-  const socket = io(SOCKET_URL, {
-    auth: { 
-      token: authToken,
-      userId: userId 
-    },
-    transports: ['websocket'], 
+let socket: Socket | null = null;
+
+export const setupSocket = (authToken: string, userId: string | number, onEvent?: (action: any) => void) => {
+  // 1. Cleanup previous instance before creating a new one
+  if (socket) {
+    socket.disconnect();
+  }
+
+  socket = io(SOCKET_URL, {
+    auth: { token: authToken, userId: userId },
+    transports: ['websocket'],
     autoConnect: true,
+    reconnection: true,
+    reconnectionAttempts: 5, // Stop trying after 5 attempts to save battery
+    reconnectionDelay: 5000,
   });
 
   socket.on("connect", () => {
-    console.log("✅ Socket connected:", socket.id);
+    console.log("✅ Socket connected:", socket?.id);
   });
 
   socket.on("connect_error", (err) => {
     console.log("❌ Socket connection error:", err.message);
-  });
-
-  // Helper to trigger Redux and Native Notification
-  const triggerNotification = async (data: any, type: string = 'system') => {
-    const notificationItem = {
-      id: data.id || Math.random().toString(36).substr(2, 9),
-      title: data.title,
-      message: data.message,
-      body: data.message, 
-      createdAt: new Date().toISOString(),
-      isRead: false,
-      type: data.type || type,
-      targetUrl: data.targetUrl,
-      icon: data.icon || 'bell-outline',
-      emoji: data.emoji || '🔔'
-    };
-
-    if (onEvent) {
-      onEvent({ type: 'ADD_NOTIFICATION', payload: notificationItem });
+    // If the server explicitly rejects the token, stop retrying
+    if (err.message.includes("401") || err.message.includes("Unauthorized")) {
+        socket?.disconnect();
     }
-
-    const settings = await notifee.requestPermission();
-    if (settings.authorizationStatus < AuthorizationStatus.AUTHORIZED) return;
-
-    const channelId = await notifee.createChannel({
-      id: 'default',
-      name: 'Default Channel',
-      importance: AndroidImportance.HIGH,
-    });
-
-    await notifee.displayNotification({
-      title: notificationItem.title,
-      body: notificationItem.message,
-      android: {
-        channelId,
-        smallIcon: 'ic_launcher', 
-        pressAction: { id: 'default' },
-      },
-    });
-  };
-
-  // Listener for 'notification' event
-  socket.on("notification", async (data: { title: string; message: string; type?: string; id?: number | string; targetUrl?: string }) => {
-    console.log("🔔 Notification received via socket:", data);
-    await triggerNotification(data);
   });
 
-  // Listener for 'new_order'
-  socket.on("new_order", async (data: { orderId: string }) => {
+  // Listener logic remains, just ensure we use the local 'socket' variable
+  socket.on("notification", async (data: any) => {
+    await triggerNotification(data, onEvent);
+  });
+
+  socket.on("new_order", async (data: any) => {
     await triggerNotification({
+      ...data,
       title: 'New Order Received!',
-      message: `Order #${data.orderId} is ready for processing.`,
+      message: `Order #${data.orderId} is ready.`,
       icon: 'package-variant-closed',
       emoji: '📦',
       type: 'order'
-    });
+    }, onEvent);
   });
 
-  // Listener for 'order_status_update'
-  socket.on("order_status_update", async (data: { orderId: string, status: string }) => {
-    console.log("📦 Order Status Updated:", data);
-    
-    // Trigger notification
+  socket.on("order_status_update", async (data: any) => {
     await triggerNotification({
+      ...data,
       title: 'Order Status Updated',
-      message: `Your order #${data.orderId} is now ${data.status}.`,
+      message: `Order #${data.orderId} is now ${data.status}.`,
       icon: 'truck-delivery-outline',
       emoji: '🚚',
       type: 'order'
-    });
-
-    // Also tell Redux to refresh orders if onEvent is provided
-    if (onEvent) {
-      onEvent({ type: 'SOCKET_ORDER_UPDATE' });
-    }
+    }, onEvent);
+    
+    if (onEvent) onEvent({ type: 'SOCKET_ORDER_UPDATE' });
   });
 
   return socket;
+};
+
+// 2. Export a disconnect helper
+export const disconnectSocket = () => {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+    console.log("🔌 Socket disconnected");
+  }
+};
+
+// 3. Extracted triggerNotification to keep setupSocket clean
+const triggerNotification = async (data: any, onEvent?: (action: any) => void) => {
+  if (onEvent) {
+    onEvent({ type: 'ADD_NOTIFICATION', payload: data });
+  }
+
+  const settings = await notifee.requestPermission();
+  if (settings.authorizationStatus < AuthorizationStatus.AUTHORIZED) return;
+
+  const channelId = await notifee.createChannel({
+    id: 'default',
+    name: 'Default Channel',
+    importance: AndroidImportance.HIGH,
+  });
+
+  await notifee.displayNotification({
+    title: data.title,
+    body: data.message,
+    android: {
+      channelId,
+      smallIcon: 'ic_launcher',
+      pressAction: { id: 'default' },
+    },
+  });
 };

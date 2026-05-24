@@ -38,19 +38,20 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
 
     // --- FETCH CUSTOMER DATA & WALLET ---
-    if (data.user?.customer) {
+    const customerRef = getCustomerRefFromUser(data.user);
+    if (customerRef) {
       yield put({ 
         type: Type.GET_CUSTOMER, 
-        payload: { id: data.user.customer, token: data.token } 
+        payload: { id: customerRef, token: data.token } 
       });
       yield put({
         type: Type.GET_WALLET,
-        payload: { id: data.user.customer, token: data.token }
+        payload: { id: customerRef, token: data.token }
       });
     }
 
     // --- PUSH NOTIFICATION TOKEN SYNC ---
-    const customerIri = resolveResourceIri(data.user?.customer, 'customers');
+    const customerIri = resolveResourceIri(customerRef, 'customers');
     try {
       const deviceToken = yield call([messaging(), messaging().getToken]);
       if (deviceToken && data.token && customerIri) {
@@ -148,8 +149,17 @@ export function* userLogout(): Generator<any, void, any> {
     if (authInstance.currentUser) {
       yield call([authInstance, authInstance.signOut]);
     }
+    
+    // 💡 1. Kill the websocket connection immediately
+    disconnectSocket();
+    console.log("✅ Socket disconnected on logout.");
+
   } catch (error) {
-    console.log("Logout sync failed:", error);
+    console.log("⚠️ Logout sync failed:", error);
+  } finally {
+    // 💡 2. Tell Redux the logout is done (even if Firebase fails)
+    // This clears the state and triggers AppNavigator to show the Login screen
+    yield put({ type: Type.USER_LOGIN_RESET });
   }
 }
 

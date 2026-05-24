@@ -57,3 +57,13 @@ export function getEmbeddedCustomer(ref: string | Customer | undefined): Custome
   }
   return null;
 }
+
+/** Login API returns `customerId`; older responses may use `customer` IRI or embedded object. */
+export function getCustomerRefFromUser(
+  user?: { customer?: string | Customer; customerId?: number } | null,
+): string | number | Customer | null {
+  if (!user) return null;
+  if (user.customer != null) return user.customer;
+  if (user.customerId != null) return user.customerId;
+  return null;
+}
