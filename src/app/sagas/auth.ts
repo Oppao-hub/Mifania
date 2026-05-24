@@ -1,9 +1,10 @@
 import { takeEvery, call, put } from 'redux-saga/effects';
-import { userLoginApi, userRegisterApi, userUpdateDeviceTokenApi } from '../api/auth';
+import { userLoginApi, userRegisterApi, userGoogleLoginApi, userUpdateDeviceTokenApi } from '../api/auth';
 import * as Type from '../../app/actions';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from '@react-native-firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 import messaging from '@react-native-firebase/messaging';
 import { resolveResourceIri } from '../../utils/apiResource';
+import {AlertMsg} from '../../components/AlertMsg';
 
 export function* userLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
   yield put({ type: Type.USER_LOGIN_REQUEST });
@@ -67,6 +68,60 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
   }
 }
 
+export function* userGoogleLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
+  yield put({ type: Type.USER_LOGIN_REQUEST });
+  
+  try {
+    // 1. Send the Google token to your Symfony API
+    const data = yield call(userGoogleLoginApi, action.payload);
+
+    try {
+      const authInstance = getAuth();
+      const googleCredential = GoogleAuthProvider.credential(action.payload.idToken); 
+      yield call(signInWithCredential, authInstance, googleCredential);
+      console.log("✅ Firebase synced with Google Token.");
+    } catch (firebaseError) {
+      console.log("⚠️ Firebase sync failed:", firebaseError);
+    }
+
+    // 💡 2. ADD THIS: Check the flag and show the correct alert
+    if (data.is_new_user) {
+      AlertMsg.customSuccess({ 
+        title: "Welcome to Mifania!", 
+        message: "Your account has been created successfully using Google." 
+      });
+    } else {
+      AlertMsg.customSuccess({ 
+        title: "Welcome Back!", 
+        message: "You have successfully logged in." 
+      });
+    }
+
+    // 3. Save the user data/token and finish the login flow
+    yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
+    
+    if (data.user?.customer) {
+      yield put({ 
+        type: Type.GET_CUSTOMER, 
+        payload: { id: data.user.customer, token: data.token } 
+      });
+      yield put({
+        type: Type.GET_WALLET,
+        payload: { id: data.user.customer, token: data.token }
+      });
+    }
+
+  } catch (error: any) {
+    const message = error.response?.data?.error || error.message || "Google Login failed";
+    yield put({ type: Type.USER_LOGIN_ERROR, payload: message });
+    
+    AlertMsg.customError({
+      title: "Login Failed",
+      message: message
+    });
+  }
+}
+
 export function* userRegister(action: { type: string; payload: any }): Generator<any, void, any>{
   yield put({ type: Type.USER_REGISTER_REQUEST });
   try{
@@ -100,6 +155,10 @@ export function* userLogout(): Generator<any, void, any> {
 
 export function* watchLogin() {
   yield takeEvery(Type.USER_LOGIN, userLoginAsync);
+}
+
+export function* watchGoogleLogin() {
+  yield takeEvery('USER_GOOGLE_LOGIN', userGoogleLoginAsync); 
 }
 
 export function* watchRegister(){

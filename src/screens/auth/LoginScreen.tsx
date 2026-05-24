@@ -14,12 +14,10 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 
 // Redux Imports
 import { useDispatch, useSelector } from 'react-redux';
-import { userLogin, loginReset, userLoginCompleted } from '../../app/reducers/auth';
+import { userLogin, loginReset } from '../../app/reducers/auth';
 import { IMG, ROUTES } from '../../utils';
 import { RootState } from '../../utils/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
-import { userGoogleLoginApi } from '../../app/api/auth';
 import { AlertMsg } from '../../components/AlertMsg';
 import CustomModal from '../../components/CustomModal';
 import FormInput from '../../components/FormInput'
@@ -29,7 +27,7 @@ const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+    const [isGoogleLoading] = useState(false);
     
     const navigation = useNavigation<NavigationProp<any>>();
     const dispatch = useDispatch();
@@ -81,50 +79,31 @@ const LoginScreen = () => {
 
             console.log("📍 Google Sign-In: Opening account picker...");
             const signInResponse = await GoogleSignin.signIn();
+            
             if (signInResponse.type === 'cancelled') {
                 console.log("📍 Google Sign-In: Cancelled by user.");
                 return;
             }
 
-            setIsGoogleLoading(true);
-
             const idToken = signInResponse.data.idToken;
             if (!idToken) throw new Error("No ID token found from Google.");
 
-            console.log("📍 Google Sign-In: Exchanging token with backend...");
-            const serverData = await userGoogleLoginApi(idToken);
-            
-            console.log("📍 Google Sign-In: Syncing with Firebase...");
-            const authInstance = getAuth();
-            const googleCredential = GoogleAuthProvider.credential(idToken);
-            const userCredential = await signInWithCredential(authInstance, googleCredential);
-            
-            console.log("📍 Google Sign-In: Login completed.");
-            dispatch(userLoginCompleted({
-                user: serverData.user || {
-                    email: userCredential.user.email || '',
-                },
-                token: serverData.token || idToken
-            }));
+            // 💡 THE FIX: Stop calling the API here! Just dispatch to your Saga.
+            // (Assuming your action type is USER_GOOGLE_LOGIN)
+            dispatch({ 
+                type: 'USER_GOOGLE_LOGIN', 
+                payload: { idToken } 
+            });
             
         } catch (signInError: any) { 
             console.log("❌ Google Sign-In Error details:", signInError);
             const errorCode = signInError.code || "unknown";
             const errorMessage = signInError.message || "An unknown error occurred.";
             
-            let extraInfo = "";
-            if (errorCode === '10') {
-                extraInfo = "\n\n(Developer Error: This usually means the SHA-1 fingerprint of your app doesn't match the one registered in the Google/Firebase Console.)";
-            } else if (errorMessage.toLowerCase().includes('network')) {
-                extraInfo = "\n\n(Network Error: Please check your internet connection or verify if your backend server is running and accessible.)";
-            }
-            
             AlertMsg.customError({ 
                 title: "Google Sign-In Failed", 
-                message: `[Code: ${errorCode}] ${errorMessage}${extraInfo}` 
+                message: `[Code: ${errorCode}] ${errorMessage}` 
             });
-        } finally {
-            setIsGoogleLoading(false);
         }
     };
 
