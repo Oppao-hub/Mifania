@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
     View, 
     Text, 
-    TextInput, 
     TouchableOpacity, 
     Image, 
     KeyboardAvoidingView, 
@@ -23,6 +22,8 @@ import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native
 import { userGoogleLoginApi } from '../../app/api/auth';
 import { AlertMsg } from '../../components/AlertMsg';
 import CustomModal from '../../components/CustomModal';
+import FormInput from '../../components/FormInput'
+import Button from '../../components/Button';
 
 const LoginScreen = () => {
     const [email, setEmail] = useState('');
@@ -156,47 +157,39 @@ const LoginScreen = () => {
 
                         {/* Form Section */}
                         <View className="space-y-4">
-                            {/* Email Input */}
-                            <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm mb-6">
-                                <Icon name="mail-outline" size={20} color="#6A7282" />
-                                <TextInput
-                                    value={email}
-                                    onChangeText={(text) => {
-                                        setEmail(text);
-                                        if (isError) dispatch(loginReset());
-                                    }}
-                                    placeholder="Email Address"
-                                    className="flex-1 ml-3 text-sm font-bold text-brand-dark"
-                                    keyboardType="email-address"
-                                    autoCapitalize="none"
-                                    editable={!isLoading && !isGoogleLoading}
-                                    placeholderTextColor="#9CA3AF"
-                                />
-                            </View>
+                            <FormInput
+                                value={email}
+                                onChangeText={(text) => {
+                                    setEmail(text);
+                                    if (isError) dispatch(loginReset());
+                                }}
+                                placeholder="Email Address"
+                                iconName="mail-outline" // Icon matches your reference image
+                                keyboardType="email-address" // Ensures the @ symbol is on the keyboard
+                                autoCapitalize="none" // Essential for emails
+                                editable={!isLoading}
+                                inputClassName={isError && error?.toLowerCase().includes('email') ? 'border-red-500' : ''}
+                            />
 
-                            {/* Password Input */}
-                            <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
-                                <Icon name="lock-closed-outline" size={20} color="#6A7282" />
-                                <TextInput
-                                    value={password}
-                                    onChangeText={(text) => {
-                                        setPassword(text);
-                                        if (isError) dispatch(loginReset());
-                                    }}
-                                    placeholder="Password"
-                                    className="flex-1 ml-3 text-sm font-bold text-brand-dark"
-                                    secureTextEntry={!isPasswordVisible}
-                                    editable={!isLoading && !isGoogleLoading}
-                                    placeholderTextColor="#9CA3AF"
-                                />
-                                <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                                    <Icon 
-                                        name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-                                        size={20} 
-                                        color="#6A7282" 
-                                    />
-                                </TouchableOpacity>
-                            </View>
+                            <FormInput
+                                value={password}
+                                onChangeText={(text) => {
+                                    setPassword(text);
+                                    if (isError) dispatch(loginReset());
+                                }}
+                                placeholder="Password"
+                                iconName="lock-closed-outline" // Icon matches your reference image
+                                secureTextEntry={!isPasswordVisible}
+                                rightElement={
+                                    <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
+                                        <Icon 
+                                            name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
+                                            size={20} 
+                                            color="#6A7282" 
+                                        />
+                                    </TouchableOpacity>
+                                }
+                            />
 
                             {/* Forgot Password */}
                             <TouchableOpacity 
@@ -209,13 +202,12 @@ const LoginScreen = () => {
 
                         {/* Action Buttons */}
                         <View className="mt-10">
-                            <TouchableOpacity 
+                            <Button
+                                label="Sign In"
                                 onPress={handleLogin}
-                                disabled={isLoading || isGoogleLoading}
-                                className={`w-full h-16 rounded-2xl items-center justify-center shadow-lg ${(isLoading || isGoogleLoading) ? 'bg-brand-light' : 'bg-brand'}`}
-                            >
-                                <Text className="text-white text-base font-bold tracking-widest uppercase">Sign In</Text>
-                            </TouchableOpacity>
+                                isLoading={isLoading}
+                                variant="primary"
+                            />  
 
                             {/* Social Login */}
                             <View className="flex-row items-center my-8">
@@ -223,15 +215,14 @@ const LoginScreen = () => {
                                 <Text className="mx-4 text-gray text-[10px] font-bold tracking-widest uppercase">Or</Text>
                                 <View className="flex-1 h-[1px] bg-border-color" />
                             </View>
-
-                            <TouchableOpacity 
+                            
+                            <Button
+                                label="Continue with Google"
                                 onPress={handleGoogleSignIn}
-                                className="w-full h-16 flex-row items-center justify-center rounded-2xl border border-border-color bg-white shadow-sm"
                                 disabled={isLoading || isGoogleLoading}
-                            >
-                                <Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>
-                                <Text className="text-dark-gray font-bold text-sm">Google Account</Text>
-                            </TouchableOpacity>
+                                variant="secondary"
+                                leftElement={<Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>}
+                            />
                         </View>
 
                         {/* Footer */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, ActivityIndicator, ViewStyle } from 'react-native';
+import { TouchableOpacity, Text, ActivityIndicator, ViewStyle, View } from 'react-native';
 
 interface ButtonProps {
   label: string;
@@ -10,6 +10,7 @@ interface ButtonProps {
   className?: string;     // For layout overrides (margin, width)
   textClassName?: string; // For text overrides
   style?: ViewStyle;      // For cases where dynamic styles are needed
+  leftElement?: React.ReactNode; // Added to support Google/Apple icons
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -21,24 +22,26 @@ const Button: React.FC<ButtonProps> = ({
   className = '',
   textClassName = '',
   style,
+  leftElement,
 }) => {
-  // Define base styles using your tailwind config colors
+  // Updated to match your Login/Register screen exact styling
   const variants = {
-    primary: 'bg-brand shadow-sm',
-    secondary: 'bg-white border border-border-color',
+    primary: 'bg-brand shadow-lg',
+    secondary: 'bg-white border border-border-color shadow-sm', // Perfect for Google/Apple
     outline: 'bg-transparent border border-brand',
-    danger: 'bg-danger',
+    danger: 'bg-red-500 shadow-sm',
     ghost: 'bg-transparent',
   };
 
   const textVariants = {
-    primary: 'text-white',
-    secondary: 'text-dark-gray',
-    outline: 'text-brand',
-    danger: 'text-white',
-    ghost: 'text-brand',
+    primary: 'text-white text-base font-bold tracking-widest uppercase',
+    secondary: 'text-brand-dark text-sm font-bold', // Social buttons usually aren't uppercase
+    outline: 'text-brand text-base font-bold tracking-widest uppercase',
+    danger: 'text-white text-base font-bold tracking-widest uppercase',
+    ghost: 'text-brand text-base font-bold',
   };
 
+  // If loading or disabled, lower opacity or apply your specific disabled logic
   const isDisabled = disabled || isLoading;
 
   return (
@@ -47,20 +50,23 @@ const Button: React.FC<ButtonProps> = ({
       disabled={isDisabled}
       activeOpacity={0.7}
       style={style}
-      // Common layout styles + variant styles + optional overrides
-      className={`h-14 rounded-2xl flex-row items-center justify-center px-6 ${variants[variant]} ${isDisabled ? 'opacity-50' : ''} ${className}`}
+      // Changed to h-16 to match your modern inputs
+      className={`w-full h-16 rounded-2xl flex-row items-center justify-center px-6 ${variants[variant]} ${isDisabled ? 'opacity-60' : ''} ${className}`}
     >
       {isLoading ? (
         <ActivityIndicator 
-          color={variant === 'secondary' || variant === 'outline' || variant === 'ghost' ? '#52622E' : '#FFFFFF'} 
+          color={variant === 'primary' || variant === 'danger' ? '#FFFFFF' : '#52622E'} 
         />
       ) : (
-        <Text 
-          numberOfLines={1}
-          className={`font-montserrat-bold text-sm uppercase ${textVariants[variant]} ${textClassName}`}
-        >
-          {label}
-        </Text>
+        <>
+          {leftElement && <View className="mr-3">{leftElement}</View>}
+          <Text 
+            numberOfLines={1}
+            className={`${textVariants[variant]} ${textClassName}`}
+          >
+            {label}
+          </Text>
+        </>
       )}
     </TouchableOpacity>
   );
