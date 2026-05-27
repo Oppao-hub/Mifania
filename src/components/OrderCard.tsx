@@ -39,7 +39,9 @@ const OrderCard: React.FC<OrderCardProps> = ({ item, onPress, onActionPress, hid
   // Get main product for preview (the design shows one)
   const mainItem = item.orderItems?.[0];
   const mainItemObj = typeof mainItem === 'object' ? mainItem : null;
-  const product = typeof mainItemObj?.product === 'object' ? mainItemObj.product : null;
+  const product = (typeof mainItemObj?.product === 'object' && mainItemObj.product !== null) 
+    ? mainItemObj.product 
+    : null;
 
   const getImageUrl = (url?: string) => {
     if (!url) return null;
@@ -48,9 +50,11 @@ const OrderCard: React.FC<OrderCardProps> = ({ item, onPress, onActionPress, hid
     return `${ASSET_URL}${separator}${url}`;
   };
 
-  const imageSource = (product?.imageUrl || product?.image) 
-    ? { uri: getImageUrl(product?.imageUrl || product?.image) }
-    : require('../assets/logos/logo.png');
+  const imageSource = product?.imageUrl 
+    ? { uri: getImageUrl(product.imageUrl) }
+    : product?.image 
+        ? { uri: getImageUrl(product.image) }
+        : require('../assets/logos/logo.png'); // Default logo
 
   const getActionText = (status: OrderStatus | string) => {
     const s = String(status || '').toLowerCase();
