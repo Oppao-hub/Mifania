@@ -49,7 +49,7 @@ const OrderCard: React.FC<OrderCardProps> = ({ item, onPress, onActionPress, hid
   };
 
   const imageSource = (product?.imageUrl || product?.image) 
-    ? { uri: getImageUrl(product?.imageUrl || product?.image) || 'https://via.placeholder.com/100' }
+    ? { uri: getImageUrl(product?.imageUrl || product?.image) }
     : require('../assets/logos/logo.png');
 
   const getActionText = (status: OrderStatus | string) => {
