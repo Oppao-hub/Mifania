@@ -66,7 +66,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onPress, containerSt
                 </Text>
                 <View className="flex-row justify-between items-center mt-1">
                     <Text className="text-xs font-bold text-brand">
-                        ${product.price ? parseFloat(product.price).toFixed(2) : '0.00'}
+                        ₱{product.price ? parseFloat(product.price).toFixed(2) : '0.00'}
                     </Text>
                 </View>
             </View>
