@@ -25,7 +25,7 @@ const handleResponseError = async (response: Response) => {
     console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
 
     if (response.status === 401) {
-        throw new Error("Unauthorized");
+        throw new Error(errorData.message || errorData.error || "Unauthorized");
     }
 
     if (response.status === 422) {
