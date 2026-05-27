@@ -107,7 +107,7 @@ const NotificationScreen = () => {
   );
 
   const filteredNotifications = useMemo(() => {
-    return notifications.filter(n => {
+    return (notifications || []).filter(n => {
         if (activeTab === 'General') {
             return n.type === 'system' || n.type === 'order' || n.type === 'General';
         }

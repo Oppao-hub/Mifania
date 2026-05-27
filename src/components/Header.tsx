@@ -45,7 +45,7 @@ const Header: React.FC<HeaderProps> = ({
   // Get counts for specific screens
   const cartCount = useSelector((state: RootState) => state.cart.items.length);
   const wishlistCount = useSelector((state: RootState) => state.wishlist.items.length);
-  const unreadNotificationCount = useSelector((state: RootState) => state.notification.items.filter(n => !n.isRead).length);
+  const unreadNotificationCount = useSelector((state: RootState) => state.notification?.items?.filter(n => !n.isRead).length || 0);
 
   const displayTitle = isHome ? "Mifania" : title;
   const countToDisplay = title === 'Cart' ? cartCount : title === 'Wishlist' ? wishlistCount : null;

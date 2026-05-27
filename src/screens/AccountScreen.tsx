@@ -12,6 +12,7 @@ import { RootState } from '../utils/types';
 import { getEmbeddedCustomer } from '../utils/apiResource';
 import * as Types from '../app/actions';
 import Header from '../components/Header';
+import IMAGES from '../utils/image';
 
 // Reusable component for the list items
 interface ProfileOptionItemProps {
@@ -50,11 +51,18 @@ const AccountScreen = () => {
       ? `${user.firstName} ${user.lastName}`
       : 'Mifania User';
   const displayEmail = user?.email || 'user@mifania.com';
-  const displayAvatar = customer?.avatar || 'https://randomuser.me/api/portraits/men/32.jpg';
 
   const handleEditProfile = () => {
     navigation.navigate(ROUTES.PROFILE as never);
   };
+
+  const handleNotification = () => {
+    navigation.navigate(ROUTES.NOTIFICATION as never);
+  };
+
+  const handleOrder = () => {
+    navigation.navigate(ROUTES.ORDER as never)
+  }
 
   const handleLogout = () => {
     Alert.alert(
@@ -108,18 +116,22 @@ const AccountScreen = () => {
         {/* PROFILE CARD */}
         <View className="flex-row items-center bg-white rounded-3xl p-5 mb-8 shadow-sm">
           <Image 
-            source={{ uri: displayAvatar }} 
+            source={
+              customer?.avatar 
+                ? { uri: customer.avatar }
+                : IMAGES.DEFAULT_AVATAR
+            } 
             className="w-16 h-16 rounded-full bg-light-gray"
             resizeMode="cover"
           />
-          <View className="flex-1 ml-4">
-            <Text className="text-lg font-montserrat-bold text-dark-gray mb-0.5">{displayName}</Text>
-            <Text className="text-xs text-gray font-montserrat">{displayEmail}</Text>
+            <View className="flex-1 ml-4">
+              <Text className="text-lg font-montserrat-bold text-dark-gray mb-0.5">{displayName}</Text>
+              <Text className="text-xs text-gray font-montserrat">{displayEmail}</Text>
+            </View>
+            <TouchableOpacity onPress={handleEditProfile} className="ml-2">
+              <Icon name="create-outline" size={24} color="#52622E" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity onPress={handleEditProfile} className="ml-2">
-            <Icon name="create-outline" size={24} color="#52622E" />
-          </TouchableOpacity>
-        </View>
 
         {/* LIST OPTIONS - GROUP 1 */}
         <View className="bg-white rounded-3xl px-5 mb-6 shadow-sm">
@@ -134,9 +146,9 @@ const AccountScreen = () => {
         <View className="bg-white rounded-3xl px-5 mb-6 shadow-sm">
           <ProfileOptionItem icon="person-outline" label="My Profile" onPress={handleEditProfile} />
           <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="document-text-outline" label="My Orders" onPress={() => navigation.navigate(ROUTES.ORDER as never)} />
+          <ProfileOptionItem icon="document-text-outline" label="My Orders" onPress={handleOrder} />
           <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="notifications-outline" label="Notifications" />
+          <ProfileOptionItem icon="notifications-outline" label="Notifications" onPress={handleNotification}/>
           <View className="h-[1px] bg-light-gray" />
           <ProfileOptionItem icon="repeat-outline" label="Linked Accounts" />
           <View className="h-[1px] bg-light-gray" />
