@@ -39,6 +39,7 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
     }
 
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
+    AlertMsg.customSuccess({ title: "Welcome Back!", message: "You have successfully logged in." });
 
     // --- FETCH CUSTOMER DATA & WALLET ---
     const customerRef = getCustomerRefFromUser(data.user);
@@ -65,9 +66,14 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
     } catch (pushError) {
       console.log("⚠️ Push token sync failed:", pushError);
     }
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.log("❌ Login Saga Error:", error);
-    const message = error instanceof Error ? error.message : "An unknown error occurred";
+
+
+    const message = error.response?.data.message
+      || error.response?.data?.error 
+      || error.message 
+      || "An unknown error occurred";
     yield put({ type: Type.USER_LOGIN_ERROR, payload: message });
   }
 }
@@ -140,8 +146,13 @@ export function* userRegister(action: { type: string; payload: any }): Generator
       console.log("Firebase registration sync failed:", firebaseError);
     }
 
-  }catch(error: unknown){
-    const message = error instanceof Error ? error.message : "An unknown error occurred";
+  } catch(error: any) { // 💡 FIX 3: Also updated the Register error handler
+    console.log("❌ Register Saga Error:", error);
+    const message = error.response?.data?.message 
+      || error.response?.data?.error 
+      || error.message 
+      || "An unknown error occurred";
+      
     yield put({ type: Type.USER_REGISTER_ERROR, payload: message });
   }
 }
