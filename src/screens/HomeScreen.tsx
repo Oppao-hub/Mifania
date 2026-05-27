@@ -3,6 +3,7 @@ import { View, FlatList, ActivityIndicator, Text } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
+import messaging from '@react-native-firebase/messaging'; // 💡 ADDED IMPORT
 
 import { RootState, Category } from '../utils/types';
 import Header from '../components/Header';
@@ -24,12 +25,48 @@ const HomeScreen = () => {
   const { items, isLoading: isProductsLoading } = useSelector((state: RootState) => state.product);
   const { items: categories, isLoading: isCategoriesLoading } = useSelector((state: RootState) => state.category);
   const { items: subCategories, isLoading: isSubCategoriesLoading } = useSelector((state: RootState) => state.subCategory);
+  
+  // 💡 ADDED: Get Auth Data from Redux so we know WHO is logging in
+  const { data: authData } = useSelector((state: RootState) => state.authentication);
 
+  // Existing Data Fetching
   useEffect(() => {
     dispatch(getProducts());
     dispatch(getCategories());
     dispatch(getSubCategories());
   }, [dispatch]);
+
+  // 💡 ADDED: Push Notification Registration Effect
+  useEffect(() => {
+    const registerDevice = async (userId: number, authToken: string) => {
+        try {
+            const authStatus = await messaging().requestPermission();
+            const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED || authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+            if (enabled) {
+                const deviceToken = await messaging().getToken();
+                console.log('📱 Registering Device Token:', deviceToken);
+                
+                // Send it to the Symfony Backend via PATCH
+                await fetch(`https://sfl-mifania.up.railway.app/api/users/${userId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/merge-patch+json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ deviceToken })
+                });
+            }
+        } catch (error) {
+            console.error('Push Notification Registration Error:', error);
+        }
+    };
+
+    // Only run if the user is fully logged in and has an ID/Token
+    if (authData?.user?.id && authData?.token) {
+        registerDevice(authData.user.id, authData.token);
+    }
+  }, [authData?.user?.id, authData?.token]);
 
   // Combine "All" with categories from API
   const allCategories = [{ id: 'all' as any, name: 'All', slug: 'all' } as Category, ...categories];
@@ -66,12 +103,6 @@ const HomeScreen = () => {
 
     return matchesCategory && matchesSubCategory && matchesSearch;
   });
-
-  console.log('Total Products:', items.length);
-  console.log('Filtered Products:', filteredProducts.length);
-  if (items.length > 0 && filteredProducts.length === 0) {
-    console.log('Filter debug - selectedCategoryId:', selectedCategoryId, 'selectedSubCategoryId:', selectedSubCategoryId);
-  }
 
   const trendingProducts = items.slice(0, 5);
 

@@ -18,6 +18,7 @@ import { getEmbeddedCustomer, getCustomerRefFromUser } from '../utils/apiResourc
 import * as Types from '../app/actions';
 import Header from '../components/Header';
 import CustomModal from '../components/CustomModal';
+import IMAGES from '../utils/image';
 
 const ProfileScreen = () => {
   const dispatch = useDispatch();
@@ -39,6 +40,7 @@ const ProfileScreen = () => {
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [postalCode, setPostalCode] = useState('');
+
   
   // 💡 TRACK IF WE ARE ACTUALLY PERFORMING AN UPDATE
   const [isUpdating, setIsUpdating] = useState(false);
@@ -190,10 +192,14 @@ const ProfileScreen = () => {
           <View className="items-center mt-6 mb-8">
             <View className="relative">
               <Image 
-                source={{ uri: customer?.avatar || 'https://randomuser.me/api/portraits/men/44.jpg' }} 
-                className="w-32 h-32 rounded-full bg-light-gray"
+                source={
+                  customer?.avatar 
+                    ? { uri: customer.avatar }
+                    : IMAGES.DEFAULT_AVATAR
+                } 
+                className="w-48 h-48 rounded-md bg-light-gray"
                 resizeMode="cover"
-              />
+              />  
               <TouchableOpacity 
                 activeOpacity={0.8}
                 className="absolute bottom-1 right-1 bg-brand w-8 h-8 rounded-lg items-center justify-center border-2 border-white shadow-sm"

@@ -134,13 +134,13 @@ const AccountScreen = () => {
           </View>
 
         {/* LIST OPTIONS - GROUP 1 */}
-        <View className="bg-white rounded-3xl px-5 mb-6 shadow-sm">
+        {/* <View className="bg-white rounded-3xl px-5 mb-6 shadow-sm">
           <ProfileOptionItem icon="location-outline" label="Manage Addresses" />
           <View className="h-[1px] bg-light-gray" />
           <ProfileOptionItem icon="card-outline" label="Payment Methods" />
           <View className="h-[1px] bg-light-gray" />
           <ProfileOptionItem icon="shield-checkmark-outline" label="Account & Security" />
-        </View>
+        </View> */}
 
         {/* LIST OPTIONS - GROUP 2 */}
         <View className="bg-white rounded-3xl px-5 mb-6 shadow-sm">
@@ -149,12 +149,12 @@ const AccountScreen = () => {
           <ProfileOptionItem icon="document-text-outline" label="My Orders" onPress={handleOrder} />
           <View className="h-[1px] bg-light-gray" />
           <ProfileOptionItem icon="notifications-outline" label="Notifications" onPress={handleNotification}/>
-          <View className="h-[1px] bg-light-gray" />
+          {/* <View className="h-[1px] bg-light-gray" />
           <ProfileOptionItem icon="repeat-outline" label="Linked Accounts" />
           <View className="h-[1px] bg-light-gray" />
           <ProfileOptionItem icon="eye-outline" label="App Appearance" />
           <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="document-text-outline" label="Help & Support" />
+          <ProfileOptionItem icon="document-text-outline" label="Help & Support" /> */}
         </View>
 
         {/* LIST OPTIONS - LOGOUT */}
