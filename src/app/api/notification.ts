@@ -1,7 +1,8 @@
 import { getRequest } from "./client";
-import { HydraCollection, Notification } from "../../utils/types";
+import { Notification } from "../../utils/types";
 
 export const getNotifications = async (token: string): Promise<Notification[]> => {
-    const data = await getRequest<HydraCollection<Notification>>("/notifications", token);
-    return data["hydra:member"];
+    const data = await getRequest<any>("/notifications", token);
+    
+    return data.notifications || data["hydra:member"] || [];
 };
