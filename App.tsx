@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'; // 💡 ADDED useEffect
-import { View } from 'react-native';
+import { LogBox, View } from 'react-native';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -27,6 +27,12 @@ GoogleSignin.configure({
 });
 
 const App = () => {
+  useEffect(() => {
+    LogBox.ignoreLogs([
+      'SafeAreaView has been deprecated',
+    ]);
+  }, []);
+
   const navigateToMyOrders = () => {
     if (!navigationRef.isReady()) return;
     navigationRef.navigate('Main' as never, {
