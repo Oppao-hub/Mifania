@@ -64,7 +64,13 @@ const handleResponseError = async (response: Response) => {
         }
     }
     
-    throw new Error(errorData.message || errorData['hydra:description'] || errorData.detail || `Error: ${response.status}. Request Failed`);
+    throw new Error(
+        errorData.message
+        || errorData.error
+        || errorData['hydra:description']
+        || errorData.detail
+        || `Error: ${response.status}. Request Failed`,
+    );
 };
 
 const isNetworkFailure = (error: unknown): boolean => {
