@@ -155,7 +155,7 @@ const CheckoutScreen = () => {
     const customerData: Customer | null =
         customerFromSlice || getEmbeddedCustomer(authData?.user?.customer);
 
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(PaymentMethods.CREDIT_CARD);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(PaymentMethods.CASH);
     const [selectedAddressId, setSelectedAddressId] = useState('home');
     const [selectedAddressName, setSelectedAddressName] = useState('Home');
     const [selectedAddressText, setSelectedAddressText] = useState('');
@@ -165,8 +165,8 @@ const CheckoutScreen = () => {
         'Estimated arrival: 23 - 24 Dec, 2024',
     );
     const [selectedDeliveryFee, setSelectedDeliveryFee] = useState('₱8.50');
-    const [selectedPaymentId, setSelectedPaymentId] = useState('mastercard-4679');
-    const [selectedPaymentLabel, setSelectedPaymentLabel] = useState('.... .... .... 4679');
+    const [selectedPaymentId, setSelectedPaymentId] = useState('cash');
+    const [selectedPaymentLabel, setSelectedPaymentLabel] = useState('Cash');
     const [selectedPaymentGatewayType, setSelectedPaymentGatewayType] = useState<'paypal' | 'direct'>(
         'direct',
     );
@@ -332,12 +332,10 @@ const CheckoutScreen = () => {
     };
 
     const handleViewMyOrder = () => {
-        resetCheckoutFlow();
         goToMyOrders(navigation);
     };
 
     const handleBackHome = () => {
-        resetCheckoutFlow();
         goToHomeTab(navigation);
     };
 
@@ -438,10 +436,6 @@ const CheckoutScreen = () => {
             payload: { data: orderData, token, idempotencyKey },
         });
     };
-
-    if (displayItems.length === 0 && flowStatus === 'idle') {
-        return null;
-    }
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>

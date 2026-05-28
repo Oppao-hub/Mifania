@@ -12,13 +12,21 @@ import { fetchPaymentOptions, PaymentOption } from '../utils/checkoutOptions';
 
 const BRAND = '#5B8E68';
 
+const paymentIconName = (option: PaymentOption): string => {
+    const key = `${option.id} ${option.name} ${option.backendMethod}`.toLowerCase();
+    if (key.includes('paypal')) return 'logo-paypal';
+    if (key.includes('cash')) return 'cash-outline';
+    if (key.includes('bank')) return 'business-outline';
+    return 'card-outline';
+};
+
 const ChoosePaymentMethodScreen = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const token = useSelector((state: RootState) => state.authentication.data?.token);
     const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const initialPaymentId = route.params?.selectedPaymentId || 'mastercard-4679';
+    const initialPaymentId = route.params?.selectedPaymentId || 'cash';
     const [selectedPaymentId, setSelectedPaymentId] = useState<string>(initialPaymentId);
 
     const selectedPayment = useMemo(
@@ -39,7 +47,7 @@ const ChoosePaymentMethodScreen = () => {
                 if (!mounted) return;
                 setPaymentOptions(options);
                 if (!options.some((opt) => opt.id === selectedPaymentId)) {
-                    setSelectedPaymentId(options[0]?.id || 'credit-card');
+                    setSelectedPaymentId(options[0]?.id || 'cash');
                 }
             } catch (error) {
                 if (!mounted) return;
@@ -107,12 +115,19 @@ const ChoosePaymentMethodScreen = () => {
                                 {item.logo ? (
                                     <Image source={{ uri: item.logo }} className="w-11 h-11" resizeMode="contain" />
                                 ) : (
-                                    <Icon name="card-outline" size={24} color="#6B7280" />
+                                    <Icon name={paymentIconName(item)} size={24} color="#6B7280" />
                                 )}
                             </View>
-                            <Text className="flex-1 text-[17px] font-montserrat-bold text-dark-gray">
-                                {item.name}
-                            </Text>
+                            <View className="flex-1">
+                                <Text className="text-[17px] font-montserrat-bold text-dark-gray">
+                                    {item.name}
+                                </Text>
+                                {item.description ? (
+                                    <Text className="text-xs font-montserrat text-gray mt-1">
+                                        {item.description}
+                                    </Text>
+                                ) : null}
+                            </View>
                             {selected ? <Icon name="checkmark" size={24} color={BRAND} /> : null}
                         </TouchableOpacity>
                     );
