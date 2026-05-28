@@ -5,37 +5,34 @@ import {
   TouchableOpacity, 
   ScrollView, 
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
 import { RootState, CartItem, Customer } from '../utils/types';
 import { getEmbeddedCustomer, getCustomerRefFromUser } from '../utils/apiResource';
 import { 
     getCart,
     removeFromCart, 
     toggleCartItemSelection, 
-    updateCartQty
+    updateCartQty,
+    editCartItem,
 } from '../app/reducers/cart';
+import { getProducts } from '../app/reducers/product';
+import EditVariantModal, { EditCartItemPayload } from '../components/EditVariantModal';
 import CartItemComponent from '../components/CartItem';
 import EmptyState from '../components/EmptyState';
 import AlertMsg from '../components/AlertMsg/AlertMsg';
 import Header from '../components/Header';
-import EditVariantModal from '../components/EditVariantModal';
 import * as Types from '../app/actions';
-import { PaymentMethods, PaymentMethodType } from '../constants/Payment';
-import { ASSET_URL } from '../app/api/client';
+import { ROUTES } from '../utils';
 
 const CartScreen = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
-  const { items: cartItems, isLoading } = useSelector((state: RootState) => state.cart);
+  const { items: cartItems, isLoading, error: cartError } = useSelector((state: RootState) => state.cart);
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const { data: customerFromSlice, isLoading: isCustomerLoading } = useSelector((state: RootState) => state.customer);
-  const { isLoading: isOrdering, isError: isOrderError, error: orderError } = useSelector((state: RootState) => state.order);
-  
   const token = authData?.token;
   
   const customerRef = getCustomerRefFromUser(authData?.user);
@@ -44,10 +41,6 @@ const CartScreen = () => {
   // Modal State
   const [isModalVisible, setModalVisible] = useState(false);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
-  
-  // Payment State - now using exact strings as required by backend (e.g. "Cash")
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(PaymentMethods.CASH);
-  const [paypalPreparedAmount, setPaypalPreparedAmount] = useState<string | null>(null);
   
   // Alert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -62,7 +55,8 @@ const CartScreen = () => {
 
   useEffect(() => {
     dispatch(getCart());
-    
+    dispatch(getProducts());
+
     if (!customerData && customerRef && authData?.token) {
       dispatch({ 
         type: Types.GET_CUSTOMER, 
@@ -74,17 +68,6 @@ const CartScreen = () => {
       });
     }
   }, [dispatch, authData, customerData, customerRef]);
-
-  // Handle Order Success/Error from Redux
-  useEffect(() => {
-    if (isOrderError && orderError) {
-      setAlertConfig({
-        visible: true,
-        type: 'error',
-        message: orderError,
-      });
-    }
-  }, [isOrderError, orderError]);
 
   const toggleSelection = (id: string | number) => {
     dispatch(toggleCartItemSelection(id));
@@ -99,10 +82,20 @@ const CartScreen = () => {
     setModalVisible(true);
   };
 
-  const handleEditConfirm = (id: string | number, qty: number) => {
-    dispatch(updateCartQty(id, qty));
+  const handleEditConfirm = (payload: EditCartItemPayload) => {
+    dispatch(editCartItem(payload));
     setModalVisible(false);
   };
+
+  useEffect(() => {
+    if (cartError) {
+      setAlertConfig({
+        visible: true,
+        type: 'error',
+        message: cartError,
+      });
+    }
+  }, [cartError]);
 
   // Local calculation for selected items
   const { selectedCount, displayTotal } = useMemo(() => {
@@ -147,66 +140,7 @@ const CartScreen = () => {
     const selectedItems = cartItems.filter(item => item.selected);
     if (selectedItems.length === 0) return;
 
-    // PayPal Web Flow:
-    // 1st tap opens PayPal page with current total.
-    // 2nd tap confirms payment was completed and places the order.
-    if (paymentMethod === PaymentMethods.PAYPAL && paypalPreparedAmount !== displayTotal) {
-      const paypalUrl = `${ASSET_URL}/paypal/payment?amount=${encodeURIComponent(displayTotal)}`;
-      Linking.openURL(paypalUrl)
-        .then(() => {
-          setPaypalPreparedAmount(displayTotal);
-          setAlertConfig({
-            visible: true,
-            type: 'info',
-            message: 'Complete your PayPal payment in the browser, then tap Checkout again to finalize your order.',
-          });
-        })
-        .catch(() => {
-          setAlertConfig({
-            visible: true,
-            type: 'error',
-            message: 'Unable to open PayPal checkout. Please try again.',
-          });
-        });
-      return;
-    }
-
-    // Strict JSON body formatting for Symfony backend as per FINAL verified guide
-    const orderData = {
-        totalAmount: String(displayTotal),      // Numeric string precision
-        paymentMethod: paymentMethod,          // Exact case-sensitive Enum
-        paymentStatus: paymentMethod === PaymentMethods.PAYPAL ? "Paid" : "Pending", // Mark paid once user confirms PayPal completion
-        orderStatus: "Pending",                // Exact string required
-        orderItems: selectedItems.map(item => {
-            const rawPrice = item.price || '0';
-            const price = isNaN(parseFloat(rawPrice)) ? "0.00" : parseFloat(rawPrice).toFixed(2);
-            
-            const rawQty = String(item.quantity || '1');
-            const qty = isNaN(parseInt(rawQty, 10)) ? 1 : parseInt(rawQty, 10);
-            
-            const subtotal = (parseFloat(price) * qty).toFixed(2);
-            
-            // Product MUST be an IRI format: "/api/products/ID"
-            const productIri = typeof item.product === 'string' 
-                ? item.product 
-                : (item.product?.['@id'] || `/api/products/${item.product?.id || item.product}`);
-
-            return {
-                product: productIri,
-                quantity: qty,                 // Integer
-                price: String(price),          // Decimal as string
-                subtotal: String(subtotal)     // Decimal as string
-            };
-        }),
-    };
-
-    console.log("📤 Verified Checkout Payload:", JSON.stringify(orderData, null, 2));
-
-    dispatch({ 
-        type: Types.CREATE_ORDER, 
-        payload: { data: orderData, token } 
-    });
-    setPaypalPreparedAmount(null);
+    navigation.navigate(ROUTES.CHECKOUT as never);
   };
 
   useEffect(() => {
@@ -247,30 +181,6 @@ const CartScreen = () => {
                 onEdit={openEditModal}
             />
             ))}
-
-            {/* Payment Method Selector */}
-            <View className="mt-4 bg-white rounded-3xl p-5 border border-border-color shadow-sm">
-              <Text className="text-sm font-montserrat-bold text-dark-gray mb-4">Payment Method</Text>
-              
-              <View className="flex-row flex-wrap justify-between gap-2">
-                {Object.entries(PaymentMethods).map(([key, value]) => (
-                  <TouchableOpacity
-                    key={key}
-                    onPress={() => setPaymentMethod(value as PaymentMethodType)}
-                    className={`min-w-[48%] py-3 px-2 rounded-xl border items-center justify-center mb-2 ${paymentMethod === value ? 'bg-brand/5 border-brand' : 'border-gray-100 bg-gray-50'}`}
-                  >
-                    <Text className={`text-[10px] font-montserrat-bold ${paymentMethod === value ? 'text-brand' : 'text-gray-400'}`}>
-                      {value}
-                    </Text>
-                    {paymentMethod === value && (
-                      <View className="absolute -top-1 -right-1 bg-brand rounded-full w-4 h-4 items-center justify-center">
-                        <Icon name="checkmark" size={10} color="white" />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
         </ScrollView>
       ) : (
         <EmptyState 
@@ -288,16 +198,11 @@ const CartScreen = () => {
           <TouchableOpacity 
             activeOpacity={0.9}
             onPress={handleCheckout}
-            disabled={isOrdering}
-            className={`w-full ${isOrdering ? 'bg-gray-400' : 'bg-brand'} h-16 rounded-3xl flex-row items-center justify-center shadow-2xl shadow-brand/40`}
+            className="w-full bg-brand h-16 rounded-3xl flex-row items-center justify-center shadow-2xl shadow-brand/40"
           >
-            {isOrdering ? (
-                <ActivityIndicator color="white" />
-            ) : (
-                <Text className="text-white font-montserrat-bold text-[16px] tracking-wider">
-                    Checkout ({selectedCount}) • ₱{displayTotal}
-                </Text>
-            )}
+            <Text className="text-white font-montserrat-bold text-[16px] tracking-wider">
+                Checkout ({selectedCount}) • ₱{displayTotal}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
