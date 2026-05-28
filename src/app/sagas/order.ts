@@ -3,9 +3,6 @@ import { getOrdersApi, createOrderApi, getOrderDetailsApi } from '../api/order';
 import * as Type from '../../app/actions';
 import { RootState } from '../../utils/types';
 import { getCustomerRefFromUser } from '../../utils/apiResource';
-import { navigate } from '../../utils/navigation';
-import { ROUTES } from '../../utils';
-
 const getToken = (state: RootState) => state.authentication.data?.token;
 
 export function* getOrdersAsync(action: { type: string; payload: string }): Generator<any, void, any> {
@@ -61,10 +58,18 @@ export function* getOrderDetailsAsync(action: { type: string; payload: { id: str
   }
 }
 
-export function* createOrderAsync(action: { type: string; payload: { data: any; token: string } }): Generator<any, void, any> {
+export function* createOrderAsync(action: {
+  type: string;
+  payload: { data: any; token: string; idempotencyKey?: string };
+}): Generator<any, void, any> {
   yield put({ type: Type.CREATE_ORDER_REQUEST });
   try {
-    const data = yield call(createOrderApi, action.payload.data, action.payload.token);
+    const data = yield call(
+      createOrderApi,
+      action.payload.data,
+      action.payload.token,
+      action.payload.idempotencyKey,
+    );
     yield put({ type: Type.CREATE_ORDER_COMPLETED, payload: data });
     
     // 1. Clear the cart state locally
@@ -82,10 +87,6 @@ export function* createOrderAsync(action: { type: string; payload: { data: any; 
     yield put({ type: Type.GET_CART });
 
     console.log("✅ Order created successfully:", data.id);
-    
-    // Navigate to success screen with points earned
-    // data.totalPoints is expected from the backend as per instructions
-    yield call(navigate, ROUTES.ORDER_SUCCESS, { pointsEarned: data.totalPoints || 0 });
   } catch (error: unknown) {
     console.log("❌ Order Creation Failed:", error);
     const message = error instanceof Error ? error.message : "An unknown error occurred";
