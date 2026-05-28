@@ -6,7 +6,8 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Dimensions,
-  StatusBar
+  StatusBar,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -101,6 +102,30 @@ export default function ProductDetailScreen() {
 
   const handleToggleWishlist = () => {
     dispatch(toggleWishlist(product));
+  };
+
+  const handleViewSustainabilityJourney = async () => {
+    if (!product?.slug) {
+      Toast.show({
+        type: 'modalError',
+        text1: 'Unavailable',
+        text2: 'Sustainability story is not available for this product yet.',
+      });
+      return;
+    }
+
+    const journeyUrl = `${ASSET_URL}/shop/journey/${product.slug}`;
+    const supported = await Linking.canOpenURL(journeyUrl);
+    if (!supported) {
+      Toast.show({
+        type: 'modalError',
+        text1: 'Unable to open',
+        text2: 'Could not open sustainability story link.',
+      });
+      return;
+    }
+
+    await Linking.openURL(journeyUrl);
   };
 
   const formattedPrice = !isNaN(Number(displayProduct.price)) 
@@ -244,6 +269,15 @@ export default function ProductDetailScreen() {
                 </Text>
               )}
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleViewSustainabilityJourney}
+            activeOpacity={0.8}
+            className="mt-4 bg-brand/10 border border-brand/20 rounded-xl px-4 py-3 flex-row items-center justify-center"
+          >
+            <Icon name="leaf-outline" size={18} color="#52622E" />
+            <Text className="ml-2 text-brand font-bold text-sm">View Sustainability Story</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
