@@ -10,6 +10,11 @@ export const ROUTES = {
     REGISTER: 'Register' as const,
     NOTIFICATION: 'Notification' as const,
     ORDER_SUCCESS: 'OrderSuccess' as const,
+    CHECKOUT: 'Checkout' as const,
+    CHOOSE_DELIVERY_ADDRESS: 'ChooseDeliveryAddress' as const,
+    CHOOSE_DELIVERY: 'ChooseDelivery' as const,
+    CHOOSE_PAYMENT_METHOD: 'ChoosePaymentMethod' as const,
+    PROMOS_VOUCHERS: 'PromosVouchers' as const,
 };
 
 export default ROUTES;
