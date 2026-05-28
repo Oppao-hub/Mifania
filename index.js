@@ -4,14 +4,17 @@
 
 import { AppRegistry } from 'react-native';
 import notifee, { EventType } from '@notifee/react-native';
-import messaging from '@react-native-firebase/messaging'; // 💡 ADDED IMPORT
+import { getApp } from '@react-native-firebase/app';
+import { getMessaging, setBackgroundMessageHandler } from '@react-native-firebase/messaging';
 import App from './App';
 import { name as appName } from './app.json';
 //@ts-ignore
 import "./global.css"
 
 // 💡 ADDED: Firebase Background Handler
-messaging().setBackgroundMessageHandler(async remoteMessage => {
+const messagingInstance = getMessaging(getApp());
+
+setBackgroundMessageHandler(messagingInstance, async remoteMessage => {
   console.log('Message handled in the background!', remoteMessage);
   // Note: If your backend sends a "notification" payload, Android system handles displaying it automatically.
   // If it sends a "data-only" payload, you would use notifee.displayNotification here.

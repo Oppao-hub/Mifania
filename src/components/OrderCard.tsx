@@ -12,15 +12,19 @@ interface OrderCardProps {
 }
 
 const OrderCard: React.FC<OrderCardProps> = ({ item, onPress, onActionPress, hideActionButton = false }) => {
+  const normalizeStatus = (status: OrderStatus | string): string => {
+    const value = String(status || '').toLowerCase();
+    return value === 'canceled' ? 'cancelled' : value;
+  };
+
   // Map OrderStatus to the display status and styles used in the design
   const getStatusDisplay = (status: OrderStatus | string) => {
     // Standardize status for comparison
-    const s = String(status || '').toLowerCase();
+    const s = normalizeStatus(status);
     
     switch (s) {
-      case 'completed':
       case 'delivered':
-        return { label: 'Completed', color: 'text-brand', bgColor: 'bg-[#52622E]/10' };
+        return { label: 'Delivered', color: 'text-brand', bgColor: 'bg-[#52622E]/10' };
       case 'pending':
         return { label: 'Pending', color: 'text-brand', bgColor: 'bg-[#52622E]/10' };
       case 'processing':
@@ -57,13 +61,13 @@ const OrderCard: React.FC<OrderCardProps> = ({ item, onPress, onActionPress, hid
         : require('../assets/logos/logo.png'); // Default logo
 
   const getActionText = (status: OrderStatus | string) => {
-    const s = String(status || '').toLowerCase();
+    const s = normalizeStatus(status);
     if (s === 'cancelled') return 'Reorder';
-    if (s === 'completed' || s === 'delivered') return 'Leave Review';
+    if (s === 'delivered') return 'Leave Review';
     return 'Track Order';
   };
 
-  const statusLower = String(item.orderStatus || '').toLowerCase();
+  const statusLower = normalizeStatus(item.orderStatus);
   const isInDelivery = statusLower === 'shipped' || statusLower === 'processing' || statusLower === 'pending';
 
   const displayPrice = () => {

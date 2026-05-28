@@ -9,7 +9,6 @@ const initialState: AuthState = {
 };
 
 export function authReducer(state = initialState, action: { type: string; payload?: any }): AuthState {
-    console.log(action.type);
     switch (action.type) {
         case Types.USER_LOGIN_REQUEST:
             return {
@@ -31,6 +30,13 @@ export function authReducer(state = initialState, action: { type: string; payloa
                 isError: true, 
                 error: action.payload 
             };
+        case Types.USER_LOGIN_UI_RESET:
+            return {
+                ...state,
+                isLoading: false,
+                isError: false,
+                error: null,
+            };
         case Types.USER_LOGOUT:
         case Types.USER_LOGIN_RESET:
         case Types.USER_REGISTER_RESET:
@@ -38,7 +44,8 @@ export function authReducer(state = initialState, action: { type: string; payloa
                 ...state, 
                 data: null, 
                 isLoading: false, 
-                isError:false 
+                isError: false,
+                error: null,
             };
         case Types.USER_REGISTER_REQUEST:
             return {
@@ -77,6 +84,16 @@ export const userLoginCompleted = (payload: { user: User; token?: string }) => (
 
 export const loginReset = () => ({
     type: Types.USER_LOGIN_RESET
+});
+
+/** Clears transient login UI state without wiping the session. */
+export const loginUiReset = () => ({
+    type: Types.USER_LOGIN_UI_RESET
+});
+
+export const userGoogleLogin = (idToken: string) => ({
+    type: Types.USER_GOOGLE_LOGIN,
+    payload: { idToken },
 });
 
 export const registerReset = () => ({

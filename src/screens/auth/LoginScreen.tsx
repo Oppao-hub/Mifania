@@ -14,7 +14,7 @@ import { useNavigation, NavigationProp } from '@react-navigation/native';
 
 // Redux Imports
 import { useDispatch, useSelector } from 'react-redux';
-import { userLogin, loginReset } from '../../app/reducers/auth';
+import { userLogin, loginUiReset, userGoogleLogin } from '../../app/reducers/auth';
 import { IMG, ROUTES } from '../../utils';
 import { RootState } from '../../utils/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
@@ -27,20 +27,16 @@ const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-    const [isGoogleLoading] = useState(false);
     
     const navigation = useNavigation<NavigationProp<any>>();
     const dispatch = useDispatch();
 
     const { isLoading, isError, error } = useSelector((state: RootState) => state.authentication);
 
+    // Clear stale "Signing in..." if a previous login was interrupted (e.g. app reload)
     useEffect(() => {
-        GoogleSignin.configure({
-            webClientId: '300896200734-ti08h9ju74onbmmsl1v9oq011qtvgj1e.apps.googleusercontent.com',
-            offlineAccess: true,
-            forceCodeForRefreshToken: true,
-        });
-    }, []);
+        dispatch(loginUiReset());
+    }, [dispatch]);
 
     useEffect(() => {
         if (isError && error) {
@@ -49,6 +45,10 @@ const LoginScreen = () => {
     }, [isError, error]);
 
     const handleLogin = () => {
+        if (isLoading) {
+            return;
+        }
+
         if (!email.trim() || !password.trim()) {
             AlertMsg.customError({ title: "Input Error", message: "Please enter your credentials." });
             return;
@@ -67,6 +67,10 @@ const LoginScreen = () => {
     };
 
     const handleGoogleSignIn = async () => {
+        if (isLoading) {
+            return;
+        }
+
         try {
             console.log("📍 Google Sign-In: Checking Play Services...");
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -85,15 +89,12 @@ const LoginScreen = () => {
                 return;
             }
 
-            const idToken = signInResponse.data.idToken;
-            if (!idToken) throw new Error("No ID token found from Google.");
+            const idToken = signInResponse.data?.idToken;
+            if (!idToken) {
+                throw new Error('No ID token found from Google.');
+            }
 
-            // 💡 THE FIX: Stop calling the API here! Just dispatch to your Saga.
-            // (Assuming your action type is USER_GOOGLE_LOGIN)
-            dispatch({ 
-                type: 'USER_GOOGLE_LOGIN', 
-                payload: { idToken } 
-            });
+            dispatch(userGoogleLogin(idToken));
             
         } catch (signInError: any) { 
             console.log("❌ Google Sign-In Error details:", signInError);
@@ -110,7 +111,7 @@ const LoginScreen = () => {
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
             <CustomModal 
-                visible={isLoading || isGoogleLoading}
+                visible={isLoading}
                 isLoading={true}
                 message="Signing in..."
             />
@@ -140,7 +141,7 @@ const LoginScreen = () => {
                                 value={email}
                                 onChangeText={(text) => {
                                     setEmail(text);
-                                    if (isError) dispatch(loginReset());
+                                    if (isError) dispatch(loginUiReset());
                                 }}
                                 placeholder="Email Address"
                                 iconName="mail-outline" // Icon matches your reference image
@@ -154,7 +155,7 @@ const LoginScreen = () => {
                                 value={password}
                                 onChangeText={(text) => {
                                     setPassword(text);
-                                    if (isError) dispatch(loginReset());
+                                    if (isError) dispatch(loginUiReset());
                                 }}
                                 placeholder="Password"
                                 iconName="lock-closed-outline" // Icon matches your reference image
@@ -198,7 +199,7 @@ const LoginScreen = () => {
                             <Button
                                 label="Continue with Google"
                                 onPress={handleGoogleSignIn}
-                                disabled={isLoading || isGoogleLoading}
+                                disabled={isLoading}
                                 variant="secondary"
                                 leftElement={<Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>}
                             />
@@ -206,7 +207,7 @@ const LoginScreen = () => {
 
                         {/* Footer */}
                         <View className="mt-auto py-10 items-center">
-                            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.REGISTER)} disabled={isLoading || isGoogleLoading}>
+                            <TouchableOpacity onPress={() => navigation.navigate(ROUTES.REGISTER)} disabled={isLoading}>
                                 <Text className="text-sm text-gray font-medium">
                                     Don't have an account? <Text className="font-bold text-brand">Create Account</Text>
                                 </Text>

@@ -1,18 +1,21 @@
-import messaging from '@react-native-firebase/messaging';
+import { getApp } from '@react-native-firebase/app';
+import { getMessaging, requestPermission, getToken, AuthorizationStatus } from '@react-native-firebase/messaging';
+import { ASSET_URL } from '../app/api/client';
 
 export const registerDeviceForPush = async (userId: number, authToken: string) => {
     try {
-        const authStatus = await messaging().requestPermission();
+        const messagingInstance = getMessaging(getApp());
+        const authStatus = await requestPermission(messagingInstance);
         const enabled = 
-            authStatus === messaging.AuthorizationStatus.AUTHORIZED || 
-            authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+            authStatus === AuthorizationStatus.AUTHORIZED || 
+            authStatus === AuthorizationStatus.PROVISIONAL;
 
         if (enabled) {
-            const deviceToken = await messaging().getToken();
+            const deviceToken = await getToken(messagingInstance);
             console.log('📱 FCM Device Token:', deviceToken);
             
             // Use your API Platform endpoint!
-            const response = await fetch(`https://sfl-mifania.up.railway.app/api/users/${userId}`, {
+            const response = await fetch(`${ASSET_URL}/api/users/${userId}`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/merge-patch+json',

@@ -15,6 +15,7 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
         case Types.GET_CART_REQUEST:
         case Types.ADD_TO_CART_REQUEST:
         case Types.UPDATE_CART_QTY_REQUEST:
+        case Types.EDIT_CART_ITEM_REQUEST:
         case Types.REMOVE_FROM_CART_REQUEST:
         case Types.GET_COLLECTIONS_REQUEST:
         case Types.CREATE_COLLECTION_REQUEST:
@@ -36,13 +37,25 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
             const mappedItems = cartItems.map((item: any) => {
                 let productData = item.product;
                 
-                // If product is an IRI string (e.g., "/api/products/3"), try to find it in the products list
-                if (typeof productData === 'string') {
-                    const foundProduct = allProducts.find(p => 
-                        p['@id'] === productData || `/api/products/${p.id}` === productData
+                const resolveFromCatalog = (ref: string | number) =>
+                    allProducts.find(
+                        (p) =>
+                            p['@id'] === ref ||
+                            `/api/products/${p.id}` === ref ||
+                            p.id === ref ||
+                            String(p.id) === String(ref),
                     );
+
+                // If product is an IRI string, or embedded without full fields, enrich from catalog
+                if (typeof productData === 'string') {
+                    const foundProduct = resolveFromCatalog(productData);
                     if (foundProduct) {
                         productData = foundProduct;
+                    }
+                } else if (productData?.id) {
+                    const foundProduct = resolveFromCatalog(productData.id);
+                    if (foundProduct) {
+                        productData = { ...foundProduct, ...productData };
                     }
                 }
 
@@ -70,6 +83,7 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
 
         case Types.ADD_TO_CART_COMPLETED:
         case Types.UPDATE_CART_QTY_COMPLETED:
+        case Types.EDIT_CART_ITEM_COMPLETED:
         case Types.REMOVE_FROM_CART_COMPLETED:
         case Types.CREATE_COLLECTION_COMPLETED:
         case Types.SWITCH_COLLECTION_COMPLETED:
@@ -83,6 +97,7 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
         case Types.GET_CART_ERROR:
         case Types.ADD_TO_CART_ERROR:
         case Types.UPDATE_CART_QTY_ERROR:
+        case Types.EDIT_CART_ITEM_ERROR:
         case Types.REMOVE_FROM_CART_ERROR:
         case Types.GET_COLLECTIONS_ERROR:
         case Types.CREATE_COLLECTION_ERROR:
@@ -149,6 +164,16 @@ export const removeFromCart = (cartItemId: string | number) => ({
 export const updateCartQty = (cartItemId: string | number, quantity: number) => ({
     type: Types.UPDATE_CART_QTY,
     payload: { cartItemId, quantity }
+});
+
+export const editCartItem = (payload: {
+    cartItemId: string | number;
+    quantity: number;
+    size: string;
+    color: string;
+}) => ({
+    type: Types.EDIT_CART_ITEM,
+    payload,
 });
 
 export const toggleCartItemSelection = (id: string | number) => ({

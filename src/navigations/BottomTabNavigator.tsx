@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../utils/types';
@@ -12,7 +12,7 @@ import AccountScreen from '../screens/AccountScreen';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const Tab = createBottomTabNavigator();
-const HomeStack = createStackNavigator();
+const HomeStack = createNativeStackNavigator();
 
 const BRAND_GREEN = '#52622E'; 
 const LIGHT_GRAY = '#9CA3AF';

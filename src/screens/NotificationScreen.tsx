@@ -1,3 +1,4 @@
+// src/screens/NotificationScreen.tsx
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
   View, 
@@ -13,70 +14,11 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RootState, Notification } from '../utils/types';
 import * as Types from '../app/actions';
-import { StackNavigationProp } from '@react-navigation/stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ROUTES } from '../utils';
 
-const formatNotificationTime = (dateString: string) => {
-  try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-      
-      if (diffInHours < 1) {
-          const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-          return diffInMinutes <= 1 ? 'Just now' : `${diffInMinutes}m ago`;
-      } else if (diffInHours < 24 && date.getDate() === now.getDate()) {
-          return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      } else if (diffInHours < 48 && new Date(now.setDate(now.getDate() - 1)).getDate() === date.getDate()) {
-          return 'Yesterday';
-      } else {
-          return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-      }
-  } catch {
-      return dateString;
-  }
-};
-
-const NotificationItem = ({ item, onPress }: { item: Notification; onPress: (item: Notification) => void }) => (
-  <TouchableOpacity 
-    activeOpacity={0.7} 
-    onPress={() => onPress(item)}
-    className="flex-row mb-6 px-6"
-  >
-    {/* Left Icon */}
-    <View className={`w-14 h-14 rounded-full border ${!item.isRead ? 'border-[#52622E] bg-[#52622E]/5' : 'border-gray-100 bg-gray-50'} items-center justify-center mr-4`}>
-      <Icon name={item.icon || 'bell-outline'} size={24} color={!item.isRead ? '#52622E' : '#9CA3AF'} />
-    </View>
-
-    {/* Content */}
-    <View className="flex-1">
-      {/* Title Row */}
-      <View className="flex-row items-center justify-between mb-1">
-        <View className="flex-row items-center flex-1 pr-2">
-          <Text className={`text-base ${!item.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-600'}`} numberOfLines={1}>
-            {item.title} {item.emoji}
-          </Text>
-        </View>
-        
-        <View className="flex-row items-center">
-          {!item.isRead && (
-            <View className="w-2.5 h-2.5 rounded-full bg-[#52622E] mr-3" />
-          )}
-          <Icon name="chevron-right" size={20} color="#9CA3AF" />
-        </View>
-      </View>
-
-      {/* Body Text */}
-      <Text className={`text-sm ${!item.isRead ? 'text-gray-700' : 'text-gray-400'} leading-5 mb-2`} numberOfLines={2}>
-        {item.message || item.body}
-      </Text>
-
-      {/* Time */}
-      <Text className="text-[11px] font-medium text-gray-400">
-        {formatNotificationTime(item.createdAt)}
-      </Text>
-    </View>
-  </TouchableOpacity>
-);
+// 💡 Import the new component
+import NotificationItem from '../components/NotificationItem';
 
 const SectionHeader = ({ section: { title, data } }: any) => {
   if (data.length === 0) return null;
@@ -91,29 +33,76 @@ const SectionHeader = ({ section: { title, data } }: any) => {
 };
 
 const NotificationScreen = () => {
-  const navigation = useNavigation<StackNavigationProp<any>>();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const dispatch = useDispatch();
-  const [activeTab, setActiveTab] = useState<'General' | 'Promotions'>('General');
   const { items: notifications } = useSelector((state: RootState) => state.notification);
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const token = authData?.token;
+  
+  const [refreshing, setRefreshing] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
         if (token) {
-            dispatch({ type: Types.GET_NOTIFICATIONS, payload: token });
+            dispatch({ type: Types.GET_NOTIFICATIONS });
         }
     }, [token, dispatch])
   );
 
-  const filteredNotifications = useMemo(() => {
-    return (notifications || []).filter(n => {
-        if (activeTab === 'General') {
-            return n.type === 'system' || n.type === 'order' || n.type === 'General';
-        }
-        return n.type === 'Promotions' || n.type === 'marketing';
-      });
-  }, [notifications, activeTab]);
+  const onRefresh = useCallback(() => {
+    if (token) {
+      setRefreshing(true);
+      dispatch({ type: Types.GET_NOTIFICATIONS });
+      setTimeout(() => setRefreshing(false), 800);
+    }
+  }, [token, dispatch]);
+
+  const getOrderReference = (item: Notification): { orderId?: number; orderIri?: string } => {
+    const payloadOrderId = Number((item as any).orderId);
+    if (!Number.isNaN(payloadOrderId) && payloadOrderId > 0) {
+      return {
+        orderId: payloadOrderId,
+        orderIri: `/api/orders/${payloadOrderId}`,
+      };
+    }
+
+    const sourceText = `${item.targetUrl || ''} ${item.message || ''} ${item.body || ''}`;
+
+    const orderIriMatch = sourceText.match(/(\/api\/orders\/\d+)/i);
+    if (orderIriMatch?.[1]) {
+      const iri = orderIriMatch[1];
+      const idFromIri = Number(iri.match(/(\d+)$/)?.[1]);
+      return {
+        orderIri: iri,
+        orderId: Number.isNaN(idFromIri) ? undefined : idFromIri,
+      };
+    }
+
+    const orderPathMatch = sourceText.match(/\/orders?\/(\d+)/i);
+    if (orderPathMatch?.[1]) {
+      const id = Number(orderPathMatch[1]);
+      if (!Number.isNaN(id)) return { orderId: id };
+    }
+
+    const orderNumberMatch = sourceText.match(/order\s*#?\s*(\d+)/i);
+    if (orderNumberMatch?.[1]) {
+      const id = Number(orderNumberMatch[1]);
+      if (!Number.isNaN(id)) return { orderId: id };
+    }
+
+    return {};
+  };
+
+  const isOrderRelatedNotification = (item: Notification): boolean => {
+    const sourceText = `${item.type || ''} ${item.title || ''} ${item.targetUrl || ''} ${item.message || ''} ${item.body || ''}`.toLowerCase();
+    return (
+      sourceText.includes('order') ||
+      sourceText.includes('tracking') ||
+      sourceText.includes('shipped') ||
+      sourceText.includes('delivered') ||
+      sourceText.includes('cancelled')
+    );
+  };
 
   const sections = useMemo(() => {
     const today = new Date();
@@ -125,7 +114,9 @@ const NotificationScreen = () => {
     const yesterdayData: Notification[] = [];
     const olderData: Notification[] = [];
 
-    filteredNotifications.forEach(n => {
+    const safeNotifications = notifications || [];
+
+    safeNotifications.forEach(n => {
         const date = new Date(n.createdAt);
         date.setHours(0, 0, 0, 0);
 
@@ -144,19 +135,59 @@ const NotificationScreen = () => {
     if (olderData.length > 0) result.push({ title: 'Older', data: olderData });
 
     return result;
-  }, [filteredNotifications]);
+  }, [notifications]);
 
+  
   const handleNotificationPress = (item: Notification) => {
-    dispatch({ type: Types.MARK_NOTIFICATION_READ, payload: item.id });
+    if (item.id != null) {
+      dispatch({
+        type: Types.MARK_NOTIFICATION_READ,
+        payload: {
+          id: Number(item.id),
+          token,
+        },
+      });
+    }
     
-    if (item.targetUrl) {
-        // If targetUrl is a route name, navigate to it
-        // If it's something else, handle accordingly
-        try {
-            navigation.navigate(item.targetUrl as any);
-        } catch (e) {
-            console.error("Navigation error:", e);
+    try {
+      const url = String(item.targetUrl || '').toLowerCase();
+      const isOrderNotification = isOrderRelatedNotification(item);
+
+      if (isOrderNotification) {
+        const { orderId, orderIri } = getOrderReference(item);
+        if (orderId || orderIri) {
+          navigation.navigate(ROUTES.ORDER_MANAGEMENT as any, {
+            orderId,
+            orderIri,
+            initialTab: 'Tracking',
+          });
+        } else {
+          navigation.navigate('BottomTab' as any, {
+            screen: 'My Order',
+          });
         }
+        return;
+      }
+
+      // 💡 Nested Navigation Logic
+      // We navigate to 'BottomTab' (the navigator name)
+      // and pass the 'screen' param (the specific tab name)
+      if (url.includes('/account')) {
+        navigation.navigate('BottomTab' as any, {
+          screen: 'Account',
+        });
+      }
+      else if (url.includes('/cart')) {
+        navigation.navigate('BottomTab' as any, {
+          screen: 'Cart',
+        });
+      }
+      else if (item.targetUrl) {
+        // If the URL is just a simple screen name defined in MainNavigator
+        navigation.navigate(item.targetUrl as any);
+      }
+    } catch (e) {
+      console.error("Navigation error:", e);
     }
   };
 
@@ -173,20 +204,24 @@ const NotificationScreen = () => {
             { 
                 text: "Delete", 
                 style: "destructive", 
-                onPress: () => dispatch({ type: Types.CLEAR_NOTIFICATIONS }) 
+                onPress: () =>
+                  dispatch({
+                    type: Types.CLEAR_NOTIFICATIONS,
+                    payload: { token },
+                  }),
             }
         ]
     );
   };
 
-  const hasUnread = filteredNotifications.some(n => !n.isRead);
+  const hasUnread = (notifications || []).some(n => !n.isRead);
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
       <StatusBar barStyle="dark-content" />
 
       {/* HEADER */}
-      <View className="flex-row items-center justify-between px-6 py-4">
+      <View className="flex-row items-center justify-between px-6 py-4 mb-2">
         <TouchableOpacity 
             onPress={() => navigation.goBack()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -213,37 +248,6 @@ const NotificationScreen = () => {
         </View>
       </View>
 
-      {/* CUSTOM SEGMENTED TABS */}
-      <View className="px-6 mb-4 mt-2">
-        <View className="flex-row bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
-          <TouchableOpacity 
-            onPress={() => setActiveTab('General')}
-            className={`flex-1 py-3 rounded-xl items-center ${
-              activeTab === 'General' ? 'bg-white shadow-sm border border-gray-100' : 'bg-transparent'
-            }`}
-          >
-            <Text className={`font-bold text-sm ${
-              activeTab === 'General' ? 'text-[#52622E]' : 'text-gray-400'
-            }`}>
-              General
-            </Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            onPress={() => setActiveTab('Promotions')}
-            className={`flex-1 py-3 rounded-xl items-center ${
-              activeTab === 'Promotions' ? 'bg-white shadow-sm border border-gray-100' : 'bg-transparent'
-            }`}
-          >
-            <Text className={`font-bold text-sm ${
-              activeTab === 'Promotions' ? 'text-[#52622E]' : 'text-gray-400'
-            }`}>
-              Promotions
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       {/* NOTIFICATIONS LIST */}
       <SectionList
         sections={sections}
@@ -253,6 +257,8 @@ const NotificationScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
         stickySectionHeadersEnabled={false}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={() => (
             <View className="flex-1 items-center justify-center pt-20 px-10">
                 <View className="w-24 h-24 bg-gray-50 rounded-full items-center justify-center mb-6">
@@ -260,7 +266,7 @@ const NotificationScreen = () => {
                 </View>
                 <Text className="text-xl font-bold text-gray-900 mb-2 text-center">No notifications yet</Text>
                 <Text className="text-gray-400 text-center leading-5">
-                    We'll notify you when something important happens or when there's a new promotion.
+                    We'll notify you when something important happens with your account or orders.
                 </Text>
             </View>
         )}

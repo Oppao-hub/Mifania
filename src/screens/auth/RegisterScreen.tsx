@@ -11,14 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
-import { userGoogleLoginApi } from '../../app/api/auth';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
-import { userLoginCompleted } from '../../app/reducers/auth';
 
 // Redux Imports
 import { useDispatch, useSelector } from 'react-redux';
-import { userRegister, registerReset } from '../../app/reducers/auth';
+import { userRegister, registerReset, userGoogleLogin } from '../../app/reducers/auth';
 import { IMG, ROUTES } from '../../utils';
 import { RootState } from '../../utils/types';
 import CustomModal from '../../components/CustomModal';
@@ -33,7 +30,6 @@ const RegisterScreen = () => {
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
-    const [isGoogleLoading, setIsGoogleLoading] = useState(false);
     
     const navigation = useNavigation<NavigationProp<any>>();
     const dispatch = useDispatch();
@@ -44,7 +40,9 @@ const RegisterScreen = () => {
     }, [dispatch]);
 
     useEffect(() => {
-        if (data && !isLoading && !isError) {
+        // Email registration only — Google login sets `token` and AppNavigator switches to Main
+        const registerData = data as { token?: string; success?: boolean } | null;
+        if (registerData?.success && !registerData.token && !isLoading && !isError) {
             AlertMsg.customSuccess({ 
                 title: "Registration Successful", 
                 message: "Please check your inbox and verify your email before signing in." 
@@ -79,6 +77,10 @@ const RegisterScreen = () => {
     };
 
     const handleGoogleSignIn = async () => {
+        if (isLoading) {
+            return;
+        }
+
         try {
             console.log("📍 Google Sign-In: Checking Play Services...");
             await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -96,26 +98,12 @@ const RegisterScreen = () => {
                 return;
             }
 
-            setIsGoogleLoading(true);
+            const idToken = signInResponse.data?.idToken;
+            if (!idToken) {
+                throw new Error('No ID token found from Google.');
+            }
 
-            const idToken = signInResponse.data.idToken;
-            if (!idToken) throw new Error("No ID token found from Google.");
-
-            console.log("📍 Google Sign-In: Exchanging token with backend...");
-            const serverData = await userGoogleLoginApi(idToken);
-            
-            console.log("📍 Google Sign-In: Syncing with Firebase...");
-            const authInstance = getAuth();
-            const googleCredential = GoogleAuthProvider.credential(idToken);
-            const userCredential = await signInWithCredential(authInstance, googleCredential);
-            
-            console.log("📍 Google Sign-In: Login completed.");
-            dispatch(userLoginCompleted({
-                user: serverData.user || {
-                    email: userCredential.user.email || '',
-                },
-                token: serverData.token || idToken
-            }));
+            dispatch(userGoogleLogin(idToken));
             
         } catch (signInError: any) { 
             console.log("❌ Google Sign-In Error details:", signInError);
@@ -133,8 +121,6 @@ const RegisterScreen = () => {
                 title: "Google Sign-In Failed", 
                 message: `[Code: ${errorCode}] ${errorMessage}${extraInfo}` 
             });
-        } finally {
-            setIsGoogleLoading(false);
         }
     };
 
@@ -143,7 +129,7 @@ const RegisterScreen = () => {
             <CustomModal 
                 visible={isLoading}
                 isLoading={true}
-                message="Creating account..."
+                message="Signing in..."
             />
             
             <KeyboardAvoidingView 
@@ -193,9 +179,9 @@ const RegisterScreen = () => {
                                     if (isError) dispatch(registerReset());
                                 }}
                                 placeholder="Email Address"
-                                iconName="mail-outline" // Icon matches your reference image
-                                keyboardType="email-address" // Ensures the @ symbol is on the keyboard
-                                autoCapitalize="none" // Essential for emails
+                                iconName="mail-outline"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
                                 editable={!isLoading}
                                 inputClassName={isError && error?.toLowerCase().includes('email') ? 'border-red-500' : ''}
                             />
@@ -207,7 +193,7 @@ const RegisterScreen = () => {
                                     if (isError) dispatch(registerReset());
                                 }}
                                 placeholder="Password"
-                                iconName="lock-closed-outline" // Icon matches your reference image
+                                iconName="lock-closed-outline"
                                 secureTextEntry={!isPasswordVisible}
                                 rightElement={
                                     <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
@@ -226,7 +212,7 @@ const RegisterScreen = () => {
                                     <Icon 
                                         name={agreeTerms ? "checkbox" : "square-outline"} 
                                         size={22} 
-                                        color={agreeTerms ? "#4A785A" : "#6A7282"} // Adjust color to your brand
+                                        color={agreeTerms ? "#4A785A" : "#6A7282"}
                                     />
                                 </TouchableOpacity>
                                 <Text className="ml-3 text-xs font-bold text-gray tracking-wider">
@@ -261,7 +247,7 @@ const RegisterScreen = () => {
                             <Button
                                 label="Continue with Google"
                                 onPress={handleGoogleSignIn}
-                                disabled={isLoading || isGoogleLoading}
+                                disabled={isLoading}
                                 variant="secondary"
                                 leftElement={<Image source={IMG.GOOGLE_ICON} className="w-5 h-5 mr-3" resizeMode="contain"/>}
                             />

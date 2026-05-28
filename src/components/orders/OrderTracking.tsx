@@ -15,15 +15,16 @@ const OrderTracking = ({ order }: OrderTrackingProps) => {
   const getStatusStep = (status: string) => {
     const s = String(status || '').toLowerCase();
     switch (s) {
-      case 'pending': return 1;
+      case 'pending': return 0;
       case 'processing': return 2;
       case 'shipped': return 3;
-      case 'delivered':
-      case 'completed': return 4;
-      default: return 1;
+      case 'delivered': return 4;
+      default: return 0;
     }
   };
 
+  const normalizedStatus = String(order?.orderStatus || '').toLowerCase();
+  const isCancelled = normalizedStatus === 'cancelled';
   const currentStep = getStatusStep(order.orderStatus);
 
   const renderTimelineStep = (step: number, title: string, description: string, icon: string, isLast = false) => {
@@ -84,14 +85,33 @@ const OrderTracking = ({ order }: OrderTrackingProps) => {
 
       {/* --- TIMELINE --- */}
       <View className="bg-white rounded-[24px] p-6 shadow-sm border border-border-color">
-        <Text className="font-montserrat-bold text-dark-gray text-sm mb-6">Delivery Progress</Text>
-        
-        <View className="px-2">
-          {renderTimelineStep(1, 'Order Placed', 'Your order has been received.', 'receipt-outline')}
-          {renderTimelineStep(2, 'Order Processing', 'We are preparing your package.', 'cube-outline')}
-          {renderTimelineStep(3, 'In Delivery', 'Your order is on the way.', 'truck-outline')}
-          {renderTimelineStep(4, 'Delivered', 'Order reached your destination.', 'home-outline', true)}
-        </View>
+        <Text className="font-montserrat-bold text-dark-gray text-sm mb-6">
+          {isCancelled ? 'Order Status' : 'Delivery Progress'}
+        </Text>
+
+        {isCancelled ? (
+          <View className="rounded-2xl border border-red-100 bg-red-50 p-4">
+            <View className="flex-row items-center">
+              <View className="w-10 h-10 rounded-full items-center justify-center bg-red-100 mr-3">
+                <Icon name="close-circle-outline" size={20} color="#DC2626" />
+              </View>
+              <View className="flex-1">
+                <Text className="font-montserrat-bold text-red-600 text-sm">Order Cancelled</Text>
+                <Text className="font-montserrat text-[11px] text-red-500 mt-1">
+                  This order has been cancelled and will not proceed to delivery.
+                </Text>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View className="px-2">
+            {renderTimelineStep(0, 'Pending', 'Your order is waiting for confirmation.', 'time-outline')}
+            {renderTimelineStep(1, 'Order Placed', 'Your order has been received.', 'receipt-outline')}
+            {renderTimelineStep(2, 'Order Processing', 'We are preparing your package.', 'cube-outline')}
+            {renderTimelineStep(3, 'In Delivery', 'Your order is on the way.', 'car-outline')}
+            {renderTimelineStep(4, 'Delivered', 'Order reached your destination.', 'home-outline', true)}
+          </View>
+        )}
       </View>
 
       {/* --- HELP CARD --- */}

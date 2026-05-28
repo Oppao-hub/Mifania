@@ -1,5 +1,5 @@
 import React from 'react';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ROUTES } from '../utils';
 import BottomTab from './BottomTabNavigator';
 
@@ -12,8 +12,13 @@ import ProductDetails from '../screens/ProductDetailsScreen';
 import Profile from '../screens/ProfileScreen';
 import Notification from '../screens/NotificationScreen';
 import OrderSuccess from '../screens/OrderSuccessScreen';
+import Checkout from '../screens/CheckoutScreen';
+import ChooseDeliveryAddress from '../screens/ChooseDeliveryAddressScreen';
+import ChooseDelivery from '../screens/ChooseDeliveryScreen';
+import ChoosePaymentMethod from '../screens/ChoosePaymentMethodScreen';
+import PromosVouchers from '../screens/PromosVouchersScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 
 const MainNavigator: React.FC = () => {
   return (
@@ -28,6 +33,11 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen name={ROUTES.PROFILE} component={Profile} />
       <Stack.Screen name={ROUTES.NOTIFICATION} component={Notification} />
       <Stack.Screen name={ROUTES.ORDER_SUCCESS} component={OrderSuccess} />
+      <Stack.Screen name={ROUTES.CHECKOUT} component={Checkout} />
+      <Stack.Screen name={ROUTES.CHOOSE_DELIVERY_ADDRESS} component={ChooseDeliveryAddress} />
+      <Stack.Screen name={ROUTES.CHOOSE_DELIVERY} component={ChooseDelivery} />
+      <Stack.Screen name={ROUTES.CHOOSE_PAYMENT_METHOD} component={ChoosePaymentMethod} />
+      <Stack.Screen name={ROUTES.PROMOS_VOUCHERS} component={PromosVouchers} />
     </Stack.Navigator>
   );
 };

@@ -13,6 +13,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import Header from '../components/Header';
 import { RootState } from '../utils/types';
 import * as Types from '../app/actions';
+import { isUnauthorizedError } from '../utils/authSession';
 
 // Import newly extracted components
 import OrderDetailsContent from '../components/orders/OrderDetailsContent';
@@ -34,17 +35,26 @@ const OrderManagementScreen = () => {
   const token = authData?.token;
 
   const fetchOrder = useCallback(() => {
-    if (token) {
-      dispatch({ 
-        type: Types.GET_ORDER_DETAILS, 
-        payload: { id: orderIri || orderId, token } 
-      });
+    if (!token) {
+      dispatch({ type: Types.USER_LOGOUT });
+      return;
     }
+
+    dispatch({ 
+      type: Types.GET_ORDER_DETAILS, 
+      payload: { id: orderIri || orderId, token } 
+    });
   }, [orderId, orderIri, token, dispatch]);
 
   useEffect(() => {
     fetchOrder();
   }, [fetchOrder]);
+
+  useEffect(() => {
+    if (!token || isUnauthorizedError(error || undefined)) {
+      dispatch({ type: Types.USER_LOGOUT });
+    }
+  }, [token, error, dispatch]);
 
   if (isLoading && !order) {
     return (

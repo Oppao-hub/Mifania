@@ -1,65 +1,74 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
+import { View, StatusBar, Text, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ROUTES } from '../utils';
+import Icon from 'react-native-vector-icons/Ionicons';
+import ReusableOverlay from '../components/ReusableOverlay';
+import { goToHomeTab, goToMyOrders } from '../utils/navigation';
+
+const BRAND = '#52622E';
+
+const SuccessIcon = () => (
+  <View className="w-28 h-28 items-center justify-center mb-6">
+    <View className="absolute w-3 h-3 rounded-full bg-brand/30 top-2 left-6" />
+    <View className="absolute w-2 h-2 rounded-full bg-brand/40 top-8 right-4" />
+    <View className="absolute w-2.5 h-2.5 rounded-full bg-brand/25 bottom-6 left-3" />
+    <View className="absolute w-2 h-2 rounded-full bg-brand/35 bottom-4 right-6" />
+    <View className="w-20 h-20 rounded-full bg-brand items-center justify-center">
+      <Icon name="checkmark" size={44} color="#FFFFFF" />
+    </View>
+  </View>
+);
 
 const OrderSuccessScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { pointsEarned } = route.params || { pointsEarned: 0 };
-
-  const handleGoHome = () => {
-    navigation.navigate('BottomTab', { screen: 'HomeTab' });
-  };
-
-  const handleViewOrders = () => {
-    navigation.navigate(ROUTES.ORDER);
-  };
+  const { pointsEarned = 0 } = route.params || {};
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-app-bg" edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
-      <View className="flex-1 items-center justify-center px-10">
-        <View className="w-24 h-24 bg-brand/10 rounded-full items-center justify-center mb-8">
-          <Icon name="checkmark-circle" size={80} color="#52622E" />
-        </View>
-        
-        <Text className="text-2xl font-montserrat-bold text-dark-gray text-center mb-2">
-          Order Placed Successfully!
+      <View className="flex-1" />
+      <ReusableOverlay
+        visible
+        closeOnBackdropPress={false}
+        backdropClassName="flex-1 bg-black/50 justify-center items-center px-8"
+        contentClassName="bg-white rounded-3xl w-full max-w-sm px-6 py-8 items-center"
+      >
+        <SuccessIcon />
+        <Text className="text-xl font-montserrat-bold text-dark-gray text-center mb-3">
+          Order Confirmed!
         </Text>
-
+        <Text className="text-sm font-montserrat text-gray text-center leading-5 mb-2 px-2">
+          Peep your order details in &apos;My Order&apos; and start planning outfits.
+        </Text>
         {pointsEarned > 0 && (
-          <View className="bg-brand/5 px-6 py-3 rounded-2xl mb-6 flex-row items-center">
-            <Icon name="star" size={20} color="#52622E" />
-            <Text className="ml-2 text-brand font-montserrat-bold text-sm">
+          <View className="bg-brand/5 px-4 py-2 rounded-xl mb-4 flex-row items-center">
+            <Icon name="star" size={16} color={BRAND} />
+            <Text className="ml-2 text-brand font-montserrat-bold text-xs">
               You earned {pointsEarned} points!
             </Text>
           </View>
         )}
-        
-        <Text className="text-gray text-center font-montserrat mb-12 leading-6">
-          Your order has been confirmed and is being processed. You can track your order status in the orders section.
-        </Text>
-
-        <TouchableOpacity 
-          onPress={handleViewOrders}
-          className="bg-brand w-full h-14 rounded-2xl items-center justify-center mb-4 shadow-sm"
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => goToMyOrders(navigation)}
+          className="w-full h-14 rounded-full bg-brand items-center justify-center mb-3 mt-2"
         >
-          <Text className="text-white font-montserrat-bold text-sm uppercase tracking-wider">
-            View My Orders
+          <Text className="text-white font-montserrat-bold text-base">
+            View My Order
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity 
-          onPress={handleGoHome}
-          className="w-full h-14 rounded-2xl items-center justify-center border border-border-color"
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => goToHomeTab(navigation)}
+          className="w-full h-14 rounded-full bg-brand/10 items-center justify-center"
         >
-          <Text className="text-dark-gray font-montserrat-bold text-sm uppercase tracking-wider">
-            Continue Shopping
+          <Text className="text-brand font-montserrat-bold text-base">
+            Back to Home
           </Text>
         </TouchableOpacity>
-      </View>
+      </ReusableOverlay>
     </SafeAreaView>
   );
 };

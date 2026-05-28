@@ -3,7 +3,8 @@ import { View, FlatList, ActivityIndicator, Text } from 'react-native';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import messaging from '@react-native-firebase/messaging'; // 💡 ADDED IMPORT
+import { getApp } from '@react-native-firebase/app';
+import { getMessaging, requestPermission, getToken, AuthorizationStatus } from '@react-native-firebase/messaging';
 
 import { RootState, Category } from '../utils/types';
 import Header from '../components/Header';
@@ -13,6 +14,9 @@ import HorizontalProductList from '../components/HorizontalProductList';
 import { getProducts } from '../app/reducers/product';
 import { getCategories } from '../app/reducers/category';
 import { getSubCategories } from '../app/reducers/subCategory';
+import { userUpdateDeviceTokenApi } from '../app/api/auth';
+import { getCustomerRefFromUser, resolveResourceIri } from '../utils';
+import { isUnauthorizedError } from '../utils/authSession';
 
 
 const HomeScreen = () => {
@@ -38,35 +42,45 @@ const HomeScreen = () => {
 
   // 💡 ADDED: Push Notification Registration Effect
   useEffect(() => {
-    const registerDevice = async (userId: number, authToken: string) => {
+    const messagingInstance = getMessaging(getApp());
+
+    const getErrorMessage = (error: unknown): string => {
+      if (error instanceof Error) return error.message;
+      if (typeof error === 'string') return error;
+      if (typeof error === 'object' && error && 'message' in error) {
+        const message = (error as { message?: unknown }).message;
+        return typeof message === 'string' ? message : '';
+      }
+      return '';
+    };
+
+    const registerDevice = async (customerIri: string, authToken: string) => {
         try {
-            const authStatus = await messaging().requestPermission();
-            const enabled = authStatus === messaging.AuthorizationStatus.AUTHORIZED || authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+            const authStatus = await requestPermission(messagingInstance);
+            const enabled = authStatus === AuthorizationStatus.AUTHORIZED || authStatus === AuthorizationStatus.PROVISIONAL;
 
             if (enabled) {
-                const deviceToken = await messaging().getToken();
+                const deviceToken = await getToken(messagingInstance);
                 console.log('📱 Registering Device Token:', deviceToken);
-                
-                // Send it to the Symfony Backend via PATCH
-                await fetch(`https://sfl-mifania.up.railway.app/api/users/${userId}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/merge-patch+json',
-                        'Authorization': `Bearer ${authToken}`
-                    },
-                    body: JSON.stringify({ deviceToken })
-                });
+                await userUpdateDeviceTokenApi(customerIri, deviceToken, authToken);
             }
         } catch (error) {
+            if (isUnauthorizedError(getErrorMessage(error))) {
+                // Session-expired flow is already handled globally in client.ts
+                return;
+            }
             console.error('Push Notification Registration Error:', error);
         }
     };
 
-    // Only run if the user is fully logged in and has an ID/Token
-    if (authData?.user?.id && authData?.token) {
-        registerDevice(authData.user.id, authData.token);
+    const customerRef = getCustomerRefFromUser(authData?.user);
+    const customerIri = resolveResourceIri(customerRef, 'customers');
+
+    // Only run if the user is fully logged in and customer reference is available
+    if (customerIri && authData?.token) {
+        registerDevice(customerIri, authData.token);
     }
-  }, [authData?.user?.id, authData?.token]);
+  }, [authData?.user, authData?.token]);
 
   // Combine "All" with categories from API
   const allCategories = [{ id: 'all' as any, name: 'All', slug: 'all' } as Category, ...categories];

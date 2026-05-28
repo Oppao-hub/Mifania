@@ -7,13 +7,14 @@ import rootSaga from "../sagas";
 
 import { appReducer } from '../reducers/rootReducer';
 import * as Types from '../actions';
+import { setAuthStore } from '../../utils/authSession';
 
 const sagaMiddleware = createSagaMiddleware();
 
 const rootPersistConfig = {
     key: 'root',
     storage: AsyncStorage,
-    whitelist: ['cart', 'wishlist', 'notification'] // Persist cart, wishlist, and notifications locally
+    whitelist: ['authentication', 'cart', 'wishlist', 'notification'] // Persist auth + user local state
 };
 
 const rootReducer = (state: any, action: any) => {
@@ -32,6 +33,8 @@ const store = createStore(
     persistedReducer,
     applyMiddleware(sagaMiddleware)
 );
+
+setAuthStore(store);
 
 export const persistor = persistStore(store);
 

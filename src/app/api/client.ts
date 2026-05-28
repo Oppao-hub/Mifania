@@ -1,14 +1,37 @@
-export const ASSET_URL: string = "https://sfl-mifania.up.railway.app";
+import { handleSessionExpired } from '../../utils/authSession';
+
+export const ASSET_URL: string = 'https://sfl-mifania.up.railway.app';
 
 const BASE_URL: string = `${ASSET_URL}/api`;
 
-const getHeaders = (token?: string) => {
+const FETCH_TIMEOUT_MS = 30000;
+
+const fetchWithTimeout = async (url: string, options: RequestInit): Promise<Response> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } catch (error: unknown) {
+        if (error instanceof Error && error.name === 'AbortError') {
+            throw new Error('Request timed out. Check your connection and try again.');
+        }
+        throw error;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+};
+
+const getHeaders = (token?: string, extraHeaders?: Record<string, string>) => {
     const headers: any = {
         "Accept": "application/ld+json",
         "Content-Type": "application/ld+json"
     };
     if (token) {
         headers.Authorization = `Bearer ${token}`;
+    }
+    if (extraHeaders) {
+        Object.assign(headers, extraHeaders);
     }
     return headers;
 };
@@ -22,11 +45,13 @@ const handleResponseError = async (response: Response) => {
         errorData = { detail: text };
     }
 
-    console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
-
     if (response.status === 401) {
-        throw new Error(errorData.message || errorData.error || "Unauthorized");
+        console.log('❌ Server Error Response: 401 Unauthorized');
+        handleSessionExpired();
+        throw new Error('Unauthorized');
     }
+
+    console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
 
     if (response.status === 422) {
         // Handle API Platform violations array
@@ -39,7 +64,41 @@ const handleResponseError = async (response: Response) => {
         }
     }
     
-    throw new Error(errorData.message || errorData['hydra:description'] || errorData.detail || `Error: ${response.status}. Request Failed`);
+    throw new Error(
+        errorData.message
+        || errorData.error
+        || errorData['hydra:description']
+        || errorData.detail
+        || `Error: ${response.status}. Request Failed`,
+    );
+};
+
+const isNetworkFailure = (error: unknown): boolean => {
+    if (!(error instanceof TypeError)) {
+        return false;
+    }
+    const message = error.message.toLowerCase();
+    return (
+        message.includes('network request failed') ||
+        message.includes('failed to fetch') ||
+        message.includes('network error')
+    );
+};
+
+const mapFetchNetworkError = (error: unknown, url: string): Error => {
+    if (!isNetworkFailure(error)) {
+        return error instanceof Error ? error : new Error(String(error));
+    }
+
+    console.error('Network request failed:', { url, error });
+
+    const hint = __DEV__
+        ? ' If you use the Android emulator, DNS may be broken — cold boot the AVD or start it with: emulator -avd <name> -dns-server 8.8.8.8,8.8.4.4. Also run: npm run android:setup'
+        : '';
+
+    return new Error(
+        `Network Error: Could not reach ${url}. Check your internet connection.${hint}`,
+    );
 };
 
 const buildUrl = (endpoint: string): string => {
@@ -53,12 +112,17 @@ const buildUrl = (endpoint: string): string => {
     return `${BASE_URL}${endpoint}`;
 };
 
-export const postRequest = async <T>(endpoint: string, body: object, token?: string): Promise<T> => {
-    const headers = getHeaders(token);
+export const postRequest = async <T>(
+    endpoint: string,
+    body: object,
+    token?: string,
+    extraHeaders?: Record<string, string>,
+): Promise<T> => {
+    const headers = getHeaders(token, extraHeaders);
     const url = buildUrl(endpoint);
     console.log(`POST Request: ${url}`, { headers });
     try {
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: "POST",
             headers: headers,
             body: JSON.stringify(body)
@@ -70,10 +134,7 @@ export const postRequest = async <T>(endpoint: string, body: object, token?: str
 
         return await response.json();
     } catch (error: any) {
-        if (error instanceof TypeError && error.message === 'Network request failed') {
-            throw new Error("Network Error: Could not connect to the server. Please check your internet connection.");
-        }
-        throw error;
+        throw mapFetchNetworkError(error, url);
     }
 };
 
@@ -85,7 +146,7 @@ export const patchRequest = async <T>(endpoint: string, body: object, token?: st
     const url = buildUrl(endpoint);
     console.log(`PATCH Request: ${url}`, { headers });
     try {
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: "PATCH",
             headers: headers,
             body: JSON.stringify(body)
@@ -97,10 +158,7 @@ export const patchRequest = async <T>(endpoint: string, body: object, token?: st
 
         return await response.json();
     } catch (error: any) {
-        if (error instanceof TypeError && error.message === 'Network request failed') {
-            throw new Error("Network Error: Could not connect to the server.");
-        }
-        throw error;
+        throw mapFetchNetworkError(error, url);
     }
 };
 
@@ -109,7 +167,7 @@ export const deleteRequest = async <T>(endpoint: string, token?: string): Promis
     const url = buildUrl(endpoint);
     console.log(`DELETE Request: ${url}`, { headers });
     try {
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: "DELETE",
             headers: headers
         });
@@ -124,10 +182,7 @@ export const deleteRequest = async <T>(endpoint: string, token?: string): Promis
 
         return await response.json();
     } catch (error: any) {
-        if (error instanceof TypeError && error.message === 'Network request failed') {
-            throw new Error("Network Error: Could not connect to the server.");
-        }
-        throw error;
+        throw mapFetchNetworkError(error, url);
     }
 };
 
@@ -136,13 +191,15 @@ export const getRequest = async <T>(endpoint: string, token?: string): Promise<T
     const url = buildUrl(endpoint);
     console.log(`GET Request: ${url}`, { headers });
     try {
-        const response = await fetch(url, {
+        const response = await fetchWithTimeout(url, {
             method: "GET",
             headers: headers
         });
 
         if(!response.ok) {
-            console.error(`GET Error: ${response.status}`);
+            if (response.status !== 401) {
+                console.error(`GET Error: ${response.status}`);
+            }
             await handleResponseError(response);
         }
 
@@ -150,9 +207,6 @@ export const getRequest = async <T>(endpoint: string, token?: string): Promise<T
         console.log(`GET Success: ${endpoint}`, JSON.stringify(data).substring(0, 200));
         return data;
     } catch (error: any) {
-        if (error instanceof TypeError && error.message === 'Network request failed') {
-            throw new Error("Network Error: Could not connect to the server.");
-        }
-        throw error;
+        throw mapFetchNetworkError(error, url);
     }
 };

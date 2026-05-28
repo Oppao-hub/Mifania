@@ -44,7 +44,6 @@ export enum OrderStatus {
   SHIPPED = 'Shipped',
   DELIVERED = 'Delivered',
   CANCELLED = 'Cancelled',
-  COMPLETED = 'Completed',
 }
 
 export enum Size {
@@ -139,10 +138,13 @@ export interface SubCategory extends HydraResource {
 
 export interface Order extends HydraResource {
   totalAmount: string; // Decimal as string
+  originalAmount?: string;
+  discountAmount?: string;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   orderStatus: OrderStatus;
   rewardPoints: number;
+  pointsRedeemed?: number;
   createdAt?: string;
   updatedAt?: string;
   customer?: string | Customer; // ManyToOne
@@ -337,6 +339,7 @@ export interface RootState {
     isLoading: boolean;
     isError: boolean;
     error: string | null;
+    lastCreatedOrder: Order | null;
   };
   notification: {
     items: Notification[];
@@ -351,8 +354,9 @@ export interface LoginCredentials {
 }
 
 export interface LoginResponse {
-  token: string,
+  token: string;
   user: User;
+  is_new_user?: boolean;
 }
 
 export interface RegisterCredentials {

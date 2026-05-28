@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -6,7 +6,8 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Dimensions,
-  StatusBar
+  StatusBar,
+  Linking
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -16,9 +17,18 @@ import { ASSET_URL } from '../app/api/client';
 import Button from '../components/Button';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../app/reducers/cart';
+import { getProducts } from '../app/reducers/product';
 import { toggleWishlist } from '../app/reducers/wishlist';
-import { RootState } from '../utils/types';
+import { Color, Product, RootState, Size } from '../utils/types';
 import { ROUTES } from '../utils';
+import {
+  COLOR_OPTIONS,
+  SIZE_OPTIONS,
+  findProductVariant,
+  getProductStock,
+  normalizeProductColor,
+  normalizeProductSize,
+} from '../utils/productVariants';
 
 const { width } = Dimensions.get('window');
 
@@ -27,24 +37,40 @@ export default function ProductDetailScreen() {
   const route = useRoute();
   const dispatch = useDispatch();
   const wishlistItems = useSelector((state: RootState) => state.wishlist.items);
+  const catalogProducts = useSelector((state: RootState) => state.product.items);
   const { isLoading: isCartLoading, error: cartError } = useSelector((state: RootState) => state.cart);
-  
-  const { product }: any = route.params || {};
-  const isWishlisted = wishlistItems.some(item => item.id === product?.id);
 
-  const [selectedSize, setSelectedSize] = useState('L');
-  const [selectedColor, setSelectedColor] = useState('Black');
+  const { product }: { product?: Product } = route.params || {};
+  const isWishlisted = wishlistItems.some((item) => item.id === product?.id);
+
+  const [selectedSize, setSelectedSize] = useState<Size>(Size.LARGE);
+  const [selectedColor, setSelectedColor] = useState<Color>(Color.BLACK);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isBuyingNow, setIsBuyingNow] = useState(false);
 
-  const sizes = ['XS', 'S', 'M', 'L', 'XL'];
-  const colors = [
-    { name: 'Black', hex: '#1C1C1C' },
-    { name: 'White', hex: '#F9F9F9' },
-    { name: 'Brown', hex: '#8B5A2B' },
-    { name: 'Blue Grey', hex: '#607B8B' },
-    { name: 'Indigo', hex: '#4B0082' },
-  ];
+  useEffect(() => {
+    if (catalogProducts.length === 0) {
+      dispatch(getProducts());
+    }
+  }, [dispatch, catalogProducts.length]);
+
+  useEffect(() => {
+    if (!product) return;
+    setSelectedSize(normalizeProductSize(product.size) ?? Size.LARGE);
+    setSelectedColor(normalizeProductColor(product.color) ?? Color.BLACK);
+  }, [product]);
+
+  const resolvedProduct = useMemo((): Product | null => {
+    if (!product) return null;
+    if (product.size === selectedSize && product.color === selectedColor) {
+      return product;
+    }
+    return findProductVariant(catalogProducts, product, selectedSize, selectedColor) ?? null;
+  }, [product, catalogProducts, selectedSize, selectedColor]);
+
+  const variantUnavailable = !resolvedProduct;
+  const activeProduct = resolvedProduct ?? product;
 
   const getImageUrl = (url?: string) => {
     if (!url) return null;
@@ -54,28 +80,36 @@ export default function ProductDetailScreen() {
   };
 
   const displayProduct = {
-    id: product?.id,
-    name: product?.name || 'Loading...',
-    price: product?.price || '0',
-    description: product?.description || '',
-    image: product?.imageUrl ? getImageUrl(product.imageUrl) : getImageUrl(product?.image),
-    stock: parseInt(product?.stock || '0', 10),
-    qrTag: product?.qrTag ? getImageUrl(typeof product.qrTag === 'object' ? product.qrTag.image : product.qrTag) : null,
-    material: product?.material || 'Not specified', // 💡 NEW: Linked to actual backend property
+    id: activeProduct?.id,
+    name: activeProduct?.name || product?.name || 'Loading...',
+    price: activeProduct?.price || product?.price || '0',
+    description: activeProduct?.description || product?.description || '',
+    image: activeProduct?.imageUrl
+      ? getImageUrl(activeProduct.imageUrl)
+      : getImageUrl(activeProduct?.image || product?.image),
+    stock: getProductStock(activeProduct ?? product ?? null),
+    qrTag: activeProduct?.qrTag
+      ? getImageUrl(
+          typeof activeProduct.qrTag === 'object' ? activeProduct.qrTag.image : activeProduct.qrTag,
+        )
+      : null,
+    material: activeProduct?.material || product?.material || 'Not specified',
   };
 
-  const isOutOfStock = displayProduct.stock <= 0;
-  const isLowStock = displayProduct.stock > 0 && displayProduct.stock <= 5;
+  const isOutOfStock = variantUnavailable || displayProduct.stock <= 0;
+  const isLowStock = !variantUnavailable && displayProduct.stock > 0 && displayProduct.stock <= 5;
 
   // Handle Cart Success/Error
   useEffect(() => {
-    if (isAddingToCart && !isCartLoading) {
+    if ((isAddingToCart || isBuyingNow) && !isCartLoading) {
       if (cartError) {
         Toast.show({
           type: 'modalError',
           text1: 'Oops!',
           text2: cartError,
         });
+      } else if (isBuyingNow) {
+        navigation.navigate(ROUTES.CART as never);
       } else {
         Toast.show({
           type: 'modalSuccess',
@@ -84,23 +118,70 @@ export default function ProductDetailScreen() {
         });
       }
       setIsAddingToCart(false);
+      setIsBuyingNow(false);
     }
-  }, [isCartLoading, cartError, isAddingToCart, displayProduct.name]);
+  }, [isCartLoading, cartError, isAddingToCart, isBuyingNow, displayProduct.name, navigation]);
+
+  const addResolvedToCart = () => {
+    if (!resolvedProduct?.id) {
+      Toast.show({
+        type: 'modalError',
+        text1: 'Unavailable',
+        text2: 'This size and color combination is not available.',
+      });
+      return false;
+    }
+    if (getProductStock(resolvedProduct) <= 0) {
+      Toast.show({
+        type: 'modalError',
+        text1: 'Out of stock',
+        text2: 'This variant is currently out of stock.',
+      });
+      return false;
+    }
+    dispatch(addToCart(resolvedProduct.id, 1));
+    return true;
+  };
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
+    if (!addResolvedToCart()) return;
     setIsAddingToCart(true);
-    dispatch(addToCart(displayProduct.id, 1));
   };
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
-    dispatch(addToCart(displayProduct.id, 1));
-    navigation.navigate(ROUTES.CART as never);
+    if (!addResolvedToCart()) return;
+    setIsBuyingNow(true);
   };
 
   const handleToggleWishlist = () => {
+    if (!product) return;
     dispatch(toggleWishlist(product));
+  };
+
+  const handleViewSustainabilityJourney = async () => {
+    if (!product?.slug) {
+      Toast.show({
+        type: 'modalError',
+        text1: 'Unavailable',
+        text2: 'Sustainability story is not available for this product yet.',
+      });
+      return;
+    }
+
+    const journeyUrl = `${ASSET_URL}/shop/journey/${product.slug}`;
+    const supported = await Linking.canOpenURL(journeyUrl);
+    if (!supported) {
+      Toast.show({
+        type: 'modalError',
+        text1: 'Unable to open',
+        text2: 'Could not open sustainability story link.',
+      });
+      return;
+    }
+
+    await Linking.openURL(journeyUrl);
   };
 
   const formattedPrice = !isNaN(Number(displayProduct.price)) 
@@ -177,10 +258,16 @@ export default function ProductDetailScreen() {
 
           {/* Dynamic Stock Display */}
           <View className="mt-3">
-            {isOutOfStock ? (
+            {variantUnavailable ? (
+              <Text className="text-sm font-bold text-red-500">
+                This size and color combination is not available
+              </Text>
+            ) : isOutOfStock ? (
               <Text className="text-sm font-bold text-red-500">Out of Stock</Text>
             ) : isLowStock ? (
-              <Text className="text-sm font-bold text-orange-500">Low on Stock: Only {displayProduct.stock} left!</Text>
+              <Text className="text-sm font-bold text-orange-500">
+                Low on Stock: Only {displayProduct.stock} left!
+              </Text>
             ) : (
               <Text className="text-sm font-bold text-green-600">In Stock</Text>
             )}
@@ -189,39 +276,60 @@ export default function ProductDetailScreen() {
 
         {/* SIZE SELECTOR */}
         <View className="px-4 mt-6">
-          <Text className="text-base font-bold text-dark-gray mb-3">Size</Text>
-          <View className="flex-row gap-3">
-            {sizes.map((size) => (
-              <TouchableOpacity 
-                key={size} 
-                onPress={() => setSelectedSize(size)}
-                className={`w-11 h-11 rounded-full border items-center justify-center ${selectedSize === size ? 'bg-brand border-brand' : 'border-border-color bg-white'}`}
-              >
-                <Text className={`text-sm font-bold ${selectedSize === size ? 'text-white' : 'text-dark-gray'}`}>
-                  {size}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Text className="text-base font-bold text-dark-gray mb-3">
+            Size:{' '}
+            <Text className="text-brand">
+              {SIZE_OPTIONS.find((s) => s.value === selectedSize)?.label ?? selectedSize}
+            </Text>
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View className="flex-row gap-3">
+              {SIZE_OPTIONS.map((size) => (
+                <TouchableOpacity
+                  key={size.value}
+                  onPress={() => setSelectedSize(size.value)}
+                  className={`w-11 h-11 rounded-full border items-center justify-center ${
+                    selectedSize === size.value ? 'bg-brand border-brand' : 'border-border-color bg-white'
+                  }`}
+                >
+                  <Text
+                    className={`text-sm font-bold ${
+                      selectedSize === size.value ? 'text-white' : 'text-dark-gray'
+                    }`}
+                  >
+                    {size.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
         </View>
 
         {/* COLOR SELECTOR */}
         <View className="px-4 mt-6">
-          <Text className="text-base font-bold text-dark-gray mb-3">Color</Text>
-          <View className="flex-row gap-3">
-            {colors.map((color) => (
-              <TouchableOpacity 
-                key={color.name} 
-                onPress={() => setSelectedColor(color.name)}
-                className={`w-11 h-11 rounded-full border items-center justify-center ${selectedColor === color.name ? 'border-dark-gray' : 'border-transparent'}`}
-              >
-                <View 
-                  style={{ backgroundColor: color.hex }} 
-                  className="w-9 h-9 rounded-full border border-border-color" 
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Text className="text-base font-bold text-dark-gray mb-3">
+            Color: <Text className="text-brand">{selectedColor}</Text>
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View className="flex-row gap-3">
+              {COLOR_OPTIONS.map((color) => (
+                <TouchableOpacity
+                  key={color.value}
+                  onPress={() => setSelectedColor(color.value)}
+                  className={`w-11 h-11 rounded-full border items-center justify-center ${
+                    selectedColor === color.value ? 'border-dark-gray' : 'border-transparent'
+                  }`}
+                >
+                  <View
+                    style={{ backgroundColor: color.hex }}
+                    className={`w-9 h-9 rounded-full ${
+                      color.hex === '#FFFFFF' ? 'border border-border-color' : ''
+                    }`}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
         </View>
 
         {/* PRODUCT INFORMATION */}
@@ -245,6 +353,15 @@ export default function ProductDetailScreen() {
               )}
             </Text>
           </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleViewSustainabilityJourney}
+            activeOpacity={0.8}
+            className="mt-4 bg-brand/10 border border-brand/20 rounded-xl px-4 py-3 flex-row items-center justify-center"
+          >
+            <Icon name="leaf-outline" size={18} color="#52622E" />
+            <Text className="ml-2 text-brand font-bold text-sm">View Sustainability Story</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
@@ -263,6 +380,7 @@ export default function ProductDetailScreen() {
             variant="ghost"
             disabled={isOutOfStock}
             onPress={handleBuyNow}
+            isLoading={isBuyingNow}
             className={`h-12 px-2 border ${isOutOfStock ? 'bg-gray-100 border-gray-300' : 'bg-brand/10 border-brand/20'}`}
             textClassName={`text-[12px] font-bold ${isOutOfStock ? 'text-gray-400' : 'text-brand'}`}
           />

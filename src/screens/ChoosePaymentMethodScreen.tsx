@@ -1,0 +1,135 @@
+import React, { useMemo, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { ROUTES } from '../utils';
+import Header from '../components/Header';
+import { useSelector } from 'react-redux';
+import { RootState } from '../utils/types';
+import AlertMsg from '../components/AlertMsg/AlertMsg';
+import { fetchPaymentOptions, PaymentOption } from '../utils/checkoutOptions';
+
+const BRAND = '#5B8E68';
+
+const ChoosePaymentMethodScreen = () => {
+    const navigation = useNavigation<any>();
+    const route = useRoute<any>();
+    const token = useSelector((state: RootState) => state.authentication.data?.token);
+    const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const initialPaymentId = route.params?.selectedPaymentId || 'mastercard-4679';
+    const [selectedPaymentId, setSelectedPaymentId] = useState<string>(initialPaymentId);
+
+    const selectedPayment = useMemo(
+        () => paymentOptions.find((item) => item.id === selectedPaymentId) ?? paymentOptions[0],
+        [selectedPaymentId, paymentOptions],
+    );
+
+    React.useEffect(() => {
+        let mounted = true;
+        const load = async () => {
+            if (!token) {
+                setIsLoading(false);
+                return;
+            }
+            setIsLoading(true);
+            try {
+                const options = await fetchPaymentOptions(token);
+                if (!mounted) return;
+                setPaymentOptions(options);
+                if (!options.some((opt) => opt.id === selectedPaymentId)) {
+                    setSelectedPaymentId(options[0]?.id || 'credit-card');
+                }
+            } catch (error) {
+                if (!mounted) return;
+                AlertMsg.customError({
+                    title: 'Payment Methods',
+                    message: 'Unable to load payment methods. Please try again.',
+                });
+            } finally {
+                if (mounted) setIsLoading(false);
+            }
+        };
+        load();
+        return () => {
+            mounted = false;
+        };
+    }, [token]);
+
+    const handleConfirm = () => {
+        if (!selectedPayment) {
+            return;
+        }
+        navigation.navigate({
+            name: ROUTES.CHECKOUT,
+            params: {
+                selectedPaymentId: selectedPayment.id,
+                selectedPaymentLabel: selectedPayment.name,
+                selectedBackendPaymentMethod: selectedPayment.backendMethod,
+                selectedPaymentGatewayType: selectedPayment.gatewayType,
+            },
+            merge: true,
+        });
+        navigation.goBack();
+    };
+
+    if (!isLoading && paymentOptions.length === 0) {
+        return (
+            <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+                <Header title="Choose Payment Methods" />
+                <View className="flex-1 items-center justify-center px-6">
+                    <Text className="text-sm font-montserrat text-gray text-center">
+                        No payment methods available right now.
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    return (
+        <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+            <Header title="Choose Payment Methods" />
+
+            <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
+                {paymentOptions.map((item) => {
+                    const selected = item.id === selectedPaymentId;
+                    return (
+                        <TouchableOpacity
+                            key={item.id}
+                            activeOpacity={0.85}
+                            onPress={() => setSelectedPaymentId(item.id)}
+                            className={`rounded-2xl px-4 py-5 mb-4 flex-row items-center ${
+                                selected ? 'bg-white border-2 border-brand' : 'bg-white border border-border-color'
+                            }`}
+                        >
+                            <View className="w-14 h-14 rounded-full bg-white border border-border-color items-center justify-center mr-4 overflow-hidden">
+                                {item.logo ? (
+                                    <Image source={{ uri: item.logo }} className="w-11 h-11" resizeMode="contain" />
+                                ) : (
+                                    <Icon name="card-outline" size={24} color="#6B7280" />
+                                )}
+                            </View>
+                            <Text className="flex-1 text-[17px] font-montserrat-bold text-dark-gray">
+                                {item.name}
+                            </Text>
+                            {selected ? <Icon name="checkmark" size={24} color={BRAND} /> : null}
+                        </TouchableOpacity>
+                    );
+                })}
+            </ScrollView>
+
+            <View className="px-5 py-4 bg-app-bg">
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={handleConfirm}
+                    className="w-full h-14 rounded-full bg-brand items-center justify-center"
+                >
+                    <Text className="text-white text-base font-montserrat-bold">OK</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
+    );
+};
+
+export default ChoosePaymentMethodScreen;

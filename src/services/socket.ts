@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import notifee, { AndroidImportance, AuthorizationStatus } from '@notifee/react-native';
 
-const SOCKET_URL = "https://sfl-mifania.up.railway.app";
+const SOCKET_URL = 'https://web-socket-production-29ca.up.railway.app';
 
 let socket: Socket | null = null;
 
@@ -11,12 +11,14 @@ export const setupSocket = (authToken: string, userId: string | number, onEvent?
     socket.disconnect();
   }
 
+  // Server joins rooms as user_<numericId> (see socket-server/server.js + SocketIoPublisher)
   socket = io(SOCKET_URL, {
-    auth: { token: authToken, userId: userId },
-    transports: ['websocket'],
+    path: '/socket.io',
+    auth: { userId: String(userId), token: String(userId) },
+    transports: ['websocket', 'polling'],
     autoConnect: true,
     reconnection: true,
-    reconnectionAttempts: 5, // Stop trying after 5 attempts to save battery
+    reconnectionAttempts: 5,
     reconnectionDelay: 5000,
   });
 
@@ -75,8 +77,21 @@ export const disconnectSocket = () => {
 
 // 3. Extracted triggerNotification to keep setupSocket clean
 const triggerNotification = async (data: any, onEvent?: (action: any) => void) => {
+  const resolvedOrderId = Number(data?.orderId);
+  const isOrderEvent = String(data?.type || '').toLowerCase().includes('order');
+  const targetUrl =
+    data?.targetUrl ||
+    (isOrderEvent && !Number.isNaN(resolvedOrderId) && resolvedOrderId > 0
+      ? `/orders/${resolvedOrderId}`
+      : undefined);
+
+  const notificationPayload = {
+    ...data,
+    targetUrl,
+  };
+
   if (onEvent) {
-    onEvent({ type: 'ADD_NOTIFICATION', payload: data });
+    onEvent({ type: 'ADD_NOTIFICATION', payload: notificationPayload });
   }
 
   const settings = await notifee.requestPermission();
@@ -91,6 +106,13 @@ const triggerNotification = async (data: any, onEvent?: (action: any) => void) =
   await notifee.displayNotification({
     title: data.title,
     body: data.message,
+    data: {
+      type: String(data?.type || ''),
+      targetUrl: String(targetUrl || ''),
+      orderId: !Number.isNaN(resolvedOrderId) && resolvedOrderId > 0 ? String(resolvedOrderId) : '',
+      message: String(data?.message || ''),
+      title: String(data?.title || ''),
+    },
     android: {
       channelId,
       smallIcon: 'ic_launcher',
