@@ -16,6 +16,8 @@ import { notificationReducer } from './notification';
 const authPersistConfig = {
     key: 'auth',
     storage: secureStorage,
+    // Never persist transient login UI state (causes infinite "Signing in..." after reload)
+    blacklist: ['isLoading', 'isError', 'error'],
 };
 
 export const appReducer = combineReducers({
