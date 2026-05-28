@@ -16,6 +16,7 @@ import { getCategories } from '../app/reducers/category';
 import { getSubCategories } from '../app/reducers/subCategory';
 import { userUpdateDeviceTokenApi } from '../app/api/auth';
 import { getCustomerRefFromUser, resolveResourceIri } from '../utils';
+import { isUnauthorizedError } from '../utils/authSession';
 
 
 const HomeScreen = () => {
@@ -43,6 +44,16 @@ const HomeScreen = () => {
   useEffect(() => {
     const messagingInstance = getMessaging(getApp());
 
+    const getErrorMessage = (error: unknown): string => {
+      if (error instanceof Error) return error.message;
+      if (typeof error === 'string') return error;
+      if (typeof error === 'object' && error && 'message' in error) {
+        const message = (error as { message?: unknown }).message;
+        return typeof message === 'string' ? message : '';
+      }
+      return '';
+    };
+
     const registerDevice = async (customerIri: string, authToken: string) => {
         try {
             const authStatus = await requestPermission(messagingInstance);
@@ -54,6 +65,10 @@ const HomeScreen = () => {
                 await userUpdateDeviceTokenApi(customerIri, deviceToken, authToken);
             }
         } catch (error) {
+            if (isUnauthorizedError(getErrorMessage(error))) {
+                // Session-expired flow is already handled globally in client.ts
+                return;
+            }
             console.error('Push Notification Registration Error:', error);
         }
     };
