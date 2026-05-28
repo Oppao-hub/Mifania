@@ -89,6 +89,9 @@ export function* createOrderAsync(action: {
     console.log("✅ Order created successfully:", data.id);
   } catch (error: unknown) {
     console.log("❌ Order Creation Failed:", error);
+    if (__DEV__) {
+      console.log("📦 Order payload:", JSON.stringify(action.payload.data));
+    }
     const message = error instanceof Error ? error.message : "An unknown error occurred";
     if (message === "Unauthorized") {
         yield put({ type: Type.USER_LOGOUT });
