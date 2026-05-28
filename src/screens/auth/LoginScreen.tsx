@@ -54,6 +54,10 @@ const LoginScreen = () => {
     }, [isError, error]);
 
     const handleLogin = () => {
+        if (isLoading) {
+            return;
+        }
+
         if (!email.trim() || !password.trim()) {
             AlertMsg.customError({ title: "Input Error", message: "Please enter your credentials." });
             return;
