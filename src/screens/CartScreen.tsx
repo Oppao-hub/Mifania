@@ -5,6 +5,7 @@ import {
   TouchableOpacity, 
   ScrollView, 
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
@@ -25,6 +26,7 @@ import Header from '../components/Header';
 import EditVariantModal from '../components/EditVariantModal';
 import * as Types from '../app/actions';
 import { PaymentMethods, PaymentMethodType } from '../constants/Payment';
+import { ASSET_URL } from '../app/api/client';
 
 const CartScreen = () => {
   const dispatch = useDispatch();
@@ -45,6 +47,7 @@ const CartScreen = () => {
   
   // Payment State - now using exact strings as required by backend (e.g. "Cash")
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(PaymentMethods.CASH);
+  const [paypalPreparedAmount, setPaypalPreparedAmount] = useState<string | null>(null);
   
   // Alert State
   const [alertConfig, setAlertConfig] = useState<{
@@ -144,11 +147,35 @@ const CartScreen = () => {
     const selectedItems = cartItems.filter(item => item.selected);
     if (selectedItems.length === 0) return;
 
+    // PayPal Web Flow:
+    // 1st tap opens PayPal page with current total.
+    // 2nd tap confirms payment was completed and places the order.
+    if (paymentMethod === PaymentMethods.PAYPAL && paypalPreparedAmount !== displayTotal) {
+      const paypalUrl = `${ASSET_URL}/paypal/payment?amount=${encodeURIComponent(displayTotal)}`;
+      Linking.openURL(paypalUrl)
+        .then(() => {
+          setPaypalPreparedAmount(displayTotal);
+          setAlertConfig({
+            visible: true,
+            type: 'info',
+            message: 'Complete your PayPal payment in the browser, then tap Checkout again to finalize your order.',
+          });
+        })
+        .catch(() => {
+          setAlertConfig({
+            visible: true,
+            type: 'error',
+            message: 'Unable to open PayPal checkout. Please try again.',
+          });
+        });
+      return;
+    }
+
     // Strict JSON body formatting for Symfony backend as per FINAL verified guide
     const orderData = {
         totalAmount: String(displayTotal),      // Numeric string precision
         paymentMethod: paymentMethod,          // Exact case-sensitive Enum
-        paymentStatus: "Pending",              // Exact string required
+        paymentStatus: paymentMethod === PaymentMethods.PAYPAL ? "Paid" : "Pending", // Mark paid once user confirms PayPal completion
         orderStatus: "Pending",                // Exact string required
         orderItems: selectedItems.map(item => {
             const rawPrice = item.price || '0';
@@ -179,6 +206,7 @@ const CartScreen = () => {
         type: Types.CREATE_ORDER, 
         payload: { data: orderData, token } 
     });
+    setPaypalPreparedAmount(null);
   };
 
   useEffect(() => {
