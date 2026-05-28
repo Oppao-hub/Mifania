@@ -1,13 +1,53 @@
-import { takeEvery, call, put } from 'redux-saga/effects';
+import { takeEvery, call, put, fork } from 'redux-saga/effects';
 import { userLoginApi, userRegisterApi, userGoogleLoginApi, userUpdateDeviceTokenApi } from '../api/auth';
 import * as Type from '../../app/actions';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
-import messaging from '@react-native-firebase/messaging';
+import { getAuth, createUserWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
+import { getApp } from '@react-native-firebase/app';
+import { getMessaging, getToken } from '@react-native-firebase/messaging';
 // 💡 FIX 1: Added getCustomerRefFromUser to the imports
 import { resolveResourceIri, getCustomerRefFromUser } from '../../utils/apiResource'; 
 import { AlertMsg } from '../../components/AlertMsg';
 // 💡 FIX 2: Import your socket disconnect function (adjust the path if your socket.ts is somewhere else)
-import { disconnectSocket } from '../../services/socket'; 
+import { disconnectSocket } from '../../services/socket';
+
+function* syncPostLoginSideEffects(
+  _credentials: { email: string; password: string },
+  data: { token: string; user: any },
+  options: { showWelcomeToast?: boolean } = {},
+): Generator<any, void, any> {
+  const { showWelcomeToast = true } = options;
+
+  // Auth is handled by Symfony JWT — Firebase email/password is not required for FCM
+
+  if (showWelcomeToast) {
+    AlertMsg.customSuccess({ title: "Welcome Back!", message: "You have successfully logged in." });
+  }
+
+  const customerRef = getCustomerRefFromUser(data.user);
+  if (customerRef) {
+    yield put({
+      type: Type.GET_CUSTOMER,
+      payload: { id: customerRef, token: data.token },
+    });
+    yield put({
+      type: Type.GET_WALLET,
+      payload: { id: customerRef, token: data.token },
+    });
+  }
+
+  const customerIri = resolveResourceIri(customerRef, 'customers');
+  try {
+    const messagingInstance = getMessaging(getApp());
+    const deviceToken = yield call(getToken, messagingInstance);
+    if (deviceToken && data.token && customerIri) {
+      console.log("📲 FCM Token obtained:", deviceToken);
+      yield call(userUpdateDeviceTokenApi, customerIri, deviceToken, data.token);
+      console.log("✅ Device token synced with backend.");
+    }
+  } catch (pushError) {
+    console.log("⚠️ Push token sync failed:", pushError);
+  }
+}
 
 export function* userLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
   yield put({ type: Type.USER_LOGIN_REQUEST });
@@ -16,111 +56,75 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
     console.log("📍 Login API Response:", JSON.stringify(data));
 
     const roles = data.user?.roles || [];
-    
-    // Check if the user has the required customer role
-    if(!roles.includes('ROLE_USER')){
+
+    if (!roles.includes('ROLE_USER')) {
       throw new Error("Access Denied: This account is not a customer account.");
     }
-    
-    // Check if it's an admin trying to login to mobile
-    if(roles.includes('ROLE_ADMIN') || roles.includes('ROLE_SUPER_ADMIN')){
-       console.log("⚠️ Admin account detected on mobile.");
+
+    if (roles.includes('ROLE_ADMIN') || roles.includes('ROLE_SUPER_ADMIN')) {
+      console.log("⚠️ Admin account detected on mobile.");
     }
 
-    try {
-      const authInstance = getAuth();
-      const currentUser = authInstance.currentUser;
-      if (!currentUser) {
-        yield call(signInWithEmailAndPassword, authInstance, action.payload.email, action.payload.password);
-        console.log("✅ Firebase synced.");
-      }
-    } catch (firebaseError) {
-      console.log("⚠️ Firebase sync skipped or failed:", firebaseError);
-    }
-
+    // Clear loading immediately so the UI is not blocked by Firebase / FCM
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
-    AlertMsg.customSuccess({ title: "Welcome Back!", message: "You have successfully logged in." });
-
-    // --- FETCH CUSTOMER DATA & WALLET ---
-    const customerRef = getCustomerRefFromUser(data.user);
-    if (customerRef) {
-      yield put({ 
-        type: Type.GET_CUSTOMER, 
-        payload: { id: customerRef, token: data.token } 
-      });
-      yield put({
-        type: Type.GET_WALLET,
-        payload: { id: customerRef, token: data.token }
-      });
-    }
-
-    // --- PUSH NOTIFICATION TOKEN SYNC ---
-    const customerIri = resolveResourceIri(customerRef, 'customers');
-    try {
-      const deviceToken = yield call([messaging(), messaging().getToken]);
-      if (deviceToken && data.token && customerIri) {
-        console.log("📲 FCM Token obtained:", deviceToken);
-        yield call(userUpdateDeviceTokenApi, customerIri, deviceToken, data.token);
-        console.log("✅ Device token synced with backend.");
-      }
-    } catch (pushError) {
-      console.log("⚠️ Push token sync failed:", pushError);
-    }
+    yield fork(syncPostLoginSideEffects, action.payload, data);
   } catch (error: any) {
     console.log("❌ Login Saga Error:", error);
 
-
     const message = error.response?.data.message
-      || error.response?.data?.error 
-      || error.message 
+      || error.response?.data?.error
+      || error.message
       || "An unknown error occurred";
     yield put({ type: Type.USER_LOGIN_ERROR, payload: message });
   }
 }
 
+function* syncGooglePostLoginSideEffects(
+  idToken: string,
+  data: { token: string; user: any; is_new_user?: boolean },
+): Generator<any, void, any> {
+  try {
+    const authInstance = getAuth();
+    const googleCredential = GoogleAuthProvider.credential(idToken);
+    yield call(signInWithCredential, authInstance, googleCredential);
+    console.log("✅ Firebase synced with Google Token.");
+  } catch (firebaseError) {
+    console.log("⚠️ Firebase sync failed:", firebaseError);
+  }
+
+  if (data.is_new_user) {
+    AlertMsg.customSuccess({
+      title: "Welcome to Mifania!",
+      message: "Your account has been created successfully using Google.",
+    });
+  } else {
+    AlertMsg.customSuccess({
+      title: "Welcome Back!",
+      message: "You have successfully logged in.",
+    });
+  }
+
+  const customerRef = getCustomerRefFromUser(data.user);
+  if (customerRef) {
+    yield put({
+      type: Type.GET_CUSTOMER,
+      payload: { id: customerRef, token: data.token },
+    });
+    yield put({
+      type: Type.GET_WALLET,
+      payload: { id: customerRef, token: data.token },
+    });
+  }
+}
+
 export function* userGoogleLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
   yield put({ type: Type.USER_LOGIN_REQUEST });
-  
+
   try {
-    // 💡 FIX 3: Pass ONLY the idToken string, not the whole payload object!
     const data = yield call(userGoogleLoginApi, action.payload.idToken);
 
-    try {
-      const authInstance = getAuth();
-      const googleCredential = GoogleAuthProvider.credential(action.payload.idToken); 
-      yield call(signInWithCredential, authInstance, googleCredential);
-      console.log("✅ Firebase synced with Google Token.");
-    } catch (firebaseError) {
-      console.log("⚠️ Firebase sync failed:", firebaseError);
-    }
-
-    if (data.is_new_user) {
-      AlertMsg.customSuccess({ 
-        title: "Welcome to Mifania!", 
-        message: "Your account has been created successfully using Google." 
-      });
-    } else {
-      AlertMsg.customSuccess({ 
-        title: "Welcome Back!", 
-        message: "You have successfully logged in." 
-      });
-    }
-
     yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
-    
-    // 💡 FIX 4: Replaced data.user.customer with getCustomerRefFromUser for safety
-    const customerRef = getCustomerRefFromUser(data.user);
-    if (customerRef) {
-      yield put({ 
-        type: Type.GET_CUSTOMER, 
-        payload: { id: customerRef, token: data.token } 
-      });
-      yield put({
-        type: Type.GET_WALLET,
-        payload: { id: customerRef, token: data.token }
-      });
-    }
-
+    yield fork(syncGooglePostLoginSideEffects, action.payload.idToken, data);
   } catch (error: any) {
     const message = error.response?.data?.error || error.message || "Google Login failed";
     yield put({ type: Type.USER_LOGIN_ERROR, payload: message });
