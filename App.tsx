@@ -7,7 +7,8 @@ import Toast from 'react-native-toast-message';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 // 💡 ADDED IMPORTS
-import messaging from '@react-native-firebase/messaging';
+import { getApp } from '@react-native-firebase/app';
+import { getMessaging, onMessage } from '@react-native-firebase/messaging';
 import notifee, { AndroidImportance } from '@notifee/react-native';
 
 import store, { persistor } from './src/app/store'; 
@@ -27,6 +28,8 @@ const App = () => {
 
   // 💡 ADDED: Setup Notification Channel & Foreground Listener
   useEffect(() => {
+    const messagingInstance = getMessaging(getApp());
+
     // 1. Create a channel (Required for Android 8.0+)
     const createChannel = async () => {
       await notifee.createChannel({
@@ -38,7 +41,7 @@ const App = () => {
     createChannel();
 
     // 2. Listen for messages when the app is OPEN
-    const unsubscribe = messaging().onMessage(async remoteMessage => {
+    const unsubscribe = onMessage(messagingInstance, async remoteMessage => {
       console.log('A new FCM message arrived in the foreground!', JSON.stringify(remoteMessage));
 
       // 3. Display the notification manually
@@ -53,6 +56,13 @@ const App = () => {
           },
         },
       });
+
+      // 2. NEW: Refresh the Redux store instantly!
+      // This grabs the current user's token and triggers your GET_NOTIFICATIONS action.
+      const currentToken = store.getState().authentication.data?.token;
+      if (currentToken) {
+        store.dispatch({ type: 'GET_NOTIFICATIONS', payload: currentToken });
+      }
     });
 
     return unsubscribe; // Cleanup listener on unmount
