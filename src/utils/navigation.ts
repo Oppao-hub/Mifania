@@ -7,3 +7,11 @@ export function navigate(name: string, params?: any) {
     (navigationRef.navigate as any)(name, params);
   }
 }
+
+export function goToMyOrders(navigation: { navigate: (name: string, params?: object) => void }) {
+  navigation.navigate('BottomTab', { screen: 'My Order' });
+}
+
+export function goToHomeTab(navigation: { navigate: (name: string, params?: object) => void }) {
+  navigation.navigate('BottomTab', { screen: 'HomeTab' });
+}
