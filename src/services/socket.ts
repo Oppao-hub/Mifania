@@ -1,7 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import notifee, { AndroidImportance, AuthorizationStatus } from '@notifee/react-native';
-
-const SOCKET_URL = "https://sfl-mifania.up.railway.app";
+import { ASSET_URL } from '../app/api/client';
 
 let socket: Socket | null = null;
 
@@ -11,12 +10,14 @@ export const setupSocket = (authToken: string, userId: string | number, onEvent?
     socket.disconnect();
   }
 
-  socket = io(SOCKET_URL, {
-    auth: { token: authToken, userId: userId },
-    transports: ['websocket'],
+  // Server joins rooms as user_<numericId> (see socket-server/server.js + SocketIoPublisher)
+  socket = io(ASSET_URL, {
+    path: '/socket.io',
+    auth: { userId: String(userId), token: String(userId) },
+    transports: ['websocket', 'polling'],
     autoConnect: true,
     reconnection: true,
-    reconnectionAttempts: 5, // Stop trying after 5 attempts to save battery
+    reconnectionAttempts: 5,
     reconnectionDelay: 5000,
   });
 
