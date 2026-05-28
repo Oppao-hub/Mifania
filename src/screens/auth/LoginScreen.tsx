@@ -42,6 +42,11 @@ const LoginScreen = () => {
         });
     }, []);
 
+    // Clear stale "Signing in..." if a previous login was interrupted (e.g. persisted isLoading)
+    useEffect(() => {
+        dispatch(loginReset());
+    }, [dispatch]);
+
     useEffect(() => {
         if (isError && error) {
             AlertMsg.customError({ title: "Login Failed", message: error });
