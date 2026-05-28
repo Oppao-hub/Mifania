@@ -46,6 +46,10 @@ export interface CheckoutSnapshot {
     totals: ReturnType<typeof calculateCheckoutTotals>;
 }
 
+/**
+ * @param totalAmount Checkout total BEFORE loyalty points are applied.
+ * The backend OrderProcessor deducts pointsRedeemed from this amount.
+ */
 export const buildOrderPayload = (
     selectedItems: CartItem[],
     paymentMethod: PaymentMethodType,

@@ -424,10 +424,11 @@ const CheckoutScreen = () => {
         orderPendingRef.current = true;
         setFlowStatus('processing');
 
+        // Backend applies pointsRedeemed — send gross total (fees included), not post-redemption total.
         const orderData = buildOrderPayload(
             selectedItems,
             paymentMethod,
-            activeFinalTotalFormatted,
+            displayTotals.totalFormatted,
             selectedRedeemPoints,
         );
 
