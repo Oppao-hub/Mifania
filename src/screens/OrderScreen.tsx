@@ -14,7 +14,7 @@ import { ROUTES } from '../utils';
 const OrderScreen = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation<any>();
-  const [activeTab, setActiveTab] = useState<'Active' | 'Completed' | 'Cancelled'>('Active');
+  const [activeTab, setActiveTab] = useState<'Active' | 'Delivered' | 'Cancelled'>('Active');
   
   const { items: orders, isLoading, isError, error } = useSelector((state: RootState) => state.order);
   const { data: authData } = useSelector((state: RootState) => state.authentication);
@@ -56,16 +56,16 @@ const OrderScreen = () => {
     const filtered = orders.filter(o => {
         // Safe check for orderStatus
         const status = String(o.orderStatus || '').toLowerCase();
+        const isCancelled = status === 'cancelled' || status === 'canceled';
         
         if (activeTab === 'Active') {
             return status === 'pending' || 
                    status === 'processing' || 
                    status === 'shipped';
-        } else if (activeTab === 'Completed') {
-            return status === 'completed' || 
-                   status === 'delivered';
+        } else if (activeTab === 'Delivered') {
+            return status === 'delivered';
         } else {
-            return status === 'cancelled';
+            return isCancelled;
         }
     });
     
@@ -84,7 +84,7 @@ const OrderScreen = () => {
       {/* Segmented Control */}
       <View className="px-6 my-2 pb-2">
         <View className="flex-row bg-white border border-border-color p-1 rounded-2xl shadow-sm">
-          {['Active', 'Completed', 'Cancelled'].map((tab) => (
+          {['Active', 'Delivered', 'Cancelled'].map((tab) => (
             <TouchableOpacity 
               key={tab}
               onPress={() => setActiveTab(tab as any)}
