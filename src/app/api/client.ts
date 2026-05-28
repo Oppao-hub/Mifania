@@ -1,3 +1,5 @@
+import { handleSessionExpired } from '../../utils/authSession';
+
 export const ASSET_URL: string = 'https://sfl-mifania.up.railway.app';
 
 const BASE_URL: string = `${ASSET_URL}/api`;
@@ -43,7 +45,8 @@ const handleResponseError = async (response: Response) => {
     console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
 
     if (response.status === 401) {
-        throw new Error(errorData.message || errorData.error || "Unauthorized");
+        handleSessionExpired();
+        throw new Error('Unauthorized');
     }
 
     if (response.status === 422) {
