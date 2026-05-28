@@ -14,7 +14,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { RootState, Notification } from '../utils/types';
 import * as Types from '../app/actions';
-import { StackNavigationProp } from '@react-navigation/stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ROUTES } from '../utils';
 
 // 💡 Import the new component
@@ -33,7 +33,7 @@ const SectionHeader = ({ section: { title, data } }: any) => {
 };
 
 const NotificationScreen = () => {
-  const navigation = useNavigation<StackNavigationProp<any>>();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const dispatch = useDispatch();
   const { items: notifications } = useSelector((state: RootState) => state.notification);
   const { data: authData } = useSelector((state: RootState) => state.authentication);
@@ -44,7 +44,7 @@ const NotificationScreen = () => {
   useFocusEffect(
     useCallback(() => {
         if (token) {
-            dispatch({ type: Types.GET_NOTIFICATIONS, payload: token });
+            dispatch({ type: Types.GET_NOTIFICATIONS });
         }
     }, [token, dispatch])
   );
@@ -52,12 +52,20 @@ const NotificationScreen = () => {
   const onRefresh = useCallback(() => {
     if (token) {
       setRefreshing(true);
-      dispatch({ type: Types.GET_NOTIFICATIONS, payload: token });
+      dispatch({ type: Types.GET_NOTIFICATIONS });
       setTimeout(() => setRefreshing(false), 800);
     }
   }, [token, dispatch]);
 
   const getOrderReference = (item: Notification): { orderId?: number; orderIri?: string } => {
+    const payloadOrderId = Number((item as any).orderId);
+    if (!Number.isNaN(payloadOrderId) && payloadOrderId > 0) {
+      return {
+        orderId: payloadOrderId,
+        orderIri: `/api/orders/${payloadOrderId}`,
+      };
+    }
+
     const sourceText = `${item.targetUrl || ''} ${item.message || ''} ${item.body || ''}`;
 
     const orderIriMatch = sourceText.match(/(\/api\/orders\/\d+)/i);
@@ -83,6 +91,17 @@ const NotificationScreen = () => {
     }
 
     return {};
+  };
+
+  const isOrderRelatedNotification = (item: Notification): boolean => {
+    const sourceText = `${item.type || ''} ${item.title || ''} ${item.targetUrl || ''} ${item.message || ''} ${item.body || ''}`.toLowerCase();
+    return (
+      sourceText.includes('order') ||
+      sourceText.includes('tracking') ||
+      sourceText.includes('shipped') ||
+      sourceText.includes('delivered') ||
+      sourceText.includes('cancelled')
+    );
   };
 
   const sections = useMemo(() => {
@@ -120,46 +139,55 @@ const NotificationScreen = () => {
 
   
   const handleNotificationPress = (item: Notification) => {
-    dispatch({ type: Types.MARK_NOTIFICATION_READ, payload: item.id });
+    if (item.id != null) {
+      dispatch({
+        type: Types.MARK_NOTIFICATION_READ,
+        payload: {
+          id: Number(item.id),
+          token,
+        },
+      });
+    }
     
-    if (item.targetUrl) {
-        try {
-            const url = item.targetUrl.toLowerCase();
+    try {
+      const url = String(item.targetUrl || '').toLowerCase();
+      const isOrderNotification = isOrderRelatedNotification(item);
 
-            // 💡 Nested Navigation Logic
-            // We navigate to 'BottomTab' (the navigator name) 
-            // and pass the 'screen' param (the specific tab name)
-            if (url.includes('/account')) {
-                navigation.navigate('BottomTab' as any, { 
-                    screen: 'Account' 
-                });
-            } 
-            else if (url.includes('/order') || url.includes('order')) {
-                const { orderId, orderIri } = getOrderReference(item);
-                if (orderId || orderIri) {
-                    navigation.navigate(ROUTES.ORDER_MANAGEMENT as any, {
-                        orderId,
-                        orderIri,
-                        initialTab: 'Tracking',
-                    });
-                } else {
-                    navigation.navigate('BottomTab' as any, { 
-                        screen: 'My Order' 
-                    });
-                }
-            }
-            else if (url.includes('/cart')) {
-                navigation.navigate('BottomTab' as any, { 
-                    screen: 'Cart' 
-                });
-            }
-            else {
-                // If the URL is just a simple screen name defined in MainNavigator
-                navigation.navigate(item.targetUrl as any);
-            }
-        } catch (e) {
-            console.error("Navigation error:", e);
+      if (isOrderNotification) {
+        const { orderId, orderIri } = getOrderReference(item);
+        if (orderId || orderIri) {
+          navigation.navigate(ROUTES.ORDER_MANAGEMENT as any, {
+            orderId,
+            orderIri,
+            initialTab: 'Tracking',
+          });
+        } else {
+          navigation.navigate('BottomTab' as any, {
+            screen: 'My Order',
+          });
         }
+        return;
+      }
+
+      // 💡 Nested Navigation Logic
+      // We navigate to 'BottomTab' (the navigator name)
+      // and pass the 'screen' param (the specific tab name)
+      if (url.includes('/account')) {
+        navigation.navigate('BottomTab' as any, {
+          screen: 'Account',
+        });
+      }
+      else if (url.includes('/cart')) {
+        navigation.navigate('BottomTab' as any, {
+          screen: 'Cart',
+        });
+      }
+      else if (item.targetUrl) {
+        // If the URL is just a simple screen name defined in MainNavigator
+        navigation.navigate(item.targetUrl as any);
+      }
+    } catch (e) {
+      console.error("Navigation error:", e);
     }
   };
 
@@ -176,7 +204,11 @@ const NotificationScreen = () => {
             { 
                 text: "Delete", 
                 style: "destructive", 
-                onPress: () => dispatch({ type: Types.CLEAR_NOTIFICATIONS }) 
+                onPress: () =>
+                  dispatch({
+                    type: Types.CLEAR_NOTIFICATIONS,
+                    payload: { token },
+                  }),
             }
         ]
     );
