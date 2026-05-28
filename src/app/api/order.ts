@@ -12,6 +12,11 @@ export const getOrderDetailsApi = async (idOrIri: string | number, token: string
     return await getRequest<any>(endpoint, token);
 };
 
-export const createOrderApi = async (orderData: any, token: string) => {
-    return await postRequest<any>("/orders", orderData, token);
+export const createOrderApi = async (
+    orderData: any,
+    token: string,
+    idempotencyKey?: string,
+) => {
+    const headers = idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined;
+    return await postRequest<any>("/orders", orderData, token, headers);
 };
