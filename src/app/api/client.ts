@@ -22,13 +22,16 @@ const fetchWithTimeout = async (url: string, options: RequestInit): Promise<Resp
     }
 };
 
-const getHeaders = (token?: string) => {
+const getHeaders = (token?: string, extraHeaders?: Record<string, string>) => {
     const headers: any = {
         "Accept": "application/ld+json",
         "Content-Type": "application/ld+json"
     };
     if (token) {
         headers.Authorization = `Bearer ${token}`;
+    }
+    if (extraHeaders) {
+        Object.assign(headers, extraHeaders);
     }
     return headers;
 };
@@ -42,12 +45,13 @@ const handleResponseError = async (response: Response) => {
         errorData = { detail: text };
     }
 
-    console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
-
     if (response.status === 401) {
+        console.log('❌ Server Error Response: 401 Unauthorized');
         handleSessionExpired();
         throw new Error('Unauthorized');
     }
+
+    console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
 
     if (response.status === 422) {
         // Handle API Platform violations array
@@ -102,8 +106,13 @@ const buildUrl = (endpoint: string): string => {
     return `${BASE_URL}${endpoint}`;
 };
 
-export const postRequest = async <T>(endpoint: string, body: object, token?: string): Promise<T> => {
-    const headers = getHeaders(token);
+export const postRequest = async <T>(
+    endpoint: string,
+    body: object,
+    token?: string,
+    extraHeaders?: Record<string, string>,
+): Promise<T> => {
+    const headers = getHeaders(token, extraHeaders);
     const url = buildUrl(endpoint);
     console.log(`POST Request: ${url}`, { headers });
     try {
@@ -182,7 +191,9 @@ export const getRequest = async <T>(endpoint: string, token?: string): Promise<T
         });
 
         if(!response.ok) {
-            console.error(`GET Error: ${response.status}`);
+            if (response.status !== 401) {
+                console.error(`GET Error: ${response.status}`);
+            }
             await handleResponseError(response);
         }
 
