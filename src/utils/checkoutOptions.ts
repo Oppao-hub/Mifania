@@ -12,6 +12,7 @@ export type PaymentOption = {
     id: string;
     name: string;
     logo?: string;
+    description?: string;
     backendMethod: 'Paypal' | 'Credit Card' | 'Cash' | 'Bank Transfer';
     gatewayType: 'paypal' | 'direct';
 };
@@ -33,16 +34,32 @@ const DEFAULT_DELIVERY_OPTIONS: DeliveryOption[] = [
 
 const DEFAULT_PAYMENT_OPTIONS: PaymentOption[] = [
     {
-        id: 'paypal',
-        name: 'PayPal',
-        backendMethod: 'Paypal',
-        gatewayType: 'paypal',
+        id: 'cash',
+        name: 'Cash',
+        backendMethod: 'Cash',
+        gatewayType: 'direct',
+        description: 'Pay securely upon delivery',
     },
     {
         id: 'credit-card',
         name: 'Credit Card',
         backendMethod: 'Credit Card',
         gatewayType: 'direct',
+        description: 'Pay with Visa, Mastercard, or other major cards',
+    },
+    {
+        id: 'bank-transfer',
+        name: 'Bank Transfer',
+        backendMethod: 'Bank Transfer',
+        gatewayType: 'direct',
+        description: 'Transfer to our bank account — details sent after order',
+    },
+    {
+        id: 'paypal',
+        name: 'Paypal',
+        backendMethod: 'Paypal',
+        gatewayType: 'paypal',
+        description: 'Pay with your PayPal account',
     },
 ];
 
@@ -57,12 +74,12 @@ const DELIVERY_ENDPOINT_CANDIDATES = [
 ];
 
 const PAYMENT_ENDPOINT_CANDIDATES = [
+    '/payment-methods',
+    '/payment_methods',
     '/payment-gateways',
     '/payment_gateways',
     '/payment-options',
     '/payment_options',
-    '/payment-methods',
-    '/payment_methods',
 ];
 
 const cache = {
@@ -138,6 +155,7 @@ const mapPaymentOption = (item: any, index: number): PaymentOption => {
         id: String(item?.id || item?.slug || item?.code || item?.['@id'] || `payment-${index + 1}`),
         name,
         logo: item?.logo || item?.icon || item?.imageUrl,
+        description: item?.description || item?.subtitle || item?.summary,
         backendMethod,
         gatewayType,
     };
