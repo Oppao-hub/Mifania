@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ROUTES } from '../utils';
@@ -18,7 +19,7 @@ const OrderSuccessScreen = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <StatusBar barStyle="dark-content" />
       <View className="flex-1 items-center justify-center px-10">
         <View className="w-24 h-24 bg-brand/10 rounded-full items-center justify-center mb-8">
