@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ROUTES } from '../utils';
 import Header from '../components/Header';
@@ -26,6 +26,7 @@ const ChoosePaymentMethodScreen = () => {
     const token = useSelector((state: RootState) => state.authentication.data?.token);
     const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const sourceCheckoutRouteKey = route.params?.sourceCheckoutRouteKey as string | undefined;
     const initialPaymentId = route.params?.selectedPaymentId || 'cash';
     const [selectedPaymentId, setSelectedPaymentId] = useState<string>(initialPaymentId);
 
@@ -34,52 +35,62 @@ const ChoosePaymentMethodScreen = () => {
         [selectedPaymentId, paymentOptions],
     );
 
-    React.useEffect(() => {
-        let mounted = true;
-        const load = async () => {
-            if (!token) {
-                setIsLoading(false);
-                return;
-            }
-            setIsLoading(true);
-            try {
-                const options = await fetchPaymentOptions(token);
-                if (!mounted) return;
-                setPaymentOptions(options);
-                if (!options.some((opt) => opt.id === selectedPaymentId)) {
-                    setSelectedPaymentId(options[0]?.id || 'cash');
-                }
-            } catch (error) {
-                if (!mounted) return;
-                AlertMsg.customError({
-                    title: 'Payment Methods',
-                    message: 'Unable to load payment methods. Please try again.',
-                });
-            } finally {
-                if (mounted) setIsLoading(false);
-            }
-        };
-        load();
-        return () => {
-            mounted = false;
-        };
+    const loadPaymentOptions = React.useCallback(async () => {
+        if (!token) {
+            setIsLoading(false);
+            return;
+        }
+        setIsLoading(true);
+        try {
+            const options = await fetchPaymentOptions(token, { refresh: true });
+            setPaymentOptions(options);
+            setSelectedPaymentId((current) =>
+                options.some((opt) => opt.id === current) ? current : options[0]?.id || 'cash',
+            );
+        } catch {
+            AlertMsg.customError({
+                title: 'Payment Methods',
+                message: 'Unable to load payment methods. Please try again.',
+            });
+        } finally {
+            setIsLoading(false);
+        }
     }, [token]);
+
+    useFocusEffect(
+        React.useCallback(() => {
+            loadPaymentOptions();
+        }, [loadPaymentOptions]),
+    );
 
     const handleConfirm = () => {
         if (!selectedPayment) {
             return;
         }
-        navigation.navigate({
-            name: ROUTES.CHECKOUT,
-            params: {
-                selectedPaymentId: selectedPayment.id,
-                selectedPaymentLabel: selectedPayment.name,
-                selectedBackendPaymentMethod: selectedPayment.backendMethod,
-                selectedPaymentGatewayType: selectedPayment.gatewayType,
-            },
-            merge: true,
-        });
-        navigation.goBack();
+
+        const nextParams = {
+            selectedPaymentId: selectedPayment.id,
+            selectedPaymentLabel: selectedPayment.name,
+            selectedBackendPaymentMethod: selectedPayment.backendMethod,
+            selectedPaymentGatewayType: selectedPayment.gatewayType,
+        };
+
+        if (sourceCheckoutRouteKey) {
+            navigation.dispatch({
+                ...CommonActions.setParams(nextParams),
+                source: sourceCheckoutRouteKey,
+            });
+        } else {
+            navigation.navigate({
+                name: ROUTES.CHECKOUT,
+                params: nextParams,
+                merge: true,
+            });
+        }
+
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        }
     };
 
     if (!isLoading && paymentOptions.length === 0) {
@@ -138,7 +149,10 @@ const ChoosePaymentMethodScreen = () => {
                 <TouchableOpacity
                     activeOpacity={0.9}
                     onPress={handleConfirm}
-                    className="w-full h-14 rounded-full bg-brand items-center justify-center"
+                    disabled={isLoading || !selectedPayment}
+                    className={`w-full h-14 rounded-full items-center justify-center ${
+                        isLoading || !selectedPayment ? 'bg-brand/50' : 'bg-brand'
+                    }`}
                 >
                     <Text className="text-white text-base font-montserrat-bold">OK</Text>
                 </TouchableOpacity>
