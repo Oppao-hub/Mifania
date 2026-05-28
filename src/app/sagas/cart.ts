@@ -10,7 +10,8 @@ import {
     switchCollectionApi,
     deleteCollectionApi
 } from '../api/cart';
-import { RootState } from '../../utils/types';
+import { RootState, Product } from '../../utils/types';
+import { findProductVariant } from '../../utils/productVariants';
 
 // Selector to get token
 const getToken = (state: RootState) => state.authentication.data?.token;
@@ -129,6 +130,51 @@ export function* addToCartAsync(action: { type: string; payload: any }): Generat
     }
 }
 
+export function* editCartItemAsync(action: { type: string; payload: any }): Generator<any, void, any> {
+    const token = yield select(getToken);
+    if (!token) return;
+
+    const { cartItemId, quantity, size, color } = action.payload;
+    const cartItems = yield select((state: RootState) => state.cart.items);
+    const products: Product[] = yield select((state: RootState) => state.product.items);
+
+    const cartItem = cartItems.find((item: { id?: string | number }) => String(item.id) === String(cartItemId));
+    if (!cartItem || typeof cartItem.product !== 'object') {
+        yield put({ type: Type.EDIT_CART_ITEM_ERROR, payload: 'Cart item not found.' });
+        return;
+    }
+
+    const currentProduct = cartItem.product;
+    const variantUnchanged = currentProduct.size === size && currentProduct.color === color;
+
+    yield put({ type: Type.EDIT_CART_ITEM_REQUEST });
+
+    try {
+        if (variantUnchanged) {
+            yield call(updateCartItemApi, cartItemId, quantity, token);
+        } else {
+            const variantProduct = findProductVariant(products, currentProduct, size, color);
+            if (!variantProduct?.id) {
+                yield put({
+                    type: Type.EDIT_CART_ITEM_ERROR,
+                    payload: 'This size and color combination is not available.',
+                });
+                return;
+            }
+            yield call(deleteCartItemApi, cartItemId, token);
+            yield call(addToCartApi, variantProduct.id, quantity, token);
+        }
+        yield put({ type: Type.EDIT_CART_ITEM_COMPLETED });
+        yield call(getCartAsync);
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'An unknown error occurred';
+        if (message === 'Unauthorized') {
+            yield put({ type: Type.USER_LOGOUT });
+        }
+        yield put({ type: Type.EDIT_CART_ITEM_ERROR, payload: message });
+    }
+}
+
 export function* updateCartQtyAsync(action: { type: string; payload: any }): Generator<any, void, any> {
     const token = yield select(getToken);
     if (!token) return;
@@ -173,5 +219,6 @@ export function* watchCart() {
     yield takeEvery(Type.DELETE_COLLECTION, deleteCollectionAsync);
     yield takeEvery(Type.ADD_TO_CART, addToCartAsync);
     yield takeEvery(Type.UPDATE_CART_QTY, updateCartQtyAsync);
+    yield takeEvery(Type.EDIT_CART_ITEM, editCartItemAsync);
     yield takeEvery(Type.REMOVE_FROM_CART, removeFromCartAsync);
 }
