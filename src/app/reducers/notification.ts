@@ -22,7 +22,7 @@ export function notificationReducer(state = initialState, action: { type: string
             return { 
                 ...state, 
                 isLoading: false, 
-                items: action.payload 
+                items: action.payload,
             };
             
         case Types.GET_NOTIFICATIONS_ERROR:
@@ -39,10 +39,14 @@ export function notificationReducer(state = initialState, action: { type: string
             };
             
         case Types.MARK_NOTIFICATION_READ:
+            const targetId = typeof action.payload === 'number'
+                ? action.payload
+                : Number(action.payload?.id);
+
             return {
                 ...state,
                 items: state.items.map(item =>
-                    item.id === action.payload ? { ...item, isRead: true } : item
+                    Number(item.id) === targetId ? { ...item, isRead: true } : item
                 ),
             };
 
@@ -53,10 +57,7 @@ export function notificationReducer(state = initialState, action: { type: string
             };
             
         case Types.CLEAR_NOTIFICATIONS:
-            return {
-                ...state,
-                items: [],
-            };
+            return state;
             
         default:
             return state;
