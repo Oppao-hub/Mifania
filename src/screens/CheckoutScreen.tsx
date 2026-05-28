@@ -159,12 +159,12 @@ const CheckoutScreen = () => {
     const [selectedAddressId, setSelectedAddressId] = useState('home');
     const [selectedAddressName, setSelectedAddressName] = useState('Home');
     const [selectedAddressText, setSelectedAddressText] = useState('');
-    const [selectedDeliveryId, setSelectedDeliveryId] = useState('fedex');
-    const [selectedDeliveryName, setSelectedDeliveryName] = useState('FedEx Express');
+    const [selectedDeliveryId, setSelectedDeliveryId] = useState('jt-express');
+    const [selectedDeliveryName, setSelectedDeliveryName] = useState('J&T Express');
     const [selectedDeliveryEstimate, setSelectedDeliveryEstimate] = useState(
-        'Estimated arrival: 23 - 24 Dec, 2024',
+        '2–4 business days nationwide',
     );
-    const [selectedDeliveryFee, setSelectedDeliveryFee] = useState('₱8.50');
+    const [selectedDeliveryFee, setSelectedDeliveryFee] = useState('₱89.00');
     const [selectedPaymentId, setSelectedPaymentId] = useState('cash');
     const [selectedPaymentLabel, setSelectedPaymentLabel] = useState('Cash');
     const [selectedPaymentGatewayType, setSelectedPaymentGatewayType] = useState<'paypal' | 'direct'>(
@@ -428,6 +428,10 @@ const CheckoutScreen = () => {
             paymentMethod,
             displayTotals.totalFormatted,
             selectedRedeemPoints,
+            {
+                method: selectedDeliveryName,
+                fee: displayTotals.deliveryFeeFormatted,
+            },
         );
 
         const idempotencyKey = `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -470,6 +474,7 @@ const CheckoutScreen = () => {
                     onPress={() =>
                         navigation.navigate(ROUTES.CHOOSE_DELIVERY_ADDRESS, {
                             selectedAddressId,
+                            sourceCheckoutRouteKey: route.key,
                         })
                     }
                 />
@@ -504,11 +509,12 @@ const CheckoutScreen = () => {
 
                 <SectionCard
                     icon="car-outline"
-                    label="Delivery"
+                    label="Delivery Options"
                     value={`${selectedDeliveryName}\n${selectedDeliveryEstimate}`}
                     onPress={() =>
                         navigation.navigate(ROUTES.CHOOSE_DELIVERY, {
                             selectedDeliveryId,
+                            sourceCheckoutRouteKey: route.key,
                         })
                     }
                 />
@@ -520,6 +526,7 @@ const CheckoutScreen = () => {
                     onPress={() =>
                         navigation.navigate(ROUTES.CHOOSE_PAYMENT_METHOD, {
                             selectedPaymentId,
+                            sourceCheckoutRouteKey: route.key,
                         })
                     }
                 />
