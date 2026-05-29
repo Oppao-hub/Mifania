@@ -1,8 +1,9 @@
 import { takeEvery, call, put, select } from 'redux-saga/effects';
-import { getOrdersApi, createOrderApi, getOrderDetailsApi } from '../api/order';
+import { cancelOrderApi, getOrdersApi, createOrderApi, getOrderDetailsApi } from '../api/order';
 import * as Type from '../../app/actions';
 import { RootState } from '../../utils/types';
 import { getCustomerRefFromUser } from '../../utils/apiResource';
+import { showFeedbackToast, showBlockingError } from '../../utils/userFeedback';
 const getToken = (state: RootState) => state.authentication.data?.token;
 
 export function* getOrdersAsync(action: { type: string; payload: string }): Generator<any, void, any> {
@@ -100,8 +101,49 @@ export function* createOrderAsync(action: {
   }
 }
 
+export function* cancelOrderAsync(action: {
+  type: string;
+  payload: { orderId: number | string; token?: string; suppressToast?: boolean };
+}): Generator<any, void, any> {
+  let token = action.payload.token;
+  if (!token) {
+    token = yield select(getToken);
+  }
+  if (!token) return;
+
+  yield put({ type: Type.CANCEL_ORDER_REQUEST });
+  try {
+    const result = yield call(cancelOrderApi, action.payload.orderId, token);
+    yield put({
+      type: Type.CANCEL_ORDER_COMPLETED,
+      payload: {
+        id: action.payload.orderId,
+        orderStatus: result.orderStatus,
+      },
+    });
+    yield put({ type: Type.GET_ORDERS, payload: token });
+    if (!action.payload.suppressToast) {
+      showFeedbackToast('Order Cancelled');
+    }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Could not cancel order';
+    if (message === 'Unauthorized') {
+      yield put({ type: Type.USER_LOGOUT });
+    }
+    yield put({ type: Type.CANCEL_ORDER_ERROR, payload: message });
+    if (action.payload.suppressToast) {
+      return;
+    }
+    showBlockingError({
+      title: 'Could not cancel order',
+      message,
+    });
+  }
+}
+
 export function* watchOrder() {
   yield takeEvery(Type.GET_ORDERS, getOrdersAsync);
   yield takeEvery(Type.GET_ORDER_DETAILS, getOrderDetailsAsync);
   yield takeEvery(Type.CREATE_ORDER, createOrderAsync);
+  yield takeEvery(Type.CANCEL_ORDER, cancelOrderAsync);
 }
