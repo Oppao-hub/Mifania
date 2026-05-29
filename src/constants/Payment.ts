@@ -3,6 +3,7 @@ export const PaymentMethods = {
     PAYPAL: 'Paypal',
     CREDIT_CARD: 'Credit Card',
     BANK_TRANSFER: 'Bank Transfer',
+    WALLET: 'Wallet',
 };
 
 export const PaymentStatuses = {
