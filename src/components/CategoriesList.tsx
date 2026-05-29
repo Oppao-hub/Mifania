@@ -1,5 +1,6 @@
 import React from 'react';
-import { ScrollView, ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import LoadingState from './LoadingState';
 import { Category } from '../utils/types';
 
 interface CategoriesListProps<T extends Category = Category> {
@@ -51,9 +52,15 @@ function CategoriesList<T extends Category>({
           );
         })}
         
-        {isLoading && categories.length === 0 && (
-           <ActivityIndicator size="small" color="#52622E" className="ml-4" />
-        )}
+        {isLoading && categories.length === 0 ? (
+          <LoadingState
+            size="small"
+            fill={false}
+            card={false}
+            message="Loading categories..."
+            className="ml-4 py-2"
+          />
+        ) : null}
       </ScrollView>
     </View>
   );
