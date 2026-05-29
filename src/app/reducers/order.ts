@@ -73,6 +73,21 @@ export function orderReducer(state = initialState, action: { type: string; paylo
             return { ...state, isLoading: false, isError: true, error: action.payload };
         case Types.CANCEL_ORDER_ERROR:
             return { ...state, isLoading: false, cancelError: action.payload };
+        case Types.DELETE_ORDER_COMPLETED: {
+            const deletedId = Number(action.payload?.id);
+            return {
+                ...state,
+                isLoading: false,
+                deleteError: null,
+                currentOrder:
+                    state.currentOrder && Number(state.currentOrder.id) === deletedId
+                        ? null
+                        : state.currentOrder,
+                items: state.items.filter((order) => Number(order.id) !== deletedId),
+            };
+        }
+        case Types.DELETE_ORDER_ERROR:
+            return { ...state, isLoading: false, deleteError: action.payload };
         default:
             return state;
     }

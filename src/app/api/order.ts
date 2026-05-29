@@ -1,4 +1,4 @@
-import { getRequest, postRequest } from './client';
+import { deleteRequest, getRequest, postRequest } from './client';
 
 export const getOrdersApi = async (token: string) => {
     const response = await getRequest<any>("/orders", token);
@@ -25,6 +25,13 @@ export const cancelOrderApi = async (orderId: number | string, token: string) =>
     return await postRequest<{ success: boolean; message: string; orderStatus: string }>(
         `/orders/${orderId}/cancel`,
         {},
+        token,
+    );
+};
+
+export const deleteOrderApi = async (orderId: number | string, token: string) => {
+    return await deleteRequest<{ success: boolean; message: string }>(
+        `/orders/${orderId}`,
         token,
     );
 };
