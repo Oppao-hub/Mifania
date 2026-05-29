@@ -1,5 +1,18 @@
 import { handleSessionExpired } from '../../utils/authSession';
 
+export class ApiRequestError extends Error {
+    readonly status: number;
+
+    constructor(status: number, message: string) {
+        super(message);
+        this.name = 'ApiRequestError';
+        this.status = status;
+    }
+}
+
+export const isApiRequestError = (error: unknown): error is ApiRequestError =>
+    error instanceof ApiRequestError;
+
 export const ASSET_URL: string = 'https://sfl-mifania.up.railway.app';
 
 const BASE_URL: string = `${ASSET_URL}/api`;
@@ -48,7 +61,7 @@ const handleResponseError = async (response: Response) => {
     if (response.status === 401) {
         console.log('❌ Server Error Response: 401 Unauthorized');
         handleSessionExpired();
-        throw new Error('Unauthorized');
+        throw new ApiRequestError(401, 'Unauthorized');
     }
 
     console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
@@ -56,21 +69,22 @@ const handleResponseError = async (response: Response) => {
     if (response.status === 422) {
         // Handle API Platform violations array
         if (errorData.violations && errorData.violations.length > 0) {
-            throw new Error(errorData.violations[0].message);
+            throw new ApiRequestError(422, errorData.violations[0].message);
         }
         // Fallback to detail
         if (errorData.detail) {
-            throw new Error(errorData.detail);
+            throw new ApiRequestError(422, errorData.detail);
         }
     }
-    
-    throw new Error(
+
+    const message =
         errorData.message
         || errorData.error
         || errorData['hydra:description']
         || errorData.detail
-        || `Error: ${response.status}. Request Failed`,
-    );
+        || `Request failed with status ${response.status}`;
+
+    throw new ApiRequestError(response.status, message);
 };
 
 const isNetworkFailure = (error: unknown): boolean => {
@@ -197,9 +211,6 @@ export const getRequest = async <T>(endpoint: string, token?: string): Promise<T
         });
 
         if(!response.ok) {
-            if (response.status !== 401) {
-                console.error(`GET Error: ${response.status}`);
-            }
             await handleResponseError(response);
         }
 
