@@ -11,7 +11,8 @@ interface HeaderProps {
   title?: string;
   showBack?: boolean;
   /** When set, replaces the default back button on non-home screens */
-  leftVariant?: 'back' | 'logo' | 'empty';
+  leftVariant?: 'back' | 'logo' | 'empty' | 'close';
+  searchPlaceholder?: string;
   rightIcon?: string;
   onRightPress?: () => void;
   rightActions?: Array<{ icon: string; onPress: () => void }>;
@@ -44,6 +45,7 @@ const Header: React.FC<HeaderProps> = ({
   rightActions,
   hideNotificationBell = false,
   showSearch = false,
+  searchPlaceholder = 'Search products...',
   onSearchPress,
   searchQuery = '',
   setSearchQuery,
