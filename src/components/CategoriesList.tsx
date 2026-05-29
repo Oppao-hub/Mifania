@@ -34,7 +34,7 @@ function CategoriesList<T extends Category>({
               key={category.id}
               onPress={() => onCategoryPress?.(category)}
               activeOpacity={0.7}
-              className={`px-5 py-2.5 rounded-2xl border mr-3 ${
+              className={`px-5 py-2 rounded-full border mr-2.5 ${
                 isActive 
                   ? 'bg-brand border-brand' 
                   : 'bg-white border-border-color' 
