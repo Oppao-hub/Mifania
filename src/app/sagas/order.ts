@@ -1,5 +1,6 @@
 import { takeEvery, call, put, select } from 'redux-saga/effects';
-import { cancelOrderApi, getOrdersApi, createOrderApi, getOrderDetailsApi } from '../api/order';
+import { cancelOrderApi, deleteOrderApi, getOrdersApi, createOrderApi, getOrderDetailsApi } from '../api/order';
+import { formatFetchErrorMessage } from '../../utils/fetchError';
 import * as Type from '../../app/actions';
 import { RootState } from '../../utils/types';
 import { getCustomerRefFromUser } from '../../utils/apiResource';
@@ -141,9 +142,46 @@ export function* cancelOrderAsync(action: {
   }
 }
 
+export function* deleteOrderAsync(action: {
+  type: string;
+  payload: { orderId: number | string; token?: string; suppressToast?: boolean };
+}): Generator<any, void, any> {
+  let token = action.payload.token;
+  if (!token) {
+    token = yield select(getToken);
+  }
+  if (!token) return;
+
+  yield put({ type: Type.DELETE_ORDER_REQUEST });
+  try {
+    yield call(deleteOrderApi, action.payload.orderId, token);
+    yield put({
+      type: Type.DELETE_ORDER_COMPLETED,
+      payload: { id: action.payload.orderId },
+    });
+    if (!action.payload.suppressToast) {
+      showFeedbackToast('Order deleted');
+    }
+  } catch (error: unknown) {
+    const message = formatFetchErrorMessage(error);
+    if (message.toLowerCase().includes('unauthorized')) {
+      yield put({ type: Type.USER_LOGOUT });
+    }
+    yield put({ type: Type.DELETE_ORDER_ERROR, payload: message });
+    if (action.payload.suppressToast) {
+      return;
+    }
+    showBlockingError({
+      title: 'Could not delete order',
+      message,
+    });
+  }
+}
+
 export function* watchOrder() {
   yield takeEvery(Type.GET_ORDERS, getOrdersAsync);
   yield takeEvery(Type.GET_ORDER_DETAILS, getOrderDetailsAsync);
   yield takeEvery(Type.CREATE_ORDER, createOrderAsync);
   yield takeEvery(Type.CANCEL_ORDER, cancelOrderAsync);
+  yield takeEvery(Type.DELETE_ORDER, deleteOrderAsync);
 }
