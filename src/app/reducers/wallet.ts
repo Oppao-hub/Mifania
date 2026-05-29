@@ -8,6 +8,8 @@ const initialState: WalletSliceState = {
     isLoading: false,
     isError: false,
     error: null,
+    isRedeeming: false,
+    redemptionError: null,
 };
 
 export const walletReducer = (state = initialState, action: { type: string; payload?: any }): WalletSliceState => {
@@ -22,8 +24,8 @@ export const walletReducer = (state = initialState, action: { type: string; payl
             const pointsToDeduct = action.payload?.pointsCost || 0;
             return { 
                 ...state, 
-                isLoading: true, 
-                isError: false,
+                isRedeeming: true,
+                redemptionError: null,
                 wallet: state.wallet ? {
                     ...state.wallet,
                     rewardPoints: Math.max(0, state.wallet.rewardPoints - pointsToDeduct)
@@ -37,15 +39,14 @@ export const walletReducer = (state = initialState, action: { type: string; payl
         case Types.GET_REDEMPTIONS_COMPLETED:
             return { ...state, isLoading: false, redemptions: action.payload, isError: false };
         case Types.CREATE_REDEMPTION_COMPLETED:
-            return { ...state, isLoading: false, isError: false };
+            return { ...state, isRedeeming: false, redemptionError: null };
             
         case Types.CREATE_REDEMPTION_ERROR:
             const pointsToRefund = action.payload?.pointsCost || 0;
             return { 
                 ...state, 
-                isLoading: false, 
-                isError: true, 
-                error: action.payload?.message || action.payload,
+                isRedeeming: false, 
+                redemptionError: action.payload?.message || action.payload,
                 wallet: state.wallet ? {
                     ...state.wallet,
                     rewardPoints: state.wallet.rewardPoints + pointsToRefund
