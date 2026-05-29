@@ -89,6 +89,19 @@ const Header: React.FC<HeaderProps> = ({
             />
           ) : leftVariant === 'empty' ? (
             <View className="w-10 h-10" />
+          ) : leftVariant === 'close' ? (
+            <TouchableOpacity
+              onPress={() => {
+                if (navigation.canGoBack()) {
+                  navigation.goBack();
+                } else {
+                  navigation.navigate('HomeTab');
+                }
+              }}
+              className="p-1"
+            >
+              <Icon name="close" size={26} color="#4B5563" />
+            </TouchableOpacity>
           ) : (
             <TouchableOpacity 
               onPress={() => {
@@ -111,8 +124,8 @@ const Header: React.FC<HeaderProps> = ({
 
         <View className="z-10 flex-row items-center min-w-10 justify-end">
           {rightActions && rightActions.length > 0 ? (
-            rightActions.map((action) => (
-              <TouchableOpacity key={action.icon} className="p-1 ml-1" onPress={action.onPress}>
+            rightActions.map((action, index) => (
+              <TouchableOpacity key={`${action.icon}-${index}`} className="p-1 ml-1" onPress={action.onPress}>
                 <Icon name={action.icon} size={22} color="#4B5563" />
               </TouchableOpacity>
             ))
@@ -151,7 +164,7 @@ const Header: React.FC<HeaderProps> = ({
             >
               <Icon name="search-outline" size={20} color="#9CA3AF" />
               <Text className="flex-1 ml-3 text-sm font-montserrat text-gray">
-                Search products...
+                {searchPlaceholder}
               </Text>
               <Icon name="camera-outline" size={20} color="#4B5563" />
             </TouchableOpacity>
@@ -161,7 +174,7 @@ const Header: React.FC<HeaderProps> = ({
               <TextInput
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                placeholder="Search products..."
+                placeholder={searchPlaceholder}
                 placeholderTextColor="#9CA3AF"
                 className="flex-1 ml-3 text-sm font-montserrat text-dark-gray"
               />
