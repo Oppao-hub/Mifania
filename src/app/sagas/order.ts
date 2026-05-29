@@ -1,10 +1,13 @@
 import { takeEvery, call, put, select } from 'redux-saga/effects';
 import { cancelOrderApi, deleteOrderApi, getOrdersApi, createOrderApi, getOrderDetailsApi } from '../api/order';
+import { addToCartApi } from '../api/cart';
 import { formatFetchErrorMessage } from '../../utils/fetchError';
 import * as Type from '../../app/actions';
-import { RootState } from '../../utils/types';
+import { Order, RootState } from '../../utils/types';
 import { getCustomerRefFromUser } from '../../utils/apiResource';
+import { getReorderLineItems } from '../../utils/orderActions';
 import { showFeedbackToast, showBlockingError } from '../../utils/userFeedback';
+import { getCartAsync } from './cart';
 const getToken = (state: RootState) => state.authentication.data?.token;
 
 export function* getOrdersAsync(action: { type: string; payload: string }): Generator<any, void, any> {
@@ -73,14 +76,21 @@ export function* createOrderAsync(action: {
       action.payload.idempotencyKey,
     );
     yield put({ type: Type.CREATE_ORDER_COMPLETED, payload: data });
-    
-    // 1. Clear the cart state locally
-    yield put({ type: Type.CLEAR_CART });
-    
-    // 2. Refresh orders after creation
+
+    const selectedItems = yield select((state: RootState) =>
+      state.cart.items.filter((item) => item.selected),
+    );
+    const purchasedCartItemIds = selectedItems
+      .map((item) => item.id)
+      .filter((id): id is string | number => id != null);
+
+    if (purchasedCartItemIds.length > 0) {
+      yield put({ type: Type.REMOVE_PURCHASED_CART_ITEMS, payload: purchasedCartItemIds });
+    }
+
     yield put({ type: Type.GET_ORDERS, payload: action.payload.token });
 
-    // 3. Refresh Wallet (Reward Points) and Active Cart from Server
+    // Refresh wallet and sync cart from server (only purchased lines are removed there)
     const authData = yield select((state: RootState) => state.authentication.data);
     const customerRef = getCustomerRefFromUser(authData?.user);
     if (customerRef) {
@@ -178,10 +188,66 @@ export function* deleteOrderAsync(action: {
   }
 }
 
+export function* reorderOrderAsync(action: {
+  type: string;
+  payload: { order: Order; token?: string };
+}): Generator<any, void, any> {
+  let token = action.payload.token;
+  if (!token) {
+    token = yield select(getToken);
+  }
+  if (!token) {
+    yield put({ type: Type.REORDER_ORDER_ERROR, payload: 'Please log in to reorder items.' });
+    return;
+  }
+
+  let lineItems = getReorderLineItems(action.payload.order);
+
+  if (lineItems.length === 0 && action.payload.order.id != null) {
+    try {
+      const details = yield call(getOrderDetailsApi, action.payload.order.id, token);
+      lineItems = getReorderLineItems(details);
+    } catch {
+      // fall through to empty check
+    }
+  }
+
+  if (lineItems.length === 0) {
+    yield put({
+      type: Type.REORDER_ORDER_ERROR,
+      payload: 'No items found to add back to your cart.',
+    });
+    return;
+  }
+
+  yield put({ type: Type.REORDER_ORDER_REQUEST });
+  try {
+    for (const line of lineItems) {
+      yield call(addToCartApi, line.productId, line.quantity, token);
+    }
+    yield put({ type: Type.REORDER_ORDER_COMPLETED, payload: { count: lineItems.length } });
+    yield call(getCartAsync);
+    showFeedbackToast(
+      lineItems.length === 1 ? 'Item added to cart' : `${lineItems.length} items added to cart`,
+    );
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Could not reorder items';
+    if (message === 'Unauthorized') {
+      yield put({ type: Type.USER_LOGOUT });
+    }
+    yield put({ type: Type.REORDER_ORDER_ERROR, payload: message });
+    showBlockingError({
+      title: 'Could not reorder',
+      message,
+    });
+  }
+}
+
 export function* watchOrder() {
   yield takeEvery(Type.GET_ORDERS, getOrdersAsync);
   yield takeEvery(Type.GET_ORDER_DETAILS, getOrderDetailsAsync);
   yield takeEvery(Type.CREATE_ORDER, createOrderAsync);
   yield takeEvery(Type.CANCEL_ORDER, cancelOrderAsync);
   yield takeEvery(Type.DELETE_ORDER, deleteOrderAsync);
+  yield takeEvery(Type.REORDER_ORDER, reorderOrderAsync);
 }
