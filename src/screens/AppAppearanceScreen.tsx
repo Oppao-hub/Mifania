@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Header from '../components/Header';
 import SurfaceCard from '../components/SurfaceCard';
 import { ROUTES } from '../utils';
 import { useAppearance } from '../context/AppearanceContext';
