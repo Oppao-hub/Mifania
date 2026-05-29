@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'; // 💡 ADDED useEffect
 import { LogBox, View } from 'react-native';
 import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
@@ -15,6 +15,7 @@ import store, { persistor } from './src/app/store';
 import AppNavigation from './src/navigations';
 import { toastConfig } from './src/utils/toastConfig';
 import NetworkBanner from './src/components/NetworkBanner';
+import { AppearanceProvider } from './src/context/AppearanceContext';
 import { navigationRef } from './src/utils/navigation';
 import { ROUTES } from './src/utils';
 
@@ -168,16 +169,18 @@ const App = () => {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor}>
-          <View style={{ flex: 1 }}>
-            <NetworkBanner />
-            <AppNavigation />
-            <Toast config={toastConfig} />
-          </View>
-        </PersistGate>
-      </Provider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <AppearanceProvider>
+        <Provider store={store}>
+          <PersistGate loading={null} persistor={persistor}>
+            <View style={{ flex: 1 }}>
+              <NetworkBanner />
+              <AppNavigation />
+              <Toast config={toastConfig} />
+            </View>
+          </PersistGate>
+        </Provider>
+      </AppearanceProvider>
     </SafeAreaProvider>
   );
 };
