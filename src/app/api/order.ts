@@ -20,3 +20,11 @@ export const createOrderApi = async (
     const headers = idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined;
     return await postRequest<any>("/orders", orderData, token, headers);
 };
+
+export const cancelOrderApi = async (orderId: number | string, token: string) => {
+    return await postRequest<{ success: boolean; message: string; orderStatus: string }>(
+        `/orders/${orderId}/cancel`,
+        {},
+        token,
+    );
+};
