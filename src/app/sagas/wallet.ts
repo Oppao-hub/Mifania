@@ -1,7 +1,8 @@
-import { takeEvery, call, put } from 'redux-saga/effects';
+import { takeEvery, call, put, select } from 'redux-saga/effects';
 import { getWalletApi } from '../api/wallet';
 import { getRewardsApi } from '../api/reward';
 import { getRedemptionsApi, createRedemptionApi } from '../api/redemption';
+import { getCustomerRefFromUser } from '../../utils/apiResource';
 import * as Type from '../../app/actions';
 
 export function* getWalletAsync(action: { type: string; payload: { id: string | number; token: string } }): Generator<any, void, any> {
@@ -42,6 +43,14 @@ export function* createRedemptionAsync(action: { type: string; payload: { reward
   try {
     const data = yield call(createRedemptionApi, action.payload.rewardIri, action.payload.token);
     yield put({ type: Type.CREATE_REDEMPTION_COMPLETED, payload: data });
+
+    const authData = yield select((state: { authentication: { data?: { token?: string; user?: unknown } } }) => state.authentication.data);
+    const customerRef = getCustomerRefFromUser(authData?.user as any);
+    if (customerRef && authData?.token) {
+      yield put({ type: Type.GET_WALLET, payload: { id: customerRef, token: authData.token } });
+    }
+    yield put({ type: Type.GET_REDEMPTIONS, payload: action.payload.token });
+    yield put({ type: Type.GET_REWARDS, payload: action.payload.token });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "An unknown error occurred";
     yield put({ type: Type.CREATE_REDEMPTION_ERROR, payload: { message, pointsCost: action.payload.pointsCost } });
