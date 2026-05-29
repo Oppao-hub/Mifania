@@ -1,6 +1,13 @@
 import { call, put, select, takeEvery } from 'redux-saga/effects';
 import * as Type from '../actions';
-import { clearNotifications, getNotifications, markNotificationRead } from '../api/notification';
+import {
+    clearNotifications,
+    getNotifications,
+    markAllNotificationsRead,
+    markNotificationRead,
+} from '../api/notification';
+import { isApiRequestError } from '../api/client';
+import { formatFetchErrorMessage } from '../../utils/fetchError';
 import { isUnauthorizedError } from '../../utils/authSession';
 import { RootState } from '../../utils/types';
 
@@ -17,13 +24,22 @@ function* getNotificationsSaga(action: { type: string, payload?: string }): Gene
     try {
         const data = yield call(getNotifications, token);
         yield put({ type: Type.GET_NOTIFICATIONS_COMPLETED, payload: data });
-    } catch (e: any) {
-        if (isUnauthorizedError(e?.message)) {
+    } catch (e: unknown) {
+        if (isUnauthorizedError(getNotificationErrorMessage(e))) {
             return;
         }
-        yield put({ type: Type.GET_NOTIFICATIONS_ERROR, payload: e.message });
+        if (isApiRequestError(e) && e.status === 404) {
+            yield put({ type: Type.GET_NOTIFICATIONS_COMPLETED, payload: [] });
+            return;
+        }
+        yield put({
+            type: Type.GET_NOTIFICATIONS_ERROR,
+            payload: formatFetchErrorMessage(e),
+        });
     }
 }
+
+const getNotificationErrorMessage = (error: unknown): string => formatFetchErrorMessage(error);
 
 function* clearNotificationsSaga(action: { type: string; payload?: { token?: string; ids?: number[] } }): Generator<any, void, any> {
     let token: string | undefined;
@@ -66,8 +82,25 @@ function* markNotificationReadSaga(action: { type: string; payload?: { id?: numb
     }
 }
 
+function* markAllNotificationsReadSaga(action: {
+    type: string;
+    payload?: { token?: string };
+}): Generator<any, void, any> {
+    try {
+        const tokenFromState: string | undefined = yield select(selectAuthToken);
+        const token = action.payload?.token || tokenFromState;
+        if (!token) return;
+
+        yield call(markAllNotificationsRead, token);
+    } catch (e: any) {
+        if (isUnauthorizedError(e?.message)) return;
+        yield put({ type: Type.GET_NOTIFICATIONS_ERROR, payload: e.message });
+    }
+}
+
 export function* watchNotification() {
     yield takeEvery(Type.GET_NOTIFICATIONS, getNotificationsSaga);
     yield takeEvery(Type.CLEAR_NOTIFICATIONS, clearNotificationsSaga);
     yield takeEvery(Type.MARK_NOTIFICATION_READ, markNotificationReadSaga);
+    yield takeEvery(Type.MARK_ALL_NOTIFICATIONS_READ, markAllNotificationsReadSaga);
 }
