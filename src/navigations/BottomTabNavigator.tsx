@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View } from 'react-native';
 import { useSelector } from 'react-redux';
 import { RootState } from '../utils/types';
+import { useTabBarLayout } from '../utils/layout';
 import HomeScreen from '../screens/HomeScreen';
 import CartScreen from '../screens/CartScreen';
 import WishlistScreen from '../screens/WishlistScreen';
@@ -36,6 +37,7 @@ const TabIcon = ({ name, color, focused }: { name: string; color: string; focuse
 );
 
 const BottomTabNavigator: React.FC = () => {
+  const { tabBarHeight, tabBarTotalHeight, tabBarContentInset } = useTabBarLayout();
   const token = useSelector((state: RootState) => state.authentication?.data?.token);
 
   const protectedTabListener = ({ navigation }: any) => ({
@@ -50,7 +52,6 @@ const BottomTabNavigator: React.FC = () => {
 
   return (
     <Tab.Navigator
-      safeAreaInsets={{ bottom: 0 }} // Forces the navigator to ignore system safe area padding
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
@@ -61,20 +62,23 @@ const BottomTabNavigator: React.FC = () => {
           fontFamily: 'Montserrat-Medium',
           marginBottom: 8,
         },
+        tabBarSafeAreaInsets: { top: 0, right: 0, bottom: 0, left: 0 },
         tabBarStyle: {
           position: 'absolute',
-          left: 24,
-          right: 24,
-          height: 70,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: tabBarTotalHeight,
+          paddingBottom: tabBarContentInset,
           backgroundColor: '#FFFFFF',
-          borderTopWidth: 0,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.1,
-          shadowRadius: 15,
-          elevation: 10,
+          borderTopWidth: 1,
+          borderTopColor: '#EAE8E3',
+          borderRadius: 0,
+          shadowOpacity: 0,
+          elevation: 0,
         },
         tabBarItemStyle: {
+          height: tabBarHeight,
           paddingVertical: 8,
         },
       }}

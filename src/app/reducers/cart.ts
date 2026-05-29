@@ -27,12 +27,15 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
                 error: null
             };
 
-        case Types.GET_CART_COMPLETED:
+        case Types.GET_CART_COMPLETED: {
             const rawData = action.payload.data;
             const cartData = rawData['member'] ? rawData['member'][0] : (rawData['hydra:member'] ? rawData['hydra:member'][0] : rawData);
             const cartItems = cartData.cartItems || cartData.items || [];
             const allProducts: Product[] = action.payload.products || [];
-            
+            const previousSelection = new Map(
+                state.items.map((item) => [String(item.id), Boolean(item.selected)]),
+            );
+
             // Map items to ensure we handle IRIs by looking up the full product from the store
             const mappedItems = cartItems.map((item: any) => {
                 let productData = item.product;
@@ -59,10 +62,15 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
                     }
                 }
 
+                const itemId = String(item.id);
+                const selected = previousSelection.has(itemId)
+                    ? previousSelection.get(itemId)!
+                    : item.selected === true;
+
                 return {
                     ...item,
                     product: productData,
-                    selected: item.selected !== undefined ? item.selected : true 
+                    selected,
                 };
             });
 
@@ -73,6 +81,7 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
                 totalPrice: cartData.totalPrice || '0.00',
                 totalQuantity: cartData.totalQuantity || 0,
             };
+        }
 
         case Types.GET_COLLECTIONS_COMPLETED:
             return {
@@ -114,13 +123,58 @@ export const cartReducer = (state = initialState, action: { type: string; payloa
                 ...state,
                 items: state.items.map(item =>
                     String(item.id) === String(action.payload)
-                        ? { ...item, selected: !item.selected }
+                        ? { ...item, selected: !Boolean(item.selected) }
                         : item
                 ),
             };
 
+        case Types.SET_CART_ITEMS_SELECTION: {
+            const { selected, itemIds } = action.payload as {
+                selected: boolean;
+                itemIds?: (string | number)[];
+            };
+            const idSet = itemIds?.length
+                ? new Set(itemIds.map((id) => String(id)))
+                : null;
+
+            return {
+                ...state,
+                items: state.items.map((item) =>
+                    !idSet || idSet.has(String(item.id))
+                        ? { ...item, selected }
+                        : item,
+                ),
+            };
+        }
+
         case Types.CLEAR_CART:
             return initialState;
+
+        case Types.REMOVE_PURCHASED_CART_ITEMS: {
+            const purchasedIds = new Set(
+                (action.payload as (string | number)[]).map((id) => String(id)),
+            );
+            const remainingItems = state.items.filter(
+                (item) => item.id != null && !purchasedIds.has(String(item.id)),
+            );
+            const totalQuantity = remainingItems.reduce(
+                (sum, item) => sum + (item.quantity || 0),
+                0,
+            );
+            const totalPrice = remainingItems
+                .reduce(
+                    (sum, item) => sum + parseFloat(item.price || '0') * (item.quantity || 0),
+                    0,
+                )
+                .toFixed(2);
+
+            return {
+                ...state,
+                items: remainingItems,
+                totalQuantity,
+                totalPrice,
+            };
+        }
 
         default:
             return state;
@@ -179,6 +233,14 @@ export const editCartItem = (payload: {
 export const toggleCartItemSelection = (id: string | number) => ({
     type: Types.TOGGLE_CART_ITEM_SELECTION,
     payload: id
+});
+
+export const setCartItemsSelection = (
+    selected: boolean,
+    itemIds?: (string | number)[],
+) => ({
+    type: Types.SET_CART_ITEMS_SELECTION,
+    payload: { selected, itemIds },
 });
 
 export const clearCart = () => ({

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { RootState, CartItem, Customer } from '../utils/types';
 import { getEmbeddedCustomer, getCustomerRefFromUser } from '../utils/apiResource';
 import { 
@@ -24,19 +24,37 @@ import CartItemComponent from '../components/CartItem';
 import EmptyState from '../components/EmptyState';
 import AlertMsg from '../components/AlertMsg/AlertMsg';
 import Header from '../components/Header';
+import Button from '../components/Button';
+import StickyBottomBar from '../components/StickyBottomBar';
 import * as Types from '../app/actions';
 import { ROUTES } from '../utils';
+import { hasDeliverableAddress } from '../utils/address';
+import { useTabBarBottomPadding } from '../utils/layout';
+import { showBlockingInfo } from '../utils/userFeedback';
+
+const getCartItemName = (item: CartItem): string => {
+  if (typeof item.product === 'string') {
+    return item.productName || '';
+  }
+  return item.product.name || item.productName || '';
+};
 
 const CartScreen = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const tabBarBottomPadding = useTabBarBottomPadding();
+  const scrollBottomPadding = tabBarBottomPadding + 80;
   const { items: cartItems, isLoading, error: cartError } = useSelector((state: RootState) => state.cart);
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const { data: customerFromSlice, isLoading: isCustomerLoading } = useSelector((state: RootState) => state.customer);
+  const savedAddresses = useSelector((state: RootState) => state.address.items);
   const token = authData?.token;
   
   const customerRef = getCustomerRefFromUser(authData?.user);
   const customerData: Customer | null = customerFromSlice || getEmbeddedCustomer(authData?.user?.customer);
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
 
   // Modal State
   const [isModalVisible, setModalVisible] = useState(false);
@@ -53,21 +71,28 @@ const CartScreen = () => {
     message: '',
   });
 
-  useEffect(() => {
-    dispatch(getCart());
-    dispatch(getProducts());
+  useFocusEffect(
+    useCallback(() => {
+      dispatch(getCart());
+      dispatch(getProducts());
+      if (token) {
+        dispatch({ type: Types.GET_ADDRESSES });
+      }
+    }, [dispatch, token]),
+  );
 
-    if (!customerData && customerRef && authData?.token) {
-      dispatch({ 
-        type: Types.GET_CUSTOMER, 
-        payload: { id: customerRef, token: authData.token } 
+  useEffect(() => {
+    if (!customerFromSlice && customerRef && token) {
+      dispatch({
+        type: Types.GET_CUSTOMER,
+        payload: { id: customerRef, token },
       });
       dispatch({
         type: Types.GET_WALLET,
-        payload: { id: customerRef, token: authData.token }
+        payload: { id: customerRef, token },
       });
     }
-  }, [dispatch, authData, customerData, customerRef]);
+  }, [dispatch, customerRef, token, customerFromSlice]);
 
   const toggleSelection = (id: string | number) => {
     dispatch(toggleCartItemSelection(id));
@@ -96,6 +121,14 @@ const CartScreen = () => {
       });
     }
   }, [cartError]);
+
+  const displayedItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return cartItems;
+    return cartItems.filter((item) =>
+      getCartItemName(item).toLowerCase().includes(query),
+    );
+  }, [cartItems, searchQuery]);
 
   // Local calculation for selected items
   const { selectedCount, displayTotal } = useMemo(() => {
@@ -128,11 +161,16 @@ const CartScreen = () => {
     }
 
     // 💡 Profile Completeness Check (Per Backend Requirements)
-    if (!customerData || !customerData?.address || !customerData?.contactNumber) {
+    const canDeliver = hasDeliverableAddress(
+      savedAddresses,
+      customerData?.address,
+      customerData?.contactNumber,
+    );
+    if (!canDeliver) {
       setAlertConfig({
         visible: true,
         type: 'warning',
-        message: 'Please complete your profile with an address and contact number in the Profile screen before placing an order.',
+        message: 'Please add a delivery address and contact number in Manage Addresses before placing an order.',
       });
       return;
     }
@@ -158,20 +196,46 @@ const CartScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-      {/* HEADER */}
-      <Header title="Cart" />
+      <Header
+        title="Cart"
+        leftVariant="logo"
+        hideNotificationBell
+        showSearch={showSearch}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        rightActions={[
+          {
+            icon: showSearch ? 'close-outline' : 'search-outline',
+            onPress: () => {
+              setShowSearch((prev) => {
+                if (prev) setSearchQuery('');
+                return !prev;
+              });
+            },
+          },
+          {
+            icon: 'ellipsis-vertical',
+            onPress: () =>
+              showBlockingInfo({
+                title: 'Cart Options',
+                message: 'More cart actions will be available soon.',
+              }),
+          },
+        ]}
+      />
 
       {isLoading && cartItems.length === 0 ? (
         <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color="#52622E" />
         </View>
       ) : cartItems.length > 0 ? (
+        displayedItems.length > 0 ? (
         <ScrollView 
-            className="flex-1 px-6 pt-4"
+            className="flex-1 px-4 pt-4"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 220 }}
+            contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
         >
-            {cartItems.map((item) => (
+            {displayedItems.map((item) => (
             <CartItemComponent 
                 key={item.id}
                 item={item}
@@ -182,29 +246,39 @@ const CartScreen = () => {
             />
             ))}
         </ScrollView>
-      ) : (
-        <EmptyState 
+        ) : (
+        <View className="flex-1 px-4">
+          <EmptyState
             iconName="cart-outline"
-            title="Your cart is empty"
-            description="Looks like you haven't added anything to your cart yet."
-            buttonText="Start Shopping"
-            onButtonPress={() => navigation.navigate('HomeTab' as never)}
-        />
+            title="No matches found"
+            description="Try a different search term or clear your search."
+          />
+        </View>
+        )
+      ) : (
+        <View className="flex-1 px-4">
+          <EmptyState 
+              iconName="cart-outline"
+              title="Your cart is empty"
+              description="Looks like you haven't added anything to your cart yet."
+              buttonText="Start Shopping"
+              onButtonPress={() => navigation.navigate('HomeTab' as never)}
+          />
+        </View>
       )}
 
       {/* FLOATING CHECKOUT BUTTON */}
       {selectedCount > 0 && (
-        <View className="absolute bottom-28 left-6 right-6 z-50">
-          <TouchableOpacity 
-            activeOpacity={0.9}
+        <StickyBottomBar variant="floating" className="bg-transparent">
+          <Button
+            label={`Checkout (${selectedCount}) • ₱${displayTotal}`}
             onPress={handleCheckout}
-            className="w-full bg-brand h-16 rounded-3xl flex-row items-center justify-center shadow-2xl shadow-brand/40"
-          >
-            <Text className="text-white font-montserrat-bold text-[16px] tracking-wider">
-                Checkout ({selectedCount}) • ₱{displayTotal}
-            </Text>
-          </TouchableOpacity>
-        </View>
+            size="lg"
+            shape="pill"
+            className="shadow-2xl shadow-brand/40 rounded-3xl"
+            textClassName="text-[16px] tracking-wider"
+          />
+        </StickyBottomBar>
       )}
 
       <EditVariantModal 

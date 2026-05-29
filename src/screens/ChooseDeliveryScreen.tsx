@@ -5,13 +5,16 @@ import { CommonActions, useNavigation, useRoute } from '@react-navigation/native
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ROUTES } from '../utils';
 import Header from '../components/Header';
+import { mergeSurfaceCardStyle, SURFACE_CARD_CLASS } from '../utils/cardStyles';
 import { useSelector } from 'react-redux';
 import { RootState } from '../utils/types';
-import AlertMsg from '../components/AlertMsg/AlertMsg';
+import Button from '../components/Button';
+import StickyBottomBar from '../components/StickyBottomBar';
+import EmptyState from '../components/EmptyState';
 import { DeliveryOption, fetchDeliveryOptions } from '../utils/checkoutOptions';
 import { useFocusEffect } from '@react-navigation/native';
 
-const BRAND = '#5B8E68';
+const BRAND = '#52622E';
 
 const deliveryIconName = (option: DeliveryOption): string => {
     const key = `${option.id} ${option.name}`.toLowerCase();
@@ -28,6 +31,7 @@ const ChooseDeliveryScreen = () => {
     const token = useSelector((state: RootState) => state.authentication.data?.token);
     const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const sourceCheckoutRouteKey = route.params?.sourceCheckoutRouteKey as string | undefined;
     const initialDeliveryId = route.params?.selectedDeliveryId || 'jt-express';
     const [selectedDeliveryId, setSelectedDeliveryId] = useState<string>(initialDeliveryId);
@@ -43,6 +47,7 @@ const ChooseDeliveryScreen = () => {
             return;
         }
         setIsLoading(true);
+        setLoadError(null);
         try {
             const options = await fetchDeliveryOptions(token, { refresh: true });
             setDeliveryOptions(options);
@@ -50,10 +55,8 @@ const ChooseDeliveryScreen = () => {
                 options.some((opt) => opt.id === current) ? current : options[0]?.id || 'jt-express',
             );
         } catch {
-            AlertMsg.customError({
-                title: 'Delivery Options',
-                message: 'Unable to load delivery options. Please try again.',
-            });
+            setLoadError('Unable to load delivery options. Please try again.');
+            setDeliveryOptions([]);
         } finally {
             setIsLoading(false);
         }
@@ -95,7 +98,33 @@ const ChooseDeliveryScreen = () => {
         }
     };
 
-    if (!isLoading && deliveryOptions.length === 0) {
+    if (isLoading) {
+        return (
+            <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+                <Header title="Choose Delivery Options" />
+                <View className="flex-1 items-center justify-center">
+                    <Text className="text-sm font-montserrat text-gray">Loading delivery options...</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+                <Header title="Choose Delivery Options" />
+                <EmptyState
+                    iconName="cloud-off-outline"
+                    title="Could not load delivery options"
+                    description={loadError}
+                    buttonText="Try again"
+                    onButtonPress={loadDeliveryOptions}
+                />
+            </SafeAreaView>
+        );
+    }
+
+    if (deliveryOptions.length === 0) {
         return (
             <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
                 <Header title="Choose Delivery Options" />
@@ -120,8 +149,9 @@ const ChooseDeliveryScreen = () => {
                             key={item.id}
                             activeOpacity={0.85}
                             onPress={() => setSelectedDeliveryId(item.id)}
-                            className={`rounded-2xl px-4 py-4 mb-4 flex-row items-center ${
-                                selected ? 'bg-white border-2 border-brand' : 'bg-white border border-border-color'
+                            style={mergeSurfaceCardStyle()}
+                            className={`px-4 py-4 mb-4 flex-row items-center ${SURFACE_CARD_CLASS} ${
+                                selected ? 'border-2 border-brand' : ''
                             }`}
                         >
                             <View className="w-14 h-14 rounded-full bg-white border border-border-color items-center justify-center mr-4 overflow-hidden">
@@ -149,18 +179,15 @@ const ChooseDeliveryScreen = () => {
                 })}
             </ScrollView>
 
-            <View className="px-5 py-4 bg-app-bg">
-                <TouchableOpacity
-                    activeOpacity={0.9}
+            <StickyBottomBar>
+                <Button
+                    label="OK"
                     onPress={handleConfirm}
                     disabled={isLoading || !selectedDelivery}
-                    className={`w-full h-14 rounded-full items-center justify-center ${
-                        isLoading || !selectedDelivery ? 'bg-brand/50' : 'bg-brand'
-                    }`}
-                >
-                    <Text className="text-white text-base font-montserrat-bold">OK</Text>
-                </TouchableOpacity>
-            </View>
+                    size="md"
+                    shape="pill"
+                />
+            </StickyBottomBar>
         </SafeAreaView>
     );
 };

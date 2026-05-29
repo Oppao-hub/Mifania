@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Image, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
@@ -12,45 +12,79 @@ import { RootState } from '../utils/types';
 import { getEmbeddedCustomer } from '../utils/apiResource';
 import * as Types from '../app/actions';
 import Header from '../components/Header';
+import SurfaceCard from '../components/SurfaceCard';
+import LogoutBottomSheet from '../components/LogoutBottomSheet';
 import IMAGES from '../utils/image';
+import { useTabBarBottomPadding } from '../utils/layout';
+import { showBlockingInfo } from '../utils/userFeedback';
 
-// Reusable component for the list items
-interface ProfileOptionItemProps {
+interface MenuItemProps {
   icon: string;
   label: string;
   isLogout?: boolean;
+  showChevron?: boolean;
   onPress?: () => void;
+  isLast?: boolean;
 }
 
-const ProfileOptionItem: React.FC<ProfileOptionItemProps> = ({ icon, label, isLogout, onPress }) => (
-  <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-    <View className="flex-row items-center justify-between py-4">
-      <View className="flex-row items-center flex-1">
-        <Icon name={icon} size={22} color={isLogout ? '#DC3545' : '#4B5563'} style={{ marginRight: 16 }} />
-        <Text className={`text-base font-montserrat-bold ${isLogout ? 'text-danger' : 'text-dark-gray'} flex-1`}>
-          {label}
-        </Text>
-      </View>
-      <Icon name="chevron-forward" size={20} color={isLogout ? '#DC3545' : '#9CA3AF'} />
-    </View>
-  </TouchableOpacity>
+const MenuDivider = () => <View className="h-px bg-border-color ml-12" />;
+
+const MenuItem: React.FC<MenuItemProps> = ({
+  icon,
+  label,
+  isLogout = false,
+  showChevron = true,
+  onPress,
+  isLast = false,
+}) => (
+  <>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7} className="flex-row items-center py-4">
+      <Icon
+        name={icon}
+        size={22}
+        color={isLogout ? '#DC3545' : '#6A7282'}
+        style={{ width: 28 }}
+      />
+      <Text
+        className={`flex-1 text-[15px] font-montserrat-bold ${
+          isLogout ? 'text-danger' : 'text-dark-gray'
+        }`}
+      >
+        {label}
+      </Text>
+      {showChevron && !isLogout ? (
+        <Icon name="chevron-forward" size={18} color="#9CA3AF" />
+      ) : null}
+    </TouchableOpacity>
+    {!isLast ? <MenuDivider /> : null}
+  </>
 );
 
 const AccountScreen = () => {
   const navigation = useNavigation<any>();
   const dispatch = useDispatch();
-  
+  const [showLogoutSheet, setShowLogoutSheet] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const tabBarBottomPadding = useTabBarBottomPadding();
+
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const { data: customerFromSlice } = useSelector((state: RootState) => state.customer);
-  
+
   const user = authData?.user;
   const customer = customerFromSlice || getEmbeddedCustomer(user?.customer);
   const displayName = customer
-    ? `${customer.firstName} ${customer.lastName}`
+    ? `${customer.firstName} ${customer.lastName}`.trim()
     : user?.firstName && user?.lastName
-      ? `${user.firstName} ${user.lastName}`
+      ? `${user.firstName} ${user.lastName}`.trim()
       : 'Mifania User';
   const displayEmail = user?.email || 'user@mifania.com';
+
+  const showComingSoon = (feature: string) => {
+    showBlockingInfo({
+      title: feature,
+      message: 'This feature is coming soon.',
+    });
+  };
 
   const handleEditProfile = () => {
     navigation.navigate(ROUTES.PROFILE as never);
@@ -60,113 +94,157 @@ const AccountScreen = () => {
     navigation.navigate(ROUTES.NOTIFICATION as never);
   };
 
+  const handleManageAddresses = () => {
+    navigation.navigate(ROUTES.MANAGE_ADDRESSES as never);
+  };
+
   const handleOrder = () => {
-    navigation.navigate(ROUTES.ORDER as never)
-  }
+    navigation.navigate(ROUTES.ORDER as never);
+  };
+
+  const handleWallet = () => {
+    navigation.navigate(ROUTES.WALLET as never);
+  };
+
+  const handleRewards = () => {
+    navigation.navigate(ROUTES.REWARDS as never);
+  };
+
+  const handlePaymentMethods = () => {
+    navigation.navigate(ROUTES.PAYMENT_METHODS as never);
+  };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Logout",
-      "Are you sure you want to log out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Logout", 
-          style: "destructive", 
-          onPress: async () => {
-            try {
-              // Step 1: Sign out from Firebase
-              const authInstance = getAuth();
-              if (authInstance.currentUser) {
-                await authInstance.signOut();
-              }
-
-              // Step 2: Sign out from Google to avoid "auto-login" loop
-              try {
-                await GoogleSignin.signOut();
-              } catch {
-                // Ignore if not a Google user or error
-              }
-
-              // Step 3: Clear Redux state
-              dispatch({ type: Types.USER_LOGOUT });
-              
-              console.log("✅ Successfully logged out from all providers");
-              // AppNavigator will automatically switch to Auth stack because token is cleared
-            } catch (error) {
-              console.error("❌ Logout failed:", error);
-              // Fallback: Clear Redux anyway so UI resets
-              dispatch({ type: Types.USER_LOGOUT });
-            }
-          }
-        }
-      ]
-    );
+    setShowLogoutSheet(true);
   };
+
+  const performLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      const authInstance = getAuth();
+      if (authInstance.currentUser) {
+        await authInstance.signOut();
+      }
+
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        // Ignore if not a Google user or error
+      }
+
+      dispatch({ type: Types.USER_LOGOUT });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      dispatch({ type: Types.USER_LOGOUT });
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutSheet(false);
+    }
+  };
+
+  const accountShortcuts = [
+    { icon: 'location-outline', label: 'Manage Addresses', onPress: handleManageAddresses },
+    { icon: 'document-text-outline', label: 'My Orders', onPress: handleOrder },
+    { icon: 'wallet-outline', label: 'My Wallet', onPress: handleWallet },
+    { icon: 'gift-outline', label: 'Rewards', onPress: handleRewards },
+    { icon: 'card-outline', label: 'Payment Methods', onPress: handlePaymentMethods },
+    {
+      icon: 'shield-checkmark-outline',
+      label: 'Account & Security',
+      onPress: () => showComingSoon('Account & Security'),
+    },
+  ];
+
+  const settingsItems = [
+    { icon: 'person-outline', label: 'My Profile', onPress: handleEditProfile },
+    { icon: 'notifications-outline', label: 'Notifications', onPress: handleNotification },
+    { icon: 'swap-vertical-outline', label: 'Linked Accounts', onPress: () => showComingSoon('Linked Accounts') },
+    {
+      icon: 'eye-outline',
+      label: 'App Appearance',
+      onPress: () => navigation.navigate(ROUTES.APP_APPEARANCE as never),
+    },
+  ];
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-      {/* HEADER */}
-      <Header title="Account"/>
-      <ScrollView 
+      <Header
+        title="Account"
+        leftVariant="logo"
+        rightIcon="scan-outline"
+        onRightPress={() => showComingSoon('Scanner')}
+      />
+
+      <ScrollView
         className="flex-1 px-6 pt-2"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: tabBarBottomPadding }}
       >
-        {/* PROFILE CARD */}
-        <View className="flex-row items-center bg-white rounded-3xl p-5 mb-8 shadow-sm">
-          <Image 
-            source={
-              customer?.avatar 
-                ? { uri: customer.avatar }
-                : IMAGES.DEFAULT_AVATAR
-            } 
-            className="w-16 h-16 rounded-full bg-light-gray"
+        {/* Profile card */}
+        <SurfaceCard className="flex-row items-center p-5 mb-4">
+          <Image
+            source={customer?.avatar ? { uri: customer.avatar } : IMAGES.DEFAULT_AVATAR}
+            className="w-14 h-14 rounded-full bg-light-gray"
             resizeMode="cover"
           />
-            <View className="flex-1 ml-4">
-              <Text className="text-lg font-montserrat-bold text-dark-gray mb-0.5">{displayName}</Text>
-              <Text className="text-xs text-gray font-montserrat">{displayEmail}</Text>
-            </View>
-            <TouchableOpacity onPress={handleEditProfile} className="ml-2">
-              <Icon name="create-outline" size={24} color="#52622E" />
-            </TouchableOpacity>
+          <View className="flex-1 ml-4 mr-2">
+            <Text className="text-base font-montserrat-bold text-dark-gray" numberOfLines={1}>
+              {displayName}
+            </Text>
+            <Text className="text-xs font-montserrat text-gray mt-0.5" numberOfLines={1}>
+              {displayEmail}
+            </Text>
           </View>
+          <TouchableOpacity
+            onPress={() => showComingSoon('Profile QR')}
+            activeOpacity={0.7}
+            className="p-1"
+          >
+            <Icon name="qr-code-outline" size={22} color="#4B5563" />
+          </TouchableOpacity>
+        </SurfaceCard>
 
-        {/* LIST OPTIONS - GROUP 1 */}
-        {/* <View className="bg-white rounded-3xl px-5 mb-6 shadow-sm">
-          <ProfileOptionItem icon="location-outline" label="Manage Addresses" />
-          <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="card-outline" label="Payment Methods" />
-          <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="shield-checkmark-outline" label="Account & Security" />
-        </View> */}
+        {/* Addresses, payments, security */}
+        <SurfaceCard className="px-5 mb-4">
+          {accountShortcuts.map((item, index) => (
+            <MenuItem
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              onPress={item.onPress}
+              isLast={index === accountShortcuts.length - 1}
+            />
+          ))}
+        </SurfaceCard>
 
-        {/* LIST OPTIONS - GROUP 2 */}
-        <View className="bg-white rounded-3xl px-5 mb-6 shadow-sm">
-          <ProfileOptionItem icon="person-outline" label="My Profile" onPress={handleEditProfile} />
-          <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="document-text-outline" label="My Orders" onPress={handleOrder} />
-          <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="notifications-outline" label="Notifications" onPress={handleNotification}/>
-          {/* <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="repeat-outline" label="Linked Accounts" />
-          <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="eye-outline" label="App Appearance" />
-          <View className="h-[1px] bg-light-gray" />
-          <ProfileOptionItem icon="document-text-outline" label="Help & Support" /> */}
-        </View>
-
-        {/* LIST OPTIONS - LOGOUT */}
-        <View className="bg-white rounded-3xl px-5 shadow-sm">
-          <ProfileOptionItem 
-            icon="log-out-outline" 
-            label="Logout" 
-            isLogout 
+        {/* Profile, notifications, settings, logout */}
+        <SurfaceCard className="px-5">
+          {settingsItems.map((item, index) => (
+            <MenuItem
+              key={item.label}
+              icon={item.icon}
+              label={item.label}
+              onPress={item.onPress}
+              isLast={false}
+            />
+          ))}
+          <MenuItem
+            icon="log-out-outline"
+            label="Logout"
+            isLogout
+            showChevron={false}
             onPress={handleLogout}
+            isLast
           />
-        </View>
+        </SurfaceCard>
       </ScrollView>
+
+      <LogoutBottomSheet
+        visible={showLogoutSheet}
+        onCancel={() => setShowLogoutSheet(false)}
+        onConfirm={performLogout}
+        isLoading={isLoggingOut}
+      />
     </SafeAreaView>
   );
 };

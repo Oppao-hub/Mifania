@@ -1,4 +1,5 @@
 import { handleSessionExpired } from '../../utils/authSession';
+import { isPublicAuthRequestUrl, mapAuthErrorMessage } from '../../utils/authErrors';
 
 export class ApiRequestError extends Error {
     readonly status: number;
@@ -49,42 +50,51 @@ const getHeaders = (token?: string, extraHeaders?: Record<string, string>) => {
     return headers;
 };
 
-const handleResponseError = async (response: Response) => {
-    let errorData: any = {};
+const extractResponseMessage = (errorData: Record<string, unknown>, status: number): string =>
+    (typeof errorData.message === 'string' && errorData.message)
+    || (typeof errorData.error === 'string' && errorData.error)
+    || (typeof errorData['hydra:description'] === 'string' && errorData['hydra:description'])
+    || (typeof errorData.detail === 'string' && errorData.detail)
+    || `Request failed with status ${status}`;
+
+const handleResponseError = async (response: Response, requestUrl: string) => {
+    let errorData: Record<string, unknown> = {};
     const text = await response.text();
     try {
-        errorData = JSON.parse(text);
+        errorData = JSON.parse(text) as Record<string, unknown>;
     } catch {
         errorData = { detail: text };
     }
 
-    if (response.status === 401) {
-        console.log('❌ Server Error Response: 401 Unauthorized');
-        handleSessionExpired();
-        throw new ApiRequestError(401, 'Unauthorized');
-    }
-
-    console.log("❌ Server Error Response:", JSON.stringify(errorData, null, 2));
-
     if (response.status === 422) {
-        // Handle API Platform violations array
-        if (errorData.violations && errorData.violations.length > 0) {
-            throw new ApiRequestError(422, errorData.violations[0].message);
+        const violations = errorData.violations;
+        if (Array.isArray(violations) && violations.length > 0) {
+            const first = violations[0] as { message?: string };
+            if (first?.message) {
+                throw new ApiRequestError(422, first.message);
+            }
         }
-        // Fallback to detail
-        if (errorData.detail) {
+        if (typeof errorData.detail === 'string' && errorData.detail) {
             throw new ApiRequestError(422, errorData.detail);
         }
     }
 
-    const message =
-        errorData.message
-        || errorData.error
-        || errorData['hydra:description']
-        || errorData.detail
-        || `Request failed with status ${response.status}`;
+    const rawMessage = extractResponseMessage(errorData, response.status);
 
-    throw new ApiRequestError(response.status, message);
+    if (response.status === 401) {
+        if (isPublicAuthRequestUrl(requestUrl)) {
+            console.log('❌ Server Error Response: 401 on auth endpoint', JSON.stringify(errorData));
+            throw new ApiRequestError(401, mapAuthErrorMessage(rawMessage));
+        }
+
+        console.log('❌ Server Error Response: 401 session expired');
+        handleSessionExpired();
+        throw new ApiRequestError(401, 'Your session has expired. Please sign in again.');
+    }
+
+    console.log('❌ Server Error Response:', JSON.stringify(errorData, null, 2));
+
+    throw new ApiRequestError(response.status, rawMessage);
 };
 
 const isNetworkFailure = (error: unknown): boolean => {
@@ -143,7 +153,7 @@ export const postRequest = async <T>(
         });
 
         if(!response.ok) {
-            await handleResponseError(response);
+            await handleResponseError(response, url);
         }
 
         return await response.json();
@@ -167,7 +177,7 @@ export const patchRequest = async <T>(endpoint: string, body: object, token?: st
         });
 
         if(!response.ok) {
-            await handleResponseError(response);
+            await handleResponseError(response, url);
         }
 
         return await response.json();
@@ -187,7 +197,7 @@ export const deleteRequest = async <T>(endpoint: string, token?: string): Promis
         });
 
         if(!response.ok) {
-            await handleResponseError(response);
+            await handleResponseError(response, url);
         }
 
         if (response.status === 204) {
@@ -211,7 +221,7 @@ export const getRequest = async <T>(endpoint: string, token?: string): Promise<T
         });
 
         if(!response.ok) {
-            await handleResponseError(response);
+            await handleResponseError(response, url);
         }
 
         const data = await response.json();

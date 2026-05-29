@@ -8,7 +8,7 @@ import {
     Linking,
     ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -29,6 +29,10 @@ import { ASSET_URL } from '../app/api/client';
 import { getLoyaltyPolicyApi } from '../app/api/reward';
 import * as Types from '../app/actions';
 import AlertMsg from '../components/AlertMsg/AlertMsg';
+import Button from '../components/Button';
+import StickyBottomBar from '../components/StickyBottomBar';
+import { mergeSurfaceCardStyle, SURFACE_CARD_CLASS } from '../utils/cardStyles';
+import { hasDeliverableAddress } from '../utils/address';
 
 const BRAND = '#52622E';
 type OrderFlowStatus = 'processing' | 'success';
@@ -47,7 +51,8 @@ const SectionCard = ({
     <TouchableOpacity
         activeOpacity={0.8}
         onPress={onPress}
-        className="bg-white rounded-xl px-4 py-3 mb-3 border border-border-color"
+        style={mergeSurfaceCardStyle()}
+        className={`${SURFACE_CARD_CLASS} px-4 py-3 mb-3`}
     >
         <View className="flex-row items-center justify-between">
             <View className="flex-row items-center">
@@ -149,6 +154,7 @@ const CheckoutScreen = () => {
         error: orderError,
         lastCreatedOrder,
     } = useSelector((state: RootState) => state.order);
+    const savedAddresses = useSelector((state: RootState) => state.address.items);
 
     const token = authData?.token;
     const customerRef = getCustomerRefFromUser(authData?.user);
@@ -159,6 +165,7 @@ const CheckoutScreen = () => {
     const [selectedAddressId, setSelectedAddressId] = useState('home');
     const [selectedAddressName, setSelectedAddressName] = useState('Home');
     const [selectedAddressText, setSelectedAddressText] = useState('');
+    const [selectedCustomerAddressIri, setSelectedCustomerAddressIri] = useState<string | undefined>();
     const [selectedDeliveryId, setSelectedDeliveryId] = useState('jt-express');
     const [selectedDeliveryName, setSelectedDeliveryName] = useState('J&T Express');
     const [selectedDeliveryEstimate, setSelectedDeliveryEstimate] = useState(
@@ -184,6 +191,8 @@ const CheckoutScreen = () => {
         null,
     );
     const orderPendingRef = useRef(false);
+    const insets = useSafeAreaInsets();
+    const scrollBottomPadding = Math.max(insets.bottom, 16) + 80;
 
     const selectedItems = useMemo(() => getSelectedCartItems(cartItems), [cartItems]);
     const deliveryFeeValue = useMemo(
@@ -198,7 +207,23 @@ const CheckoutScreen = () => {
     const displayItems = checkoutSnapshot?.items ?? selectedItems;
     const displayTotals = checkoutSnapshot?.totals ?? totals;
 
+    const defaultSavedAddress = useMemo(
+        () => savedAddresses.find((item) => item.isDefault) || savedAddresses[0],
+        [savedAddresses],
+    );
+
     const addressSummary = useMemo(() => {
+        if (selectedAddressText) return selectedAddressText;
+        if (defaultSavedAddress) {
+            return [
+                defaultSavedAddress.address,
+                defaultSavedAddress.city,
+                defaultSavedAddress.state,
+                defaultSavedAddress.postalCode,
+            ]
+                .filter(Boolean)
+                .join(', ');
+        }
         if (!customerData?.address) return 'Add your delivery address';
         const parts = [
             customerData.address,
@@ -207,7 +232,7 @@ const CheckoutScreen = () => {
             customerData.postalCode,
         ].filter(Boolean);
         return parts.join(', ');
-    }, [customerData]);
+    }, [customerData, defaultSavedAddress, selectedAddressText]);
 
     const customerDisplayName = useMemo(() => {
         const firstName = customerData?.firstName?.trim() || '';
@@ -225,13 +250,19 @@ const CheckoutScreen = () => {
     const activeFinalTotalFormatted = activeFinalTotal.toFixed(2);
 
     useEffect(() => {
-        if (!customerData && customerRef && token) {
+        if (token) {
+            dispatch({ type: Types.GET_ADDRESSES });
+        }
+    }, [token, dispatch]);
+
+    useEffect(() => {
+        if (!customerFromSlice && customerRef && token) {
             dispatch({
                 type: Types.GET_CUSTOMER,
                 payload: { id: customerRef, token },
             });
         }
-    }, [customerData, customerRef, token, dispatch]);
+    }, [customerFromSlice, customerRef, token, dispatch]);
 
     useEffect(() => {
         if (!token) return;
@@ -268,6 +299,9 @@ const CheckoutScreen = () => {
         if (params.selectedAddressId) setSelectedAddressId(params.selectedAddressId);
         if (params.selectedAddressName) setSelectedAddressName(params.selectedAddressName);
         if (params.selectedAddress) setSelectedAddressText(params.selectedAddress);
+        if (params.selectedCustomerAddressIri) {
+            setSelectedCustomerAddressIri(params.selectedCustomerAddressIri);
+        }
         if (params.selectedDeliveryId) setSelectedDeliveryId(params.selectedDeliveryId);
         if (params.selectedDeliveryName) setSelectedDeliveryName(params.selectedDeliveryName);
         if (params.selectedDeliveryEstimate) setSelectedDeliveryEstimate(params.selectedDeliveryEstimate);
@@ -356,11 +390,16 @@ const CheckoutScreen = () => {
             return;
         }
 
-        if (!customerData?.address || !customerData?.contactNumber) {
+        const canDeliver = hasDeliverableAddress(
+            savedAddresses,
+            customerData?.address,
+            customerData?.contactNumber,
+        );
+        if (!canDeliver) {
             AlertMsg.customInfo({
                 title: 'Notice',
                 message:
-                    'Please complete your profile with an address and contact number before placing an order.',
+                    'Please add a delivery address and contact number in Manage Addresses before placing an order.',
             });
             return;
         }
@@ -423,6 +462,13 @@ const CheckoutScreen = () => {
         setFlowStatus('processing');
 
         // Backend applies pointsRedeemed — send gross total (fees included), not post-redemption total.
+        const addressIri =
+            selectedCustomerAddressIri ||
+            (defaultSavedAddress
+                ? defaultSavedAddress['@id'] ||
+                  `/api/customer_addresses/${defaultSavedAddress.id}`
+                : undefined);
+
         const orderData = buildOrderPayload(
             selectedItems,
             paymentMethod,
@@ -432,6 +478,7 @@ const CheckoutScreen = () => {
                 method: selectedDeliveryName,
                 fee: displayTotals.deliveryFeeFormatted,
             },
+            addressIri,
         );
 
         const idempotencyKey = `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -464,7 +511,7 @@ const CheckoutScreen = () => {
             <ScrollView
                 className="flex-1 px-4"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 110 }}
+                contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
             >
                 {/* Delivery Address */}
                 <SectionCard
@@ -480,7 +527,10 @@ const CheckoutScreen = () => {
                 />
 
                 {/* Your Order */}
-                <View className="bg-white rounded-xl px-4 pt-3 pb-1 mb-3 border border-border-color">
+                <View
+                    className={`${SURFACE_CARD_CLASS} px-4 pt-3 pb-1 mb-3`}
+                    style={mergeSurfaceCardStyle()}
+                >
                     <View className="flex-row items-center justify-between mb-1">
                         <View className="flex-row items-center flex-1">
                             <Text className="text-[14px] font-montserrat-bold text-dark-gray">
@@ -540,7 +590,8 @@ const CheckoutScreen = () => {
                             checkoutTotal: Number(totals.totalFormatted),
                         })
                     }
-                    className="bg-white rounded-xl px-4 py-3 mb-3 border border-border-color"
+                    style={mergeSurfaceCardStyle()}
+                    className={`${SURFACE_CARD_CLASS} px-4 py-3 mb-3`}
                 >
                     <View className="flex-row items-center justify-between">
                         <View className="flex-row items-center">
@@ -574,7 +625,10 @@ const CheckoutScreen = () => {
                 </TouchableOpacity>
 
                 {/* Review Summary */}
-                <View className="bg-white rounded-xl px-4 py-4 mt-1 border border-border-color">
+                <View
+                    className={`${SURFACE_CARD_CLASS} px-4 py-4 mt-1`}
+                    style={mergeSurfaceCardStyle()}
+                >
                     <Text className="text-[14px] font-montserrat-bold text-dark-gray mb-3">
                         Review Summary
                     </Text>
@@ -629,21 +683,15 @@ const CheckoutScreen = () => {
                 </View>
             </ScrollView>
 
-            {/* Confirm Order */}
-            <View className="absolute bottom-0 left-0 right-0 px-4 pb-8 pt-3 bg-app-bg">
-                <TouchableOpacity
-                    activeOpacity={0.9}
+            <StickyBottomBar variant="sticky">
+                <Button
+                    label="Confirm Order"
                     onPress={handleConfirmOrder}
                     disabled={flowStatus !== 'idle'}
-                    className={`w-full h-12 rounded-full items-center justify-center ${
-                        flowStatus !== 'idle' ? 'bg-gray-400' : 'bg-brand'
-                    }`}
-                >
-                    <Text className="text-white font-montserrat-bold text-base tracking-wide">
-                        Confirm Order
-                    </Text>
-                </TouchableOpacity>
-            </View>
+                    size="md"
+                    shape="pill"
+                />
+            </StickyBottomBar>
 
             <ReusableOverlay
                 visible={flowStatus === 'processing' || flowStatus === 'success'}
@@ -683,24 +731,20 @@ const CheckoutScreen = () => {
                                 </Text>
                             </View>
                         )}
-                        <TouchableOpacity
-                            activeOpacity={0.9}
+                        <Button
+                            label="View My Order"
                             onPress={handleViewMyOrder}
-                            className="w-full h-14 rounded-full bg-brand items-center justify-center mb-3 mt-2"
-                        >
-                            <Text className="text-white font-montserrat-bold text-base">
-                                View My Order
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            activeOpacity={0.9}
+                            size="md"
+                            shape="pill"
+                            className="mt-2 mb-3"
+                        />
+                        <Button
+                            label="Back to Home"
                             onPress={handleBackHome}
-                            className="w-full h-14 rounded-full bg-brand/10 items-center justify-center"
-                        >
-                            <Text className="text-brand font-montserrat-bold text-base">
-                                Back to Home
-                            </Text>
-                        </TouchableOpacity>
+                            variant="soft"
+                            size="md"
+                            shape="pill"
+                        />
                     </>
                 )}
             </ReusableOverlay>

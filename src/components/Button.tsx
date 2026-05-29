@@ -1,5 +1,6 @@
 import React from 'react';
 import { TouchableOpacity, Text, ActivityIndicator, ViewStyle, View } from 'react-native';
+import { LOADING_INDICATOR_COLOR } from './LoadingState';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'danger' | 'ghost' | 'soft';
 export type ButtonSize = 'sm' | 'md' | 'lg';
@@ -74,7 +75,7 @@ const Button: React.FC<ButtonProps> = ({
       ? '#FFFFFF'
       : variant === 'secondary'
         ? '#4A3428'
-        : '#52622E';
+        : LOADING_INDICATOR_COLOR;
 
   return (
     <TouchableOpacity
@@ -98,23 +99,25 @@ const Button: React.FC<ButtonProps> = ({
         <ActivityIndicator color={spinnerColor} />
       ) : (
         <>
-          {leftElement ? <View className="mr-3 shrink-0">{leftElement}</View> : null}
-          <Text
-            numberOfLines={numberOfLines}
-            adjustsFontSizeToFit={numberOfLines === 1}
-            minimumFontScale={0.8}
-            className={[
-              variantStyle.text,
-              sizeStyle.text,
-              'text-center shrink',
-              textClassName,
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            style={{ flexShrink: 1 }}
-          >
-            {label}
-          </Text>
+          {leftElement ? <View className="mr-2 shrink-0">{leftElement}</View> : null}
+          <View className="flex-1 min-w-0 items-center justify-center px-0.5">
+            <Text
+              numberOfLines={numberOfLines}
+              adjustsFontSizeToFit={numberOfLines === 1}
+              minimumFontScale={0.75}
+              ellipsizeMode="tail"
+              className={[
+                variantStyle.text,
+                sizeStyle.text,
+                'text-center w-full',
+                textClassName,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {label}
+            </Text>
+          </View>
         </>
       )}
     </TouchableOpacity>
