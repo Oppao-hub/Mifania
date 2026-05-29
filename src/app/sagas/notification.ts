@@ -2,6 +2,7 @@ import { call, put, select, takeEvery } from 'redux-saga/effects';
 import * as Type from '../actions';
 import {
     clearNotifications,
+    deleteNotification,
     getNotifications,
     markAllNotificationsRead,
     markNotificationRead,
@@ -98,9 +99,32 @@ function* markAllNotificationsReadSaga(action: {
     }
 }
 
+function* deleteNotificationSaga(action: {
+    type: string;
+    payload?: { id?: number; token?: string };
+}): Generator<any, void, any> {
+    try {
+        const tokenFromState: string | undefined = yield select(selectAuthToken);
+        const id = Number(action.payload?.id);
+        const token = action.payload?.token || tokenFromState;
+
+        if (!token || Number.isNaN(id)) return;
+
+        yield call(deleteNotification, id, token);
+    } catch (e: unknown) {
+        if (isUnauthorizedError(getNotificationErrorMessage(e))) return;
+        yield put({ type: Type.GET_NOTIFICATIONS });
+        yield put({
+            type: Type.GET_NOTIFICATIONS_ERROR,
+            payload: formatFetchErrorMessage(e),
+        });
+    }
+}
+
 export function* watchNotification() {
     yield takeEvery(Type.GET_NOTIFICATIONS, getNotificationsSaga);
     yield takeEvery(Type.CLEAR_NOTIFICATIONS, clearNotificationsSaga);
     yield takeEvery(Type.MARK_NOTIFICATION_READ, markNotificationReadSaga);
     yield takeEvery(Type.MARK_ALL_NOTIFICATIONS_READ, markAllNotificationsReadSaga);
+    yield takeEvery(Type.DELETE_NOTIFICATION, deleteNotificationSaga);
 }
