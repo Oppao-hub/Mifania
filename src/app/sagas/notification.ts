@@ -114,10 +114,6 @@ function* deleteNotificationSaga(action: {
     } catch (e: unknown) {
         if (isUnauthorizedError(getNotificationErrorMessage(e))) return;
         yield put({ type: Type.GET_NOTIFICATIONS });
-        yield put({
-            type: Type.GET_NOTIFICATIONS_ERROR,
-            payload: formatFetchErrorMessage(e),
-        });
     }
 }
 
