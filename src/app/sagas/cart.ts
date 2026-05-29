@@ -12,6 +12,7 @@ import {
 } from '../api/cart';
 import { RootState, Product } from '../../utils/types';
 import { findProductVariant } from '../../utils/productVariants';
+import { showFeedbackToast } from '../../utils/feedbackToast';
 
 // Selector to get token
 const getToken = (state: RootState) => state.authentication.data?.token;
@@ -202,12 +203,14 @@ export function* removeFromCartAsync(action: { type: string; payload: any }): Ge
         yield call(deleteCartItemApi, action.payload, token);
         yield put({ type: Type.REMOVE_FROM_CART_COMPLETED });
         yield call(getCartAsync);
+        showFeedbackToast('Removed from Cart!');
     } catch (error: unknown) {
         const message = error instanceof Error ? error.message : "An unknown error occurred";
         if (message === "Unauthorized") {
             yield put({ type: Type.USER_LOGOUT });
         }
         yield put({ type: Type.REMOVE_FROM_CART_ERROR, payload: message });
+        showFeedbackToast("Couldn't remove item from cart", 'error');
     }
 }
 

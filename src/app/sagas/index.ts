@@ -6,9 +6,11 @@ import { watchSubCategory } from './subCategory';
 import { watchCart } from './cart';
 import { watchSocket } from './socket';
 import { watchCustomer } from './customer';
+import { watchAddress } from './address';
 import { watchWallet } from './wallet';
 import { watchOrder } from './order';
 import { watchNotification } from './notification';
+import { watchWishlist } from './wishlist';
 
 export default function* rootSaga() {
     yield all([
@@ -22,8 +24,10 @@ export default function* rootSaga() {
         watchCart(),
         watchSocket(),
         watchCustomer(),
+        watchAddress(),
         watchWallet(),
         watchOrder(),
         watchNotification(),
+        watchWishlist(),
     ]);
 }

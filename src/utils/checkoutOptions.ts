@@ -5,6 +5,7 @@ export type DeliveryOption = {
     name: string;
     estimate: string;
     fee: string;
+    description?: string;
     logo?: string;
 };
 
@@ -12,37 +13,94 @@ export type PaymentOption = {
     id: string;
     name: string;
     logo?: string;
+    description?: string;
     backendMethod: 'Paypal' | 'Credit Card' | 'Cash' | 'Bank Transfer';
     gatewayType: 'paypal' | 'direct';
 };
 
 const DEFAULT_DELIVERY_OPTIONS: DeliveryOption[] = [
     {
-        id: 'fedex',
-        name: 'FedEx Express',
-        estimate: 'Estimated arrival: 23 - 24 Dec, 2024',
-        fee: '₱8.50',
+        id: 'jt-express',
+        name: 'J&T Express',
+        estimate: '2–4 business days nationwide',
+        fee: '₱89.00',
+        description: 'Door-to-door courier across Luzon, Visayas, and Mindanao',
     },
     {
-        id: 'usps',
-        name: '(USPS) United States Postal Service',
-        estimate: 'Estimated arrival: 24 - 25 Dec, 2024',
-        fee: '₱9.00',
+        id: 'ninja-van',
+        name: 'Ninja Van Philippines',
+        estimate: '2–5 business days',
+        fee: '₱79.00',
+        description: 'Reliable parcel delivery to most PH provinces',
+    },
+    {
+        id: 'lbc',
+        name: 'LBC Express',
+        estimate: '3–5 business days',
+        fee: '₱95.00',
+        description: 'Trusted nationwide shipping with branch pickup available',
+    },
+    {
+        id: 'flash-express',
+        name: 'Flash Express Philippines',
+        estimate: '2–4 business days',
+        fee: '₱85.00',
+        description: 'Fast domestic delivery for major cities and towns',
+    },
+    {
+        id: 'grab-express',
+        name: 'Grab Express',
+        estimate: 'Same day to next day (Metro Manila & key cities)',
+        fee: '₱149.00',
+        description: 'On-demand delivery in Metro Manila, Cebu, and Davao',
+    },
+    {
+        id: 'philpost-economy',
+        name: 'PHLPost (Economy)',
+        estimate: '7–14 business days',
+        fee: '₱59.00',
+        description: 'Budget-friendly standard mail via Philippine Post',
+    },
+    {
+        id: 'store-pickup',
+        name: 'Store Pickup (Mifania)',
+        estimate: 'Ready in 1–2 business days',
+        fee: '₱0.00',
+        description: 'Pick up at our store — location details sent after order confirmation',
     },
 ];
 
+/** Bump when defaults change so stale in-memory cache is discarded. */
+const CHECKOUT_OPTIONS_CACHE_VERSION = 2;
+
 const DEFAULT_PAYMENT_OPTIONS: PaymentOption[] = [
     {
-        id: 'paypal',
-        name: 'PayPal',
-        backendMethod: 'Paypal',
-        gatewayType: 'paypal',
+        id: 'cash',
+        name: 'Cash',
+        backendMethod: 'Cash',
+        gatewayType: 'direct',
+        description: 'Pay securely upon delivery',
     },
     {
         id: 'credit-card',
         name: 'Credit Card',
         backendMethod: 'Credit Card',
         gatewayType: 'direct',
+        description: 'Pay with Visa, Mastercard, or other major cards',
+    },
+    {
+        id: 'bank-transfer',
+        name: 'Bank Transfer',
+        backendMethod: 'Bank Transfer',
+        gatewayType: 'direct',
+        description: 'Transfer to our bank account — details sent after order',
+    },
+    {
+        id: 'paypal',
+        name: 'Paypal',
+        backendMethod: 'Paypal',
+        gatewayType: 'paypal',
+        description: 'Pay with your PayPal account',
     },
 ];
 
@@ -57,12 +115,12 @@ const DELIVERY_ENDPOINT_CANDIDATES = [
 ];
 
 const PAYMENT_ENDPOINT_CANDIDATES = [
+    '/payment-methods',
+    '/payment_methods',
     '/payment-gateways',
     '/payment_gateways',
     '/payment-options',
     '/payment_options',
-    '/payment-methods',
-    '/payment_methods',
 ];
 
 const cache = {
@@ -70,6 +128,22 @@ const cache = {
     paymentEndpoint: '' as string,
     deliveryOptions: null as DeliveryOption[] | null,
     paymentOptions: null as PaymentOption[] | null,
+    version: 0,
+};
+
+export const clearCheckoutOptionsCache = (): void => {
+    cache.deliveryEndpoint = '';
+    cache.paymentEndpoint = '';
+    cache.deliveryOptions = null;
+    cache.paymentOptions = null;
+    cache.version = 0;
+};
+
+const ensureCacheVersion = (): void => {
+    if (cache.version !== CHECKOUT_OPTIONS_CACHE_VERSION) {
+        clearCheckoutOptionsCache();
+        cache.version = CHECKOUT_OPTIONS_CACHE_VERSION;
+    }
 };
 
 const buildApiUrl = (endpoint: string): string => {
@@ -114,6 +188,7 @@ const mapDeliveryOption = (item: any, index: number): DeliveryOption => {
         name,
         estimate,
         fee,
+        description: item?.description || item?.subtitle || item?.summary,
         logo: item?.logo || item?.icon || item?.imageUrl,
     };
 };
@@ -138,6 +213,7 @@ const mapPaymentOption = (item: any, index: number): PaymentOption => {
         id: String(item?.id || item?.slug || item?.code || item?.['@id'] || `payment-${index + 1}`),
         name,
         logo: item?.logo || item?.icon || item?.imageUrl,
+        description: item?.description || item?.subtitle || item?.summary,
         backendMethod,
         gatewayType,
     };
@@ -174,7 +250,12 @@ const tryCollectionEndpoints = async (
     return null;
 };
 
-export const fetchDeliveryOptions = async (token: string): Promise<DeliveryOption[]> => {
+export const fetchDeliveryOptions = async (token: string, options?: { refresh?: boolean }): Promise<DeliveryOption[]> => {
+    ensureCacheVersion();
+    if (options?.refresh) {
+        cache.deliveryOptions = null;
+        cache.deliveryEndpoint = '';
+    }
     if (cache.deliveryOptions) return cache.deliveryOptions;
     const found = await tryCollectionEndpoints(DELIVERY_ENDPOINT_CANDIDATES, token, cache.deliveryEndpoint);
     if (!found) {
@@ -186,7 +267,12 @@ export const fetchDeliveryOptions = async (token: string): Promise<DeliveryOptio
     return cache.deliveryOptions;
 };
 
-export const fetchPaymentOptions = async (token: string): Promise<PaymentOption[]> => {
+export const fetchPaymentOptions = async (token: string, options?: { refresh?: boolean }): Promise<PaymentOption[]> => {
+    ensureCacheVersion();
+    if (options?.refresh) {
+        cache.paymentOptions = null;
+        cache.paymentEndpoint = '';
+    }
     if (cache.paymentOptions) return cache.paymentOptions;
     const found = await tryCollectionEndpoints(PAYMENT_ENDPOINT_CANDIDATES, token, cache.paymentEndpoint);
     if (found) {

@@ -111,7 +111,7 @@ export interface Product extends HydraResource {
   imageUrl?: string; // Custom API field
   subCategory?: string | SubCategory; // IRI or Object
   story?: string | Story; // IRI or Object
-  qrTag?: string | any; // IRI or Object
+  qrTag?: string | QrTag | QrTag[]; // IRI or Object
   stocks?: any[]; // OneToMany
   wishlisted?: any[]; // ManyToMany
 }
@@ -137,6 +137,15 @@ export interface SubCategory extends HydraResource {
 }
 
 export interface Order extends HydraResource {
+  shippingLabel?: string;
+  shippingRecipientName?: string;
+  shippingContactNumber?: string;
+  shippingAddressLine?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  shippingCountry?: string;
+  shippingPostalCode?: string;
+  customerAddress?: string | CustomerAddress;
   totalAmount: string; // Decimal as string
   originalAmount?: string;
   discountAmount?: string;
@@ -158,6 +167,24 @@ export interface OrderItem extends HydraResource {
   createdAt?: string;
   order?: string | Order; // ManyToOne
   product?: string | Product; // ManyToOne
+}
+
+export interface CustomerAddress extends HydraResource {
+  label: string;
+  recipientFirstName?: string;
+  recipientLastName?: string;
+  recipientFullName?: string;
+  contactNumber?: string;
+  address: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
+  courierNote?: string;
+  isDefault?: boolean;
+  hasPinpoint?: boolean;
+  formattedAddress?: string;
+  customer?: string | Customer;
 }
 
 export interface Customer extends HydraResource {
@@ -229,6 +256,13 @@ export interface CartItem extends HydraResource {
   productImageUrl?: string;
 }
 
+export interface QrTag extends HydraResource {
+  qrCodeValue?: string;
+  qrImagePath?: string;
+  image?: string;
+  imageUrl?: string;
+}
+
 export interface Story extends HydraResource {
   title: string;
   materialContent?: string;
@@ -265,6 +299,21 @@ export interface Notification extends HydraResource {
   body?: string;
   icon?: string;
   emoji?: string;
+}
+
+export type SavedPaymentProviderType = 'card' | 'paypal' | 'google_pay' | 'apple_pay';
+
+export interface SavedPaymentMethod extends HydraResource {
+  providerType: SavedPaymentProviderType;
+  cardBrand?: string | null;
+  lastFour?: string | null;
+  expiryMonth?: number | null;
+  expiryYear?: number | null;
+  holderName?: string | null;
+  isConnected: boolean;
+  displayName?: string;
+  maskedNumber?: string | null;
+  createdAt?: string;
 }
 
 // --- Redux State Types ---
@@ -317,6 +366,8 @@ export interface WalletSliceState {
   isLoading: boolean;
   isError: boolean;
   error: string | null;
+  isRedeeming: boolean;
+  redemptionError: string | null;
 }
 
 export interface RootState {
@@ -332,6 +383,12 @@ export interface RootState {
     isError: boolean;
     error: string | null;
   };
+  address: {
+    items: CustomerAddress[];
+    isLoading: boolean;
+    isError: boolean;
+    error: string | null;
+  };
   wallet: WalletSliceState;
   order: {
     items: Order[];
@@ -339,6 +396,7 @@ export interface RootState {
     isLoading: boolean;
     isError: boolean;
     error: string | null;
+    cancelError: string | null;
     lastCreatedOrder: Order | null;
   };
   notification: {

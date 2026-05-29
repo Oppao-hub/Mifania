@@ -1,74 +1,80 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { Notification } from '../utils/types';
-
-const formatNotificationTime = (dateString: string) => {
-    try {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-        
-        if (diffInHours < 1) {
-            const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-            return diffInMinutes <= 1 ? 'Just now' : `${diffInMinutes}m ago`;
-        } else if (diffInHours < 24 && date.getDate() === now.getDate()) {
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        } else if (diffInHours < 48 && new Date(now.setDate(now.getDate() - 1)).getDate() === date.getDate()) {
-            return 'Yesterday';
-        } else {
-            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-        }
-    } catch {
-        return dateString;
-    }
-};
+import {
+  formatNotificationTimestamp,
+  getNotificationEmoji,
+  getNotificationIcon,
+} from '../utils/notificationPresentation';
 
 interface NotificationItemProps {
-    item: Notification;
-    onPress: (item: Notification) => void;
+  item: Notification;
+  onPress: (item: Notification) => void;
+  onDelete: (item: Notification) => void;
 }
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ item, onPress }) => (
-    <TouchableOpacity 
-        activeOpacity={0.7} 
+const NotificationItem: React.FC<NotificationItemProps> = ({ item, onPress, onDelete }) => {
+  const emoji = getNotificationEmoji(item);
+  const iconName = getNotificationIcon(item);
+  const body = item.message || item.body || '';
+
+  return (
+    <View className="relative px-6 py-4">
+      <TouchableOpacity
+        onPress={() => onDelete(item)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        className="absolute top-4 right-6 z-10"
+        accessibilityLabel="Delete notification"
+        accessibilityRole="button"
+      >
+        <Icon name="close" size={14} color="#F87171" />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        activeOpacity={0.7}
         onPress={() => onPress(item)}
-        className="flex-row mb-6 px-6"
-    >
-        {/* Left Icon */}
-        <View className={`w-14 h-14 rounded-full border ${!item.isRead ? 'border-[#52622E] bg-[#52622E]/5' : 'border-gray-100 bg-gray-50'} items-center justify-center mr-4`}>
-            <Icon name={item.icon || 'bell-outline'} size={24} color={!item.isRead ? '#52622E' : '#9CA3AF'} />
+        className="flex-row items-start min-w-0 pr-5"
+      >
+        <View className="w-12 h-12 rounded-full border border-border-color bg-white items-center justify-center mr-4">
+          <Icon name={iconName} size={22} color="#6A7282" />
         </View>
 
-        {/* Content */}
-        <View className="flex-1">
-            {/* Title Row */}
-            <View className="flex-row items-center justify-between mb-1">
-                <View className="flex-row items-center flex-1 pr-2">
-                    <Text className={`text-base ${!item.isRead ? 'font-bold text-gray-900' : 'font-medium text-gray-600'}`} numberOfLines={1}>
-                        {item.title} {item.emoji}
-                    </Text>
-                </View>
-                
-                <View className="flex-row items-center">
-                    {!item.isRead && (
-                        <View className="w-2.5 h-2.5 rounded-full bg-[#52622E] mr-3" />
-                    )}
-                    <Icon name="chevron-right" size={20} color="#9CA3AF" />
-                </View>
-            </View>
-
-            {/* Body Text */}
-            <Text className={`text-sm ${!item.isRead ? 'text-gray-700' : 'text-gray-400'} leading-5 mb-2`} numberOfLines={2}>
-                {item.message || item.body}
+        <View className="flex-1 min-w-0 pr-3">
+          <View className="flex-row items-start">
+            <Text
+              className={`flex-1 text-[15px] font-montserrat-bold text-dark-gray pr-2 ${
+                !item.isRead ? '' : 'opacity-80'
+              }`}
+              numberOfLines={2}
+            >
+              {item.title}
+              {emoji ? ` ${emoji}` : ''}
             </Text>
 
-            {/* Time */}
-            <Text className="text-[11px] font-medium text-gray-400">
-                {formatNotificationTime(item.createdAt)}
+            {!item.isRead ? (
+              <View className="w-2 h-2 rounded-full bg-brand mt-1.5" />
+            ) : null}
+          </View>
+
+          {body ? (
+            <Text
+              className={`text-sm font-montserrat leading-5 mt-1.5 ${
+                !item.isRead ? 'text-gray' : 'text-gray/80'
+              }`}
+              numberOfLines={3}
+            >
+              {body}
             </Text>
+          ) : null}
+
+          <Text className="text-[11px] font-montserrat text-gray mt-2">
+            {formatNotificationTimestamp(item.createdAt)}
+          </Text>
         </View>
-    </TouchableOpacity>
-);
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 export default NotificationItem;

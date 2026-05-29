@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ROUTES } from '../utils';
 import Header from '../components/Header';
@@ -49,6 +49,7 @@ const ChooseDeliveryAddressScreen = () => {
         },
     ];
 
+    const sourceCheckoutRouteKey = route.params?.sourceCheckoutRouteKey as string | undefined;
     const initialAddressId = route.params?.selectedAddressId || ADDRESS_OPTIONS[0].id;
     const [selectedAddressId, setSelectedAddressId] = useState<string>(initialAddressId);
 
@@ -58,18 +59,30 @@ const ChooseDeliveryAddressScreen = () => {
     );
 
     const handleConfirm = () => {
-        navigation.navigate({
-            name: ROUTES.CHECKOUT,
-            params: {
-                selectedAddress: selectedAddress.address,
-                selectedAddressName: selectedAddress.name
-                    ? `${selectedAddress.title} (${selectedAddress.name})`
-                    : selectedAddress.title,
-                selectedAddressId: selectedAddress.id,
-            },
-            merge: true,
-        });
-        navigation.goBack();
+        const nextParams = {
+            selectedAddress: selectedAddress.address,
+            selectedAddressName: selectedAddress.name
+                ? `${selectedAddress.title} (${selectedAddress.name})`
+                : selectedAddress.title,
+            selectedAddressId: selectedAddress.id,
+        };
+
+        if (sourceCheckoutRouteKey) {
+            navigation.dispatch({
+                ...CommonActions.setParams(nextParams),
+                source: sourceCheckoutRouteKey,
+            });
+        } else {
+            navigation.navigate({
+                name: ROUTES.CHECKOUT,
+                params: nextParams,
+                merge: true,
+            });
+        }
+
+        if (navigation.canGoBack()) {
+            navigation.goBack();
+        }
     };
 
     return (

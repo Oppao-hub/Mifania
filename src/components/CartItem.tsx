@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { CartItem } from '../utils/types';
 import { ASSET_URL } from '../app/api/client';
 import { getColorHex, getSizeLabel } from '../utils/productVariants';
+import { mergeSurfaceCardStyle } from '../utils/cardStyles';
 
 interface CartItemProps {
     item: CartItem;
@@ -44,7 +45,7 @@ const CartItemComponent: React.FC<CartItemProps> = ({
       typeof product === 'object' && product.color ? getColorHex(product.color) : '#9CA3AF';
 
     return (
-        <View className="flex-row bg-white rounded-[24px] p-3 mb-4 shadow-sm border border-border-color">
+        <View className="flex-row bg-surface rounded-card p-3 mb-4 border border-border-color" style={mergeSurfaceCardStyle()}>
             
             {/* Checkbox & Image Container */}
             <View className="flex-row items-center">

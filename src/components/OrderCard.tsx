@@ -1,51 +1,45 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Button from './Button';
 import { Order, OrderStatus } from '../utils/types';
 import { ASSET_URL } from '../app/api/client';
+import { mergeSurfaceCardStyle } from '../utils/cardStyles';
+import {
+  formatOrderListDate,
+  getOtherProductsLabel,
+  normalizeOrderStatus,
+} from '../utils/orderPresentation';
+import type { MenuAnchor } from './AnchorActionMenu';
 
 interface OrderCardProps {
   item: Order;
   onPress: (order: Order) => void;
   onActionPress?: (order: Order) => void;
+  onMenuPress?: (order: Order, anchor: MenuAnchor) => void;
   hideActionButton?: boolean;
+  showMenu?: boolean;
 }
 
-const OrderCard: React.FC<OrderCardProps> = ({ item, onPress, onActionPress, hideActionButton = false }) => {
-  const normalizeStatus = (status: OrderStatus | string): string => {
-    const value = String(status || '').toLowerCase();
-    return value === 'canceled' ? 'cancelled' : value;
-  };
+const OrderCard: React.FC<OrderCardProps> = ({
+  item,
+  onPress,
+  onActionPress,
+  onMenuPress,
+  hideActionButton = false,
+  showMenu = false,
+}) => {
+  const menuButtonRef = useRef<View>(null);
 
-  // Map OrderStatus to the display status and styles used in the design
-  const getStatusDisplay = (status: OrderStatus | string) => {
-    // Standardize status for comparison
-    const s = normalizeStatus(status);
-    
-    switch (s) {
-      case 'delivered':
-        return { label: 'Delivered', color: 'text-brand', bgColor: 'bg-[#52622E]/10' };
-      case 'pending':
-        return { label: 'Pending', color: 'text-brand', bgColor: 'bg-[#52622E]/10' };
-      case 'processing':
-        return { label: 'Processing', color: 'text-brand', bgColor: 'bg-[#52622E]/10' };
-      case 'shipped':
-        return { label: 'In Delivery', color: 'text-brand', bgColor: 'bg-[#52622E]/10' };
-      case 'cancelled':
-        return { label: 'Cancelled', color: 'text-red-500', bgColor: 'bg-red-50' };
-      default:
-        return { label: String(status || 'Unknown'), color: 'text-gray', bgColor: 'bg-gray-100' };
-    }
-  };
-
-  const statusInfo = getStatusDisplay(item.orderStatus);
-  
-  // Get main product for preview (the design shows one)
   const mainItem = item.orderItems?.[0];
   const mainItemObj = typeof mainItem === 'object' ? mainItem : null;
-  const product = (typeof mainItemObj?.product === 'object' && mainItemObj.product !== null) 
-    ? mainItemObj.product 
-    : null;
+  const product =
+    typeof mainItemObj?.product === 'object' && mainItemObj.product !== null
+      ? mainItemObj.product
+      : null;
+
+  const itemCount = item.orderItems?.length ?? 0;
+  const otherProductsLabel = getOtherProductsLabel(itemCount);
 
   const getImageUrl = (url?: string) => {
     if (!url) return null;
@@ -54,99 +48,91 @@ const OrderCard: React.FC<OrderCardProps> = ({ item, onPress, onActionPress, hid
     return `${ASSET_URL}${separator}${url}`;
   };
 
-  const imageSource = product?.imageUrl 
-    ? { uri: getImageUrl(product.imageUrl) }
-    : product?.image 
-        ? { uri: getImageUrl(product.image) }
-        : require('../assets/logos/logo.png'); // Default logo
+  const imageSource = product?.imageUrl
+    ? { uri: getImageUrl(product.imageUrl) ?? undefined }
+    : product?.image
+      ? { uri: getImageUrl(product.image) ?? undefined }
+      : require('../assets/logos/logo.png');
 
   const getActionText = (status: OrderStatus | string) => {
-    const s = normalizeStatus(status);
-    if (s === 'cancelled') return 'Reorder';
-    if (s === 'delivered') return 'Leave Review';
+    const normalized = normalizeOrderStatus(String(status));
+    if (normalized === 'cancelled') return 'Reorder';
+    if (normalized === 'delivered') return 'Leave Review';
     return 'Track Order';
   };
 
-  const statusLower = normalizeStatus(item.orderStatus);
-  const isInDelivery = statusLower === 'shipped' || statusLower === 'processing' || statusLower === 'pending';
-
   const displayPrice = () => {
     try {
-        const val = parseFloat(item.totalAmount);
-        return isNaN(val) ? '0.00' : val.toFixed(2);
+      const val = parseFloat(item.totalAmount);
+      return isNaN(val) ? '0.00' : val.toFixed(2);
     } catch {
-        return '0.00';
+      return '0.00';
     }
   };
 
+  const openMenu = () => {
+    if (!onMenuPress || !menuButtonRef.current) return;
+
+    menuButtonRef.current.measureInWindow((x, y, width, height) => {
+      onMenuPress(item, { x, y, width, height });
+    });
+  };
+
   return (
-    <View className="bg-white rounded-[24px] p-4 mb-5 border border-border-color shadow-sm">
-      {/* Top Row: Order ID & Status Badge */}
-      <View className="flex-row justify-between items-center mb-3">
-        <View className="flex-row items-center">
-            <Icon name="receipt-outline" size={16} color="#4B5563" />
-            <Text className="font-montserrat-bold text-dark-gray text-xs ml-2">ORD-{item.id}</Text>
-        </View>
-        <View className={`px-3 py-1 rounded-md ${statusInfo.bgColor}`}>
-          <Text className={`font-montserrat-bold text-[10px] ${statusInfo.color}`}>
-            {statusInfo.label}
+    <View
+      className="bg-surface rounded-card p-4 mb-5 border border-border-color"
+      style={mergeSurfaceCardStyle()}
+    >
+      <View className="flex-row justify-between items-center mb-4">
+        <View className="flex-row items-center flex-1 pr-2">
+          <Icon name="bag-handle-outline" size={18} color="#52622E" />
+          <Text className="font-montserrat-bold text-dark-gray text-sm ml-2" numberOfLines={1}>
+            {formatOrderListDate(item.createdAt)}
           </Text>
         </View>
+
+        {showMenu ? (
+          <View ref={menuButtonRef} collapsable={false}>
+            <TouchableOpacity
+              onPress={openMenu}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              className="p-1"
+            >
+              <Icon name="ellipsis-vertical" size={18} color="#6A7282" />
+            </TouchableOpacity>
+          </View>
+        ) : null}
       </View>
 
-      {/* Divider */}
-      <View className="h-[1px] bg-gray-100 mb-4" />
-
-      {/* Product Details Row */}
-      <TouchableOpacity 
-        activeOpacity={0.7}
-        onPress={() => onPress(item)}
-        className="flex-row items-center mb-4"
-      >
-        {/* Image */}
-        <View className="w-20 h-24 rounded-2xl bg-gray-100 overflow-hidden mr-4">
-          <Image 
-            source={imageSource} 
-            className="w-full h-full"
-            resizeMode="cover"
-          />
+      <TouchableOpacity activeOpacity={0.7} onPress={() => onPress(item)} className="flex-row mb-4">
+        <View className="w-[88px] h-[104px] rounded-2xl bg-light-gray overflow-hidden mr-4">
+          <Image source={imageSource} className="w-full h-full" resizeMode="cover" />
         </View>
-        
-        {/* Text Info */}
-        <View className="flex-1 justify-between h-24 py-1">
-          <View>
-            <Text className="font-montserrat-bold text-dark-gray text-sm mb-1" numberOfLines={2}>
-                {product?.name || 'Product'}
-            </Text>
-            <View className="flex-row items-center mt-0.5">
-                <Text className="text-[11px] text-gray font-montserrat mr-3">Color: {product?.color || 'N/A'}</Text>
-                <Text className="text-[11px] text-gray font-montserrat">Size: {product?.size || 'N/A'}</Text>
-            </View>
-          </View>
-          
-          <View className="flex-row justify-between items-end">
-            <Text className="font-montserrat-bold text-brand text-sm">₱{displayPrice()}</Text>
-            <Text className="text-[11px] text-gray font-montserrat-bold">Qty: {mainItemObj?.quantity || 0}</Text>
-          </View>
+
+        <View className="flex-1 justify-center">
+          <Text className="font-montserrat-bold text-dark-gray text-sm mb-1" numberOfLines={2}>
+            {product?.name || 'Product'}
+          </Text>
+          {otherProductsLabel ? (
+            <Text className="text-xs text-gray font-montserrat mb-3">{otherProductsLabel}</Text>
+          ) : (
+            <View className="mb-3" />
+          )}
+
+          <Text className="text-[11px] text-gray font-montserrat mb-0.5">Total Shopping</Text>
+          <Text className="font-montserrat-bold text-brand text-lg">₱{displayPrice()}</Text>
         </View>
       </TouchableOpacity>
 
-      {/* Action Button */}
-      {!hideActionButton && (
-        <TouchableOpacity 
-          activeOpacity={0.8}
+      {!hideActionButton ? (
+        <Button
+          label={getActionText(item.orderStatus)}
           onPress={() => onActionPress?.(item)}
-          className={`w-full h-12 rounded-full items-center justify-center flex-row ${
-              isInDelivery ? 'bg-brand' : 'bg-transparent border border-brand'
-          }`}
-        >
-          <Text className={`font-montserrat-bold text-sm tracking-wide ${
-              isInDelivery ? 'text-white' : 'text-brand'
-          }`}>
-              {getActionText(item.orderStatus)}
-          </Text>
-        </TouchableOpacity>
-      )}
+          variant="outline"
+          size="sm"
+          shape="pill"
+        />
+      ) : null}
     </View>
   );
 };

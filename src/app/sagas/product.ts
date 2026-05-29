@@ -1,6 +1,7 @@
 import { call, put, takeLatest } from 'redux-saga/effects';
 import { fetchProducts } from '../api/product';
 import * as Type from '../actions';
+import { formatFetchErrorMessage } from '../../utils/fetchError';
 
 function* fetchProductsWorker(): Generator<any, void, any> {
     yield put({ type: Type.GET_PRODUCTS_REQUEST});
@@ -9,8 +10,7 @@ function* fetchProductsWorker(): Generator<any, void, any> {
         const products = Array.isArray(data) ? data : (data['hydra:member'] || data.member || data.data || []);
         yield put({ type: Type.GET_PRODUCTS_COMPLETED, payload: products});
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "An unknown error occurred";
-        yield put({ type: Type.GET_PRODUCTS_ERROR, payload: message });
+        yield put({ type: Type.GET_PRODUCTS_ERROR, payload: formatFetchErrorMessage(error) });
     }
 }
 

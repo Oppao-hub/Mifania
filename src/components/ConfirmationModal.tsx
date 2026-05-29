@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity } from 'react-native';
+import { Modal, View, Text } from 'react-native';
+import Button from './Button';
 
 interface ConfirmationModalProps {
     visible: boolean;
@@ -28,20 +29,25 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           <Text className="text-gray text-base mb-8">{message}</Text>
 
           <View className="flex-row justify-between gap-x-4">
-            <TouchableOpacity 
+            <Button
+              label="Cancel"
               onPress={onCancel}
-              className="flex-1 h-12 border border-gray-300 rounded-xl justify-center items-center"
-            >
-              <Text className="text-gray-600 font-bold text-base">Cancel</Text>
-            </TouchableOpacity>
+              variant="secondary"
+              size="sm"
+              shape="square"
+              fullWidth
+              className="flex-1"
+            />
 
-            <TouchableOpacity 
+            <Button
+              label={confirmText}
               onPress={onConfirm}
-              // If isDanger is true, we use a red background instead of the brand color
-              className={`flex-1 h-12 rounded-xl justify-center items-center ${isDanger ? 'bg-red-500' : 'bg-brand'}`}
-            >
-              <Text className="text-white font-bold text-base">{confirmText}</Text>
-            </TouchableOpacity>
+              variant={isDanger ? 'danger' : 'primary'}
+              size="sm"
+              shape="square"
+              fullWidth
+              className="flex-1"
+            />
           </View>
         </View>
       </View>

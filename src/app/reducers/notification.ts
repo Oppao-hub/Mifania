@@ -58,6 +58,16 @@ export function notificationReducer(state = initialState, action: { type: string
             
         case Types.CLEAR_NOTIFICATIONS:
             return state;
+
+        case Types.DELETE_NOTIFICATION: {
+            const deleteId = Number(action.payload?.id ?? action.payload);
+            if (Number.isNaN(deleteId)) return state;
+
+            return {
+                ...state,
+                items: state.items.filter((item) => Number(item.id) !== deleteId),
+            };
+        }
             
         default:
             return state;

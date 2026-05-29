@@ -1,6 +1,7 @@
 import { call, put, takeLatest } from 'redux-saga/effects';
 import { fetchCategories } from '../api/category';
 import * as Type from '../actions';
+import { formatFetchErrorMessage } from '../../utils/fetchError';
 
 function* fetchCategoriesWorker(): Generator<any, void, any> {
     yield put({ type: Type.GET_CATEGORIES_REQUEST});
@@ -9,8 +10,7 @@ function* fetchCategoriesWorker(): Generator<any, void, any> {
         const categories = Array.isArray(data) ? data : (data['hydra:member'] || data.member || data.data || []);
         yield put({ type: Type.GET_CATEGORIES_COMPLETED, payload: categories});
     } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : "An unknown error occurred";
-        yield put({ type: Type.GET_CATEGORIES_ERROR, payload: message });
+        yield put({ type: Type.GET_CATEGORIES_ERROR, payload: formatFetchErrorMessage(error) });
     }
 }
 

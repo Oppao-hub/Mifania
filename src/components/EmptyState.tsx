@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Button from './Button';
 
 interface EmptyStateProps {
   iconName: string;
@@ -38,14 +39,13 @@ const EmptyState: React.FC<EmptyStateProps> = ({
       </Text>
       
       {buttonText && onButtonPress && (
-        <TouchableOpacity 
+        <Button
+          label={buttonText}
           onPress={onButtonPress}
-          className="bg-brand px-10 py-4 rounded-full shadow-sm active:opacity-80"
-        >
-          <Text className="text-white font-bold text-base">
-            {buttonText}
-          </Text>
-        </TouchableOpacity>
+          size="md"
+          shape="pill"
+          className="px-10 shadow-sm"
+        />
       )}
     </View>
   );

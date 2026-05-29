@@ -6,6 +6,7 @@ import {
   TouchableOpacity 
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { mergeSurfaceCardStyle } from '../../utils/cardStyles';
 
 interface OrderTrackingProps {
   order: any;
@@ -65,7 +66,7 @@ const OrderTracking = ({ order }: OrderTrackingProps) => {
       contentContainerStyle={{ paddingBottom: 100 }}
     >
       {/* --- ORDER SUMMARY INFO --- */}
-      <View className="bg-white rounded-[24px] p-5 mb-6 shadow-sm border border-border-color">
+      <View className="bg-surface rounded-card p-5 mb-6 border border-border-color" style={mergeSurfaceCardStyle()}>
           <View className="flex-row justify-between items-center mb-4">
               <View>
                   <Text className="text-[10px] font-montserrat-bold text-gray uppercase tracking-widest mb-1">Order Number</Text>
@@ -84,7 +85,7 @@ const OrderTracking = ({ order }: OrderTrackingProps) => {
       </View>
 
       {/* --- TIMELINE --- */}
-      <View className="bg-white rounded-[24px] p-6 shadow-sm border border-border-color">
+      <View className="bg-surface rounded-card p-6 border border-border-color" style={mergeSurfaceCardStyle()}>
         <Text className="font-montserrat-bold text-dark-gray text-sm mb-6">
           {isCancelled ? 'Order Status' : 'Delivery Progress'}
         </Text>

@@ -53,6 +53,8 @@ function* syncCustomerAndWallet(data: { token: string; user: any }): Generator<a
         type: Type.GET_WALLET,
         payload: { id: customerRef, token: data.token },
     });
+    yield put({ type: Type.GET_ADDRESSES });
+    yield put({ type: Type.MERGE_GUEST_WISHLIST });
 }
 
 function* syncPostLoginSideEffects(

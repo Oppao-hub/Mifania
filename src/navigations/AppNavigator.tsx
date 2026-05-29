@@ -8,11 +8,12 @@ import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { RootState } from '../utils/types';
 import IMG from '../utils/image';
-import { View, ActivityIndicator, Alert, Image, Text } from 'react-native';
+import { View, ActivityIndicator, Image, Text } from 'react-native';
 import * as Types from '../app/actions';
 import { getCustomerRefFromUser } from '../utils/apiResource';
 import { navigationRef } from '../utils/navigation';
 import { ROUTES } from '../utils';
+import { showBlockingInfo } from '../utils/userFeedback';
 
 const Stack = createNativeStackNavigator();
 
@@ -54,6 +55,9 @@ export default function AppNavigator() {
     if (!initializing && authData?.token) {
       dispatch({
         type: Types.GET_NOTIFICATIONS,
+      });
+      dispatch({
+        type: Types.GET_WISHLIST,
       });
     }
   }, [initializing, authData?.token, dispatch]);
@@ -99,7 +103,7 @@ export default function AppNavigator() {
       }
 
       if (body) {
-        Alert.alert('Notification', body);
+        showBlockingInfo({ title: 'Notification', message: body });
       }
     });
     return unsubscribeForeground;

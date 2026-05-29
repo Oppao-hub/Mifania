@@ -18,3 +18,7 @@ export const clearNotifications = async (token: string): Promise<void> => {
 export const markNotificationRead = async (id: number, token: string): Promise<void> => {
     await postRequest(`/notifications/${id}/read`, {}, token);
 };
+
+export const markAllNotificationsRead = async (token: string): Promise<void> => {
+    await postRequest('/notifications/mark-read', {}, token);
+};

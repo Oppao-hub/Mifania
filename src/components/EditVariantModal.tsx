@@ -8,6 +8,7 @@ import {
   ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Button from './Button';
 import { CartItem, Color, Product, Size } from '../utils/types';
 import { ASSET_URL } from '../app/api/client';
 import {
@@ -208,22 +209,25 @@ const EditVariantModal: React.FC<EditVariantModalProps> = ({
             )}
           </ScrollView>
 
-          <View className="flex-row mt-4">
-            <TouchableOpacity
+          <View className="flex-row mt-4 gap-x-3">
+            <Button
+              label="Cancel"
               onPress={onClose}
-              className="flex-1 bg-brand/10 h-14 rounded-full items-center justify-center mr-2"
-            >
-              <Text className="font-montserrat-bold text-brand">Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+              variant="soft"
+              size="md"
+              shape="pill"
+              fullWidth
+              className="flex-1"
+            />
+            <Button
+              label="Confirm"
               onPress={handleConfirm}
               disabled={stock <= 0}
-              className={`flex-1 h-14 rounded-full items-center justify-center ml-2 ${
-                stock <= 0 ? 'bg-gray-300' : 'bg-brand'
-              }`}
-            >
-              <Text className="font-montserrat-bold text-white">Confirm</Text>
-            </TouchableOpacity>
+              size="md"
+              shape="pill"
+              fullWidth
+              className={`flex-1 ${stock <= 0 ? 'bg-gray-300' : ''}`}
+            />
           </View>
         </View>
       </View>

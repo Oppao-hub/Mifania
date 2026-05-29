@@ -155,18 +155,18 @@ const CheckoutScreen = () => {
     const customerData: Customer | null =
         customerFromSlice || getEmbeddedCustomer(authData?.user?.customer);
 
-    const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(PaymentMethods.CREDIT_CARD);
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethodType>(PaymentMethods.CASH);
     const [selectedAddressId, setSelectedAddressId] = useState('home');
     const [selectedAddressName, setSelectedAddressName] = useState('Home');
     const [selectedAddressText, setSelectedAddressText] = useState('');
-    const [selectedDeliveryId, setSelectedDeliveryId] = useState('fedex');
-    const [selectedDeliveryName, setSelectedDeliveryName] = useState('FedEx Express');
+    const [selectedDeliveryId, setSelectedDeliveryId] = useState('jt-express');
+    const [selectedDeliveryName, setSelectedDeliveryName] = useState('J&T Express');
     const [selectedDeliveryEstimate, setSelectedDeliveryEstimate] = useState(
-        'Estimated arrival: 23 - 24 Dec, 2024',
+        '2–4 business days nationwide',
     );
-    const [selectedDeliveryFee, setSelectedDeliveryFee] = useState('₱8.50');
-    const [selectedPaymentId, setSelectedPaymentId] = useState('mastercard-4679');
-    const [selectedPaymentLabel, setSelectedPaymentLabel] = useState('.... .... .... 4679');
+    const [selectedDeliveryFee, setSelectedDeliveryFee] = useState('₱89.00');
+    const [selectedPaymentId, setSelectedPaymentId] = useState('cash');
+    const [selectedPaymentLabel, setSelectedPaymentLabel] = useState('Cash');
     const [selectedPaymentGatewayType, setSelectedPaymentGatewayType] = useState<'paypal' | 'direct'>(
         'direct',
     );
@@ -332,12 +332,10 @@ const CheckoutScreen = () => {
     };
 
     const handleViewMyOrder = () => {
-        resetCheckoutFlow();
         goToMyOrders(navigation);
     };
 
     const handleBackHome = () => {
-        resetCheckoutFlow();
         goToHomeTab(navigation);
     };
 
@@ -424,11 +422,16 @@ const CheckoutScreen = () => {
         orderPendingRef.current = true;
         setFlowStatus('processing');
 
+        // Backend applies pointsRedeemed — send gross total (fees included), not post-redemption total.
         const orderData = buildOrderPayload(
             selectedItems,
             paymentMethod,
-            activeFinalTotalFormatted,
+            displayTotals.totalFormatted,
             selectedRedeemPoints,
+            {
+                method: selectedDeliveryName,
+                fee: displayTotals.deliveryFeeFormatted,
+            },
         );
 
         const idempotencyKey = `mobile-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -437,10 +440,6 @@ const CheckoutScreen = () => {
             payload: { data: orderData, token, idempotencyKey },
         });
     };
-
-    if (displayItems.length === 0 && flowStatus === 'idle') {
-        return null;
-    }
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
@@ -475,6 +474,7 @@ const CheckoutScreen = () => {
                     onPress={() =>
                         navigation.navigate(ROUTES.CHOOSE_DELIVERY_ADDRESS, {
                             selectedAddressId,
+                            sourceCheckoutRouteKey: route.key,
                         })
                     }
                 />
@@ -509,11 +509,12 @@ const CheckoutScreen = () => {
 
                 <SectionCard
                     icon="car-outline"
-                    label="Delivery"
+                    label="Delivery Options"
                     value={`${selectedDeliveryName}\n${selectedDeliveryEstimate}`}
                     onPress={() =>
                         navigation.navigate(ROUTES.CHOOSE_DELIVERY, {
                             selectedDeliveryId,
+                            sourceCheckoutRouteKey: route.key,
                         })
                     }
                 />
@@ -525,6 +526,7 @@ const CheckoutScreen = () => {
                     onPress={() =>
                         navigation.navigate(ROUTES.CHOOSE_PAYMENT_METHOD, {
                             selectedPaymentId,
+                            sourceCheckoutRouteKey: route.key,
                         })
                     }
                 />

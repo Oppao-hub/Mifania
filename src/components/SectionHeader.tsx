@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import Icon from 'react-native-vector-icons/Ionicons';
 
 interface SectionHeaderProps {
   title: string;
@@ -13,8 +12,7 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({ title, onPress }) => {
       <Text className="text-xl font-montserrat-bold text-dark-gray">{title}</Text>
       {onPress && (
         <TouchableOpacity onPress={onPress} className="flex-row items-center">
-          <Text className="text-brand mr-1 font-montserrat">See All</Text>
-          <Icon name="chevron-forward" size={16} color="#52622E" />
+          <Text className="text-brand font-montserrat-bold text-sm">View All →</Text>
         </TouchableOpacity>
       )}
     </View>
