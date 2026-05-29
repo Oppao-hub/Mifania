@@ -38,7 +38,7 @@ const ConfirmationBottomSheet: React.FC<ConfirmationBottomSheetProps> = ({
   description,
   descriptionLinkText,
   onDescriptionLinkPress,
-  confirmLabel = 'Yes, Confirm',
+  confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   confirmVariant = 'primary',
 }) => {
@@ -118,9 +118,7 @@ const ConfirmationBottomSheet: React.FC<ConfirmationBottomSheetProps> = ({
               size="sm"
               shape="pill"
               fullWidth={false}
-              className="flex-1 min-w-0 px-3"
-              textClassName="text-xs"
-              numberOfLines={2}
+              className="flex-1 min-w-0 px-4"
             />
 
             <Button
@@ -132,9 +130,7 @@ const ConfirmationBottomSheet: React.FC<ConfirmationBottomSheetProps> = ({
               size="sm"
               shape="pill"
               fullWidth={false}
-              className="flex-1 min-w-0 px-3"
-              textClassName="text-xs"
-              numberOfLines={2}
+              className="flex-1 min-w-0 px-4"
             />
           </View>
         </View>
