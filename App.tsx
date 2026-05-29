@@ -15,6 +15,7 @@ import store, { persistor } from './src/app/store';
 import AppNavigation from './src/navigations';
 import { toastConfig } from './src/utils/toastConfig';
 import NetworkBanner from './src/components/NetworkBanner';
+import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { AppearanceProvider } from './src/context/AppearanceContext';
 import { navigationRef } from './src/utils/navigation';
 import { ROUTES } from './src/utils';
@@ -173,11 +174,13 @@ const App = () => {
       <AppearanceProvider>
         <Provider store={store}>
           <PersistGate loading={null} persistor={persistor}>
-            <View style={{ flex: 1 }}>
-              <NetworkBanner />
-              <AppNavigation />
-              <Toast config={toastConfig} />
-            </View>
+            <AppErrorBoundary>
+              <View style={{ flex: 1 }}>
+                <NetworkBanner />
+                <AppNavigation />
+                <Toast config={toastConfig} />
+              </View>
+            </AppErrorBoundary>
           </PersistGate>
         </Provider>
       </AppearanceProvider>
