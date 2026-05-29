@@ -5,6 +5,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithCredential, GoogleAu
 import { getApp } from '@react-native-firebase/app';
 import { getMessaging, getToken } from '@react-native-firebase/messaging';
 import { resolveResourceIri, getCustomerRefFromUser } from '../../utils/apiResource';
+import { mapAuthErrorMessage } from '../../utils/authErrors';
 import { AlertMsg } from '../../components/AlertMsg';
 import { disconnectSocket } from '../../services/socket';
 
@@ -113,8 +114,7 @@ export function* userLoginAsync(action: { type: string; payload: any }): Generat
     } catch (error: any) {
         console.log('❌ Login Saga Error:', error);
 
-        const message = error.message || 'An unknown error occurred';
-        yield put({ type: Type.USER_LOGIN_ERROR, payload: message });
+        yield put({ type: Type.USER_LOGIN_ERROR, payload: mapAuthErrorMessage(error) });
     }
 }
 
@@ -133,8 +133,7 @@ export function* userGoogleLoginAsync(action: { type: string; payload: { idToken
         yield put({ type: Type.USER_LOGIN_COMPLETED, payload: data });
         yield fork(syncGooglePostLoginSideEffects, action.payload.idToken, data);
     } catch (error: any) {
-        const message = error.message || 'Google Login failed';
-        yield put({ type: Type.USER_LOGIN_ERROR, payload: message });
+        yield put({ type: Type.USER_LOGIN_ERROR, payload: mapAuthErrorMessage(error) });
     }
 }
 
@@ -154,9 +153,7 @@ export function* userRegister(action: { type: string; payload: any }): Generator
 
     } catch(error: any) {
         console.log('❌ Register Saga Error:', error);
-        const message = error.message || 'An unknown error occurred';
-
-        yield put({ type: Type.USER_REGISTER_ERROR, payload: message });
+        yield put({ type: Type.USER_REGISTER_ERROR, payload: mapAuthErrorMessage(error) });
     }
 }
 
