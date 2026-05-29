@@ -10,6 +10,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import OrderCard from '../OrderCard';
 import { Customer, OrderItem } from '../../utils/types';
 import { ASSET_URL } from '../../app/api/client';
+import { mergeSurfaceCardStyle } from '../../utils/cardStyles';
 
 interface OrderDetailsContentProps {
   order: any;
@@ -39,7 +40,7 @@ const OrderDetailsContent = ({ order }: OrderDetailsContentProps) => {
       />
 
       {/* --- 2. ORDER INFO CARD --- */}
-      <View className="bg-white rounded-[24px] p-5 mb-4 shadow-sm border border-border-color">
+      <View className="bg-surface rounded-card p-5 mb-4 border border-border-color" style={mergeSurfaceCardStyle()}>
         <View className="space-y-3">
           <View className="flex-row justify-between items-center">
             <Text className="text-sm font-montserrat text-gray">Order Date</Text>
@@ -67,7 +68,7 @@ const OrderDetailsContent = ({ order }: OrderDetailsContentProps) => {
 
       {/* --- 3. PURCHASED ITEMS CARD --- */}
       {order.orderItems && order.orderItems.length > 1 && (
-        <View className="bg-white rounded-[24px] p-5 mb-4 shadow-sm border border-border-color">
+        <View className="bg-surface rounded-card p-5 mb-4 border border-border-color" style={mergeSurfaceCardStyle()}>
           <Text className="font-montserrat-bold text-dark-gray text-sm mb-4">Purchased Items</Text>
           
           {(order.orderItems as (string | OrderItem)[] | undefined)?.map((item: any, index: number) => {
@@ -110,7 +111,7 @@ const OrderDetailsContent = ({ order }: OrderDetailsContentProps) => {
       )}
 
       {/* --- 4. SHIPPING DETAILS CARD --- */}
-      <View className="bg-white rounded-[24px] p-5 mb-4 shadow-sm border border-border-color">
+      <View className="bg-surface rounded-card p-5 mb-4 border border-border-color" style={mergeSurfaceCardStyle()}>
         <Text className="font-montserrat-bold text-dark-gray text-sm mb-4">Shipping Details</Text>
         
         <View className="flex-row">
@@ -118,7 +119,29 @@ const OrderDetailsContent = ({ order }: OrderDetailsContentProps) => {
               <Icon name="location" size={20} color="#52622E" />
           </View>
           <View className="flex-1">
-              {typeof customer === 'object' && customer !== null ? (
+              {order.shippingAddressLine || order.shippingRecipientName ? (
+                <>
+                  {order.shippingLabel ? (
+                    <Text className="text-xs text-brand font-montserrat-bold mb-1">{order.shippingLabel}</Text>
+                  ) : null}
+                  <Text className="font-montserrat-bold text-dark-gray text-sm mb-1">
+                    {order.shippingRecipientName || 'Recipient'}
+                  </Text>
+                  <Text className="text-xs text-gray font-montserrat mb-1">
+                    {order.shippingContactNumber || 'No contact'}
+                  </Text>
+                  <Text className="text-xs text-gray font-montserrat leading-5">
+                    {[
+                      order.shippingAddressLine,
+                      order.shippingCity,
+                      order.shippingState,
+                      order.shippingPostalCode,
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </Text>
+                </>
+              ) : typeof customer === 'object' && customer !== null ? (
                 <>
                   <Text className="font-montserrat-bold text-dark-gray text-sm mb-1">{customer.firstName} {customer.lastName}</Text>
                   <Text className="text-xs text-gray font-montserrat mb-1">{customer.contactNumber || 'No contact'}</Text>
@@ -132,7 +155,7 @@ const OrderDetailsContent = ({ order }: OrderDetailsContentProps) => {
       </View>
 
       {/* --- 5. PAYMENT SUMMARY CARD --- */}
-      <View className="bg-white rounded-[24px] p-5 mb-6 shadow-sm border border-border-color">
+      <View className="bg-surface rounded-card p-5 mb-6 border border-border-color" style={mergeSurfaceCardStyle()}>
         <Text className="font-montserrat-bold text-dark-gray text-sm mb-4">Payment Summary</Text>
         
         <View className="space-y-3 mb-4">
