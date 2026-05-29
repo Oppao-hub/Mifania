@@ -1,13 +1,8 @@
 import React from 'react';
-import { 
-  Modal, 
-  View, 
-  Text, 
-  Pressable, 
-  ActivityIndicator 
-} from 'react-native';
+import { Modal, View, Text, Pressable } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import Button from './Button';
+import LoadingState from './LoadingState';
 
 interface CustomModalProps {
   visible: boolean;
@@ -70,12 +65,12 @@ const CustomModal: React.FC<CustomModalProps> = ({
         >
           
           {isLoading ? (
-            <View className="py-4 items-center">
-              <ActivityIndicator size="large" color="#52622E" />
-              <Text className="mt-4 text-brand-dark font-montserrat-bold text-base">
-                {message || 'Please wait...'}
-              </Text>
-            </View>
+            <LoadingState
+              fill={false}
+              card={false}
+              message={message || 'Please wait...'}
+              className="py-4"
+            />
           ) : (
             <>
               {/* Optional Icon */}
@@ -86,18 +81,21 @@ const CustomModal: React.FC<CustomModalProps> = ({
               )}
 
               {/* Title */}
-              {title && (
-                <Text className="text-xl font-montserrat-bold text-brand-dark mb-2 text-center">
+              {title ? (
+                <Text
+                  className="w-full text-xl font-montserrat-bold text-brand-dark mb-2 text-center"
+                  style={{ flexShrink: 1 }}
+                >
                   {title}
                 </Text>
-              )}
+              ) : null}
 
               {/* Message */}
-              {message && (
-                <Text className="text-gray text-base font-montserrat mb-6 text-center leading-6">
+              {message ? (
+                <Text className="w-full text-gray text-base font-montserrat mb-6 text-center leading-6">
                   {message}
                 </Text>
-              )}
+              ) : null}
 
               {/* Dynamic Content (Inputs, Forms, etc.) */}
               {children && (
