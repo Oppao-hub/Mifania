@@ -83,7 +83,7 @@ const handleResponseError = async (response: Response, requestUrl: string) => {
 
     if (response.status === 401) {
         if (isPublicAuthRequestUrl(requestUrl)) {
-            console.log('❌ Server Error Response: 401 on auth endpoint');
+            console.log('❌ Server Error Response: 401 on auth endpoint', JSON.stringify(errorData));
             throw new ApiRequestError(401, mapAuthErrorMessage(rawMessage));
         }
 
