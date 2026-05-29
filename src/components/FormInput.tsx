@@ -12,6 +12,7 @@ interface FormInputProps {
   keyboardType?: KeyboardTypeOptions;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   inputClassName?: string;
+  error?: string | null;
   editable?: boolean;
   rightElement?: React.ReactNode;
 }
@@ -26,16 +27,21 @@ const FormInput: React.FC<FormInputProps> = ({
     keyboardType = 'default',
     autoCapitalize = 'none',
     inputClassName = '',
+    error,
     editable = true,
     rightElement,
 }) => {
+  const borderClassName = error
+    ? 'border-danger'
+    : 'border-border-color';
+
   return (
     <View className="mb-4">
       {/* Label is optional */}
       {label && <Text className="text-sm font-bold text-brand-dark mb-2">{label}</Text>}
       
       {/* Container matches your Register/Login screen input style */}
-      <View className={`flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm ${inputClassName}`}>
+      <View className={`flex-row items-center bg-white border rounded-2xl px-4 h-16 shadow-sm ${borderClassName} ${inputClassName}`}>
         {iconName && <Icon name={iconName} size={20} color="#6A7282" />}
         
         <TextInput
@@ -52,6 +58,12 @@ const FormInput: React.FC<FormInputProps> = ({
 
         {rightElement && <View>{rightElement}</View>}
       </View>
+
+      {error ? (
+        <Text className="text-xs font-montserrat-medium text-danger ml-1 mt-1">
+          {error}
+        </Text>
+      ) : null}
     </View>
   );
 };
