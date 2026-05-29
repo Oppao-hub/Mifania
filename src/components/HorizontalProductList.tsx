@@ -25,8 +25,9 @@ const HorizontalProductList: React.FC<HorizontalProductListProps> = ({ products 
         <ProductCard
             key={`horizontal-list-${item.id}`}
             product={item}
+            variant="carousel"
             onPress={() => navigation.navigate('ProductDetails', { product: item })}
-            containerStyle="w-40 mr-4 mb-0"
+            containerStyle="mr-4"
         />
       ))}
     </ScrollView>
