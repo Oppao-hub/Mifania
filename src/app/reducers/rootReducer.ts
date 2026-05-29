@@ -9,6 +9,7 @@ import { subCategoryReducer } from './subCategory';
 import { cartReducer } from './cart';
 import { wishlistReducer } from './wishlist';
 import { customerReducer } from './customer';
+import { addressReducer } from './address';
 import { walletReducer } from './wallet';
 import { orderReducer } from './order';
 import { notificationReducer } from './notification';
@@ -28,6 +29,7 @@ export const appReducer = combineReducers({
     cart: cartReducer,
     wishlist: wishlistReducer,
     customer: customerReducer,
+    address: addressReducer,
     wallet: walletReducer,
     order: orderReducer,
     notification: notificationReducer,
