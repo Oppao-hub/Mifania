@@ -8,6 +8,7 @@ interface OrderState {
     isError: boolean;
     error: string | null;
     cancelError: string | null;
+    deleteError: string | null;
     lastCreatedOrder: Order | null;
 }
 
@@ -18,6 +19,7 @@ const initialState: OrderState = {
     isError: false,
     error: null,
     cancelError: null,
+    deleteError: null,
     lastCreatedOrder: null,
 };
 
@@ -29,6 +31,8 @@ export function orderReducer(state = initialState, action: { type: string; paylo
             return { ...state, isLoading: true, isError: false };
         case Types.CANCEL_ORDER_REQUEST:
             return { ...state, isLoading: true, cancelError: null };
+        case Types.DELETE_ORDER_REQUEST:
+            return { ...state, isLoading: true, deleteError: null };
         case Types.GET_ORDERS_COMPLETED:
             return { ...state, isLoading: false, items: action.payload, isError: false };
         case Types.GET_ORDER_DETAILS_COMPLETED:
