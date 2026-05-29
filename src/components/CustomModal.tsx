@@ -3,11 +3,11 @@ import {
   Modal, 
   View, 
   Text, 
-  TouchableOpacity, 
   Pressable, 
   ActivityIndicator 
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
+import Button from './Button';
 
 interface CustomModalProps {
   visible: boolean;
@@ -46,11 +46,12 @@ const CustomModal: React.FC<CustomModalProps> = ({
 }) => {
   
   // Determine button color based on type
-  const getPrimaryBtnColor = () => {
-    if (type === 'danger') return 'bg-danger';
-    if (type === 'success') return 'bg-success';
-    return 'bg-brand';
+  const getPrimaryVariant = (): 'primary' | 'danger' => {
+    if (type === 'danger') return 'danger';
+    return 'primary';
   };
+
+  const primaryClassName = type === 'success' ? 'bg-success' : '';
 
   return (
     <Modal
@@ -108,27 +109,22 @@ const CustomModal: React.FC<CustomModalProps> = ({
               {/* Action Buttons */}
               <View className="w-full gap-y-3">
                 {primaryButtonText && (
-                  <TouchableOpacity
-                    onPress={onPrimaryAction}
-                    activeOpacity={0.8}
-                    className={`w-full h-14 ${getPrimaryBtnColor()} rounded-2xl justify-center items-center`}
-                  >
-                    <Text className="text-white font-montserrat-bold text-base">
-                      {primaryButtonText}
-                    </Text>
-                  </TouchableOpacity>
+                  <Button
+                    label={primaryButtonText}
+                    onPress={onPrimaryAction ?? (() => {})}
+                    variant={getPrimaryVariant()}
+                    size="md"
+                    className={primaryClassName}
+                  />
                 )}
 
                 {secondaryButtonText && (
-                  <TouchableOpacity
-                    onPress={onSecondaryAction || onClose}
-                    activeOpacity={0.7}
-                    className="w-full h-14 border border-border-color rounded-2xl justify-center items-center"
-                  >
-                    <Text className="text-dark-gray font-montserrat-bold text-base">
-                      {secondaryButtonText}
-                    </Text>
-                  </TouchableOpacity>
+                  <Button
+                    label={secondaryButtonText}
+                    onPress={onSecondaryAction || onClose || (() => {})}
+                    variant="secondary"
+                    size="md"
+                  />
                 )}
               </View>
             </>
