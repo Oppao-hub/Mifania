@@ -28,15 +28,38 @@ export function notificationReducer(state = initialState, action: { type: string
         case Types.GET_NOTIFICATIONS_ERROR:
             return { ...state, isLoading: false, error: action.payload };
 
-        case Types.ADD_NOTIFICATION:
-            // Check if notification already exists (by ID) to avoid duplicates
-            const exists = state.items.find(item => item.id === action.payload.id);
-            if (exists) return state;
-            
+        case Types.ADD_NOTIFICATION: {
+            const incoming = action.payload as Notification | undefined;
+            if (!incoming) {
+                return state;
+            }
+
+            const incomingId = incoming.id ?? (incoming as Notification & { notificationId?: number }).notificationId;
+            if (incomingId != null) {
+                const existingIndex = state.items.findIndex(
+                    (item) => String(item.id) === String(incomingId),
+                );
+                if (existingIndex >= 0) {
+                    const nextItems = [...state.items];
+                    nextItems[existingIndex] = { ...nextItems[existingIndex], ...incoming, id: incomingId };
+                    return { ...state, items: nextItems };
+                }
+            }
+
+            const duplicateByContent = state.items.find((item) =>
+                item.title === incoming.title
+                && (item.message || item.body) === (incoming.message || incoming.body)
+                && item.createdAt === incoming.createdAt,
+            );
+            if (duplicateByContent) {
+                return state;
+            }
+
             return {
                 ...state,
-                items: [action.payload, ...state.items],
+                items: [incoming, ...state.items],
             };
+        }
             
         case Types.MARK_NOTIFICATION_READ:
             const targetId = typeof action.payload === 'number'
@@ -57,7 +80,11 @@ export function notificationReducer(state = initialState, action: { type: string
             };
             
         case Types.CLEAR_NOTIFICATIONS:
-            return state;
+            return {
+                ...state,
+                items: [],
+                error: null,
+            };
 
         case Types.DELETE_NOTIFICATION: {
             const deleteId = Number(action.payload?.id ?? action.payload);
