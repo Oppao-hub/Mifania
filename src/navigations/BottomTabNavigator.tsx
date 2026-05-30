@@ -40,14 +40,13 @@ const BottomTabNavigator: React.FC = () => {
   const { tabBarHeight, tabBarTotalHeight, tabBarContentInset } = useTabBarLayout();
   const token = useSelector((state: RootState) => state.authentication?.data?.token);
 
-  const protectedTabListener = ({ navigation }: any) => ({
-  tabPress: (e: any) => {
-    if (!token) {
-      e.preventDefault();
-      navigation.navigate('Auth'); 
-    }
-  },
-});
+  const protectedTabListener = () => ({
+    tabPress: (e: { preventDefault: () => void }) => {
+      if (!token) {
+        e.preventDefault();
+      }
+    },
+  });
 
 
   return (

@@ -1,13 +1,12 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { ROUTES } from '../utils';
+import type { MainStackParamList } from '../types/navigation';
 import BottomTab from './BottomTabNavigator';
 
-import Home from '../screens/HomeScreen'; 
-import Cart from '../screens/CartScreen';
-import Wishlist from '../screens/WishlistScreen';
 import Order from '../screens/OrderScreen';
 import OrderManagement from '../screens/OrderManagementScreen';
+import LeaveReview from '../screens/LeaveReviewScreen';
 import ProductDetails from '../screens/ProductDetailsScreen';
 import Profile from '../screens/ProfileScreen';
 import Notification from '../screens/NotificationScreen';
@@ -29,18 +28,18 @@ import SustainabilityStory from '../screens/SustainabilityStoryScreen';
 import CategoryProducts from '../screens/CategoryProductsScreen';
 import Search from '../screens/SearchScreen';
 import ErrorScreen from '../screens/ErrorScreen';
+import AccountSecurity from '../screens/AccountSecurityScreen';
+import ChangePassword from '../screens/ChangePasswordScreen';
 
-const Stack = createNativeStackNavigator();
+const Stack = createNativeStackNavigator<MainStackParamList>();
 
 const MainNavigator: React.FC = () => {
   return (
     <Stack.Navigator initialRouteName="BottomTab" screenOptions={{ headerShown: false }}>
       <Stack.Screen name="BottomTab" component={BottomTab} options={{ headerShown: false }}/>
-      <Stack.Screen name={ROUTES.HOME} component={Home} />
-      <Stack.Screen name={ROUTES.CART} component={Cart} />
-      <Stack.Screen name={ROUTES.WISHLIST} component={Wishlist} />
       <Stack.Screen name={ROUTES.ORDER} component={Order} />
       <Stack.Screen name={ROUTES.ORDER_MANAGEMENT} component={OrderManagement} />
+      <Stack.Screen name={ROUTES.LEAVE_REVIEW} component={LeaveReview} />
       <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetails} />
       <Stack.Screen name={ROUTES.CATEGORY_PRODUCTS} component={CategoryProducts} />
       <Stack.Screen name={ROUTES.SEARCH} component={Search} />
@@ -57,6 +56,8 @@ const MainNavigator: React.FC = () => {
       <Stack.Screen name={ROUTES.ADD_PAYMENT_METHOD} component={AddPaymentMethod} />
       <Stack.Screen name={ROUTES.APP_APPEARANCE} component={AppAppearance} />
       <Stack.Screen name={ROUTES.APPEARANCE_PICKER} component={AppearancePicker} />
+      <Stack.Screen name={ROUTES.ACCOUNT_SECURITY} component={AccountSecurity} />
+      <Stack.Screen name={ROUTES.CHANGE_PASSWORD} component={ChangePassword} />
       <Stack.Screen name={ROUTES.PROMOS_VOUCHERS} component={PromosVouchers} />
       <Stack.Screen name={ROUTES.WALLET} component={Wallet} />
       <Stack.Screen name={ROUTES.REWARDS} component={Rewards} />

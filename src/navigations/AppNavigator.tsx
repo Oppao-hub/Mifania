@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSelector, useDispatch } from 'react-redux';
 import { getAuth, onAuthStateChanged } from '@react-native-firebase/auth';
@@ -8,18 +8,26 @@ import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { RootState } from '../utils/types';
 import IMG from '../utils/image';
-import { View, ActivityIndicator, Image, Text } from 'react-native';
+import { View, Image, Text, ActivityIndicator } from 'react-native';
+import { LOADING_INDICATOR_COLOR } from '../components/LoadingState';
 import * as Types from '../app/actions';
 import { getCustomerRefFromUser } from '../utils/apiResource';
 import { navigationRef } from '../utils/navigation';
 import { ROUTES } from '../utils';
 import { showBlockingInfo } from '../utils/userFeedback';
+import { useAppForegroundSync } from '../hooks/useLiveSync';
+import { LIVE_SYNC_ORDER_POLL_MS } from '../config/realtime';
+import store from '../app/store';
+import { startPushTokenRefreshListener, buildPushRegistrationContext, syncDevicePushToken, initializePushNotifications, resetCachedNotificationPermission } from '../services/pushNotifications';
+import { isJwtUsable } from '../utils/jwtToken';
 
 const Stack = createNativeStackNavigator();
 
 export default function AppNavigator() {
   const dispatch = useDispatch();
   const authData = useSelector((state: RootState) => state.authentication?.data);
+  const sessionValidated = useSelector((state: RootState) => state.authentication?.sessionValidated ?? false);
+  const hasUsableSession = Boolean(authData?.token && isJwtUsable(authData.token) && sessionValidated);
   
   // 💡 1. Pull isError from the customer slice
   const { data: customerData, isLoading: isCustomerLoading, isError: isCustomerError } = useSelector((state: RootState) => state.customer);
@@ -36,31 +44,69 @@ export default function AppNavigator() {
 
   useEffect(() => {
     const customerRef = getCustomerRefFromUser(authData?.user);
-    
-    // 💡 2. Add !isCustomerError to the condition
-    // This acts as a circuit breaker. If the fetch fails once, it won't try again.
-    if (!initializing && authData?.token && customerRef && !customerData && !isCustomerLoading && !isCustomerError) {
+
+    if (!initializing && hasUsableSession && customerRef && !customerData && !isCustomerLoading && !isCustomerError) {
       dispatch({
         type: Types.GET_CUSTOMER,
-        payload: { id: customerRef, token: authData.token },
+        payload: { id: customerRef, token: authData!.token },
       });
       dispatch({
         type: Types.GET_WALLET,
-        payload: { id: customerRef, token: authData.token },
+        payload: { id: customerRef, token: authData!.token },
       });
     }
-  }, [initializing, authData, customerData, isCustomerLoading, isCustomerError, dispatch]); // 💡 3. Add isCustomerError to dependencies
+  }, [initializing, hasUsableSession, authData, customerData, isCustomerLoading, isCustomerError, dispatch]);
 
   useEffect(() => {
-    if (!initializing && authData?.token) {
-      dispatch({
-        type: Types.GET_NOTIFICATIONS,
+    if (!initializing && hasUsableSession && authData?.token) {
+      dispatch({ type: Types.SOCKET_ENSURE_CONNECTED });
+      dispatch({ type: Types.GET_ORDERS, payload: authData.token });
+      dispatch({ type: Types.GET_NOTIFICATIONS });
+      dispatch({ type: Types.GET_WISHLIST });
+
+      const registrationContext = buildPushRegistrationContext(authData.user);
+      resetCachedNotificationPermission();
+      void initializePushNotifications(true).finally(() => {
+        void syncDevicePushToken(authData.token, registrationContext);
       });
-      dispatch({
-        type: Types.GET_WISHLIST,
-      });
+      startPushTokenRefreshListener(
+        () => store.getState().authentication.data?.token,
+        () => buildPushRegistrationContext(store.getState().authentication.data?.user),
+      );
     }
-  }, [initializing, authData?.token, dispatch]);
+  }, [initializing, hasUsableSession, authData?.token, authData?.user?.id, dispatch]);
+
+  const syncOnForeground = useCallback(() => {
+    if (!hasUsableSession || !authData?.token) {
+      return;
+    }
+    dispatch({ type: Types.SOCKET_ENSURE_CONNECTED });
+    dispatch({ type: Types.GET_ORDERS, payload: authData.token });
+    dispatch({ type: Types.GET_NOTIFICATIONS });
+    dispatch({ type: Types.GET_CART });
+    dispatch({ type: Types.GET_PRODUCTS });
+    dispatch({ type: Types.GET_CATEGORIES });
+    dispatch({ type: Types.GET_WISHLIST });
+
+    resetCachedNotificationPermission();
+    void initializePushNotifications(true).finally(() => {
+      void syncDevicePushToken(authData.token, buildPushRegistrationContext(authData.user));
+    });
+  }, [hasUsableSession, authData?.token, authData?.user, dispatch]);
+
+  useAppForegroundSync(syncOnForeground, !initializing && hasUsableSession);
+
+  useEffect(() => {
+    if (initializing || !hasUsableSession || !authData?.token) {
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      dispatch({ type: Types.GET_ORDERS, payload: authData.token });
+    }, LIVE_SYNC_ORDER_POLL_MS);
+
+    return () => clearInterval(timer);
+  }, [initializing, hasUsableSession, authData?.token, dispatch]);
   
   useEffect(() => {
     const unsubscribeForeground = notifee.onForegroundEvent(({ type, detail }) => {
@@ -102,6 +148,19 @@ export default function AppNavigator() {
         return;
       }
 
+      const isSecurityNotification =
+        String(data?.type || '').toLowerCase() === 'security'
+        || sourceText.includes('security')
+        || sourceText.includes('login');
+
+      if (isSecurityNotification && navigationRef.isReady()) {
+        navigationRef.navigate('Main' as never, {
+          screen: 'BottomTab',
+          params: { screen: 'Account' },
+        } as never);
+        return;
+      }
+
       if (body) {
         showBlockingInfo({ title: 'Notification', message: body });
       }
@@ -109,7 +168,9 @@ export default function AppNavigator() {
     return unsubscribeForeground;
   }, []);
 
-  if (initializing) {
+  const isRestoringSession = Boolean(authData?.token && !sessionValidated);
+
+  if (initializing || isRestoringSession) {
     return (
       <View className="flex-1 items-center bg-white justify-center">
         <Image
@@ -118,9 +179,9 @@ export default function AppNavigator() {
           resizeMode="contain"
         />
         <Text className="text-4xl font-montserrat-bold text-brand mt-4">Mifania</Text>
-        <ActivityIndicator 
-          size="large" 
-          color="#52622E" 
+        <ActivityIndicator
+          size="large"
+          color={LOADING_INDICATOR_COLOR}
           className="mt-10"
           style={{ transform: [{ scale: 2 }] }}
         />
@@ -130,7 +191,7 @@ export default function AppNavigator() {
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      {authData && authData.token ? (
+      {hasUsableSession ? (
         <Stack.Screen name="Main" component={MainNavigator} />
       ) : (
         <Stack.Screen name="Auth" component={AuthNavigator} />
