@@ -14,7 +14,7 @@ export type PaymentOption = {
     name: string;
     logo?: string;
     description?: string;
-    backendMethod: 'Paypal' | 'Credit Card' | 'Cash' | 'Bank Transfer';
+    backendMethod: 'Paypal' | 'Credit Card' | 'Cash' | 'Bank Transfer' | 'Wallet';
     gatewayType: 'paypal' | 'direct';
 };
 
@@ -71,9 +71,16 @@ const DEFAULT_DELIVERY_OPTIONS: DeliveryOption[] = [
 ];
 
 /** Bump when defaults change so stale in-memory cache is discarded. */
-const CHECKOUT_OPTIONS_CACHE_VERSION = 2;
+const CHECKOUT_OPTIONS_CACHE_VERSION = 4;
 
 const DEFAULT_PAYMENT_OPTIONS: PaymentOption[] = [
+    {
+        id: 'wallet',
+        name: 'Mifania Wallet',
+        backendMethod: 'Wallet',
+        gatewayType: 'direct',
+        description: 'Pay instantly from your wallet balance',
+    },
     {
         id: 'cash',
         name: 'Cash',
@@ -195,10 +202,32 @@ const mapDeliveryOption = (item: any, index: number): DeliveryOption => {
 
 const inferBackendMethod = (name: string): PaymentOption['backendMethod'] => {
     const value = name.toLowerCase();
+    if (value.includes('wallet')) return 'Wallet';
     if (value.includes('paypal')) return 'Paypal';
     if (value.includes('cash')) return 'Cash';
     if (value.includes('bank')) return 'Bank Transfer';
     return 'Credit Card';
+};
+
+/** Keep full checkout methods; API responses may only list gateways used in past orders. */
+const mergePaymentOptions = (fromApi: PaymentOption[]): PaymentOption[] => {
+    const merged = new Map<PaymentOption['backendMethod'], PaymentOption>();
+    for (const option of DEFAULT_PAYMENT_OPTIONS) {
+        merged.set(option.backendMethod, option);
+    }
+    for (const option of fromApi) {
+        merged.set(option.backendMethod, option);
+    }
+    return DEFAULT_PAYMENT_OPTIONS.map(
+        (defaultOption) => merged.get(defaultOption.backendMethod) ?? defaultOption,
+    ).concat(
+        fromApi.filter(
+            (option) =>
+                !DEFAULT_PAYMENT_OPTIONS.some(
+                    (defaultOption) => defaultOption.backendMethod === option.backendMethod,
+                ),
+        ),
+    );
 };
 
 const mapPaymentOption = (item: any, index: number): PaymentOption => {
@@ -277,7 +306,7 @@ export const fetchPaymentOptions = async (token: string, options?: { refresh?: b
     const found = await tryCollectionEndpoints(PAYMENT_ENDPOINT_CANDIDATES, token, cache.paymentEndpoint);
     if (found) {
         cache.paymentEndpoint = found.endpoint;
-        cache.paymentOptions = found.items.map(mapPaymentOption);
+        cache.paymentOptions = mergePaymentOptions(found.items.map(mapPaymentOption));
         return cache.paymentOptions;
     }
 
@@ -287,14 +316,14 @@ export const fetchPaymentOptions = async (token: string, options?: { refresh?: b
         const first = normalizeCollection(maybeOrder)[0];
         if (first?.paymentMethod) {
             const method = String(first.paymentMethod);
-            cache.paymentOptions = [
+            cache.paymentOptions = mergePaymentOptions([
                 {
                     id: method.toLowerCase().replace(/\s+/g, '-'),
                     name: method,
                     backendMethod: inferBackendMethod(method),
                     gatewayType: method.toLowerCase().includes('paypal') ? 'paypal' : 'direct',
                 },
-            ];
+            ]);
             return cache.paymentOptions;
         }
     } catch {

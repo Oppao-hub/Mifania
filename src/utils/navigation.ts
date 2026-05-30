@@ -38,6 +38,16 @@ export function goToHomeTab(navigation: NavigationLike) {
   );
 }
 
+/** Open Cart tab from nested stack screens. */
+export function goToCartTab(navigation: NavigationLike) {
+  navigation.dispatch(
+    CommonActions.reset({
+      index: 0,
+      routes: [{ name: 'BottomTab', state: bottomTabState(1) }],
+    }),
+  );
+}
+
 export function navigate(name: string, params?: any) {
   if (navigationRef.isReady()) {
     (navigationRef.navigate as any)(name, params);

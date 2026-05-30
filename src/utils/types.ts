@@ -169,6 +169,15 @@ export interface OrderItem extends HydraResource {
   product?: string | Product; // ManyToOne
 }
 
+export interface ProductReview extends HydraResource {
+  rating: number;
+  comment?: string;
+  reviewerName?: string;
+  createdAt?: string;
+  orderId?: number;
+  productId?: number;
+}
+
 export interface CustomerAddress extends HydraResource {
   label: string;
   recipientFirstName?: string;
@@ -326,6 +335,8 @@ export interface AuthState {
   } | null;
   isError: boolean;
   error: string | null;
+  /** True after login or a persisted session passes validation. */
+  sessionValidated: boolean;
 }
 
 export interface ProductState {
@@ -357,6 +368,8 @@ export interface CartState {
 
 export interface WishlistState {
   items: Product[];
+  isLoading: boolean;
+  error: string | null;
 }
 
 export interface WalletSliceState {
@@ -397,6 +410,9 @@ export interface RootState {
     isError: boolean;
     error: string | null;
     cancelError: string | null;
+    deleteError: string | null;
+    isReordering: boolean;
+    reorderError: string | null;
     lastCreatedOrder: Order | null;
   };
   notification: {

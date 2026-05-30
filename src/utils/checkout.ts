@@ -56,10 +56,14 @@ export const buildOrderPayload = (
     totalAmount: string,
     pointsRedeemed: number = 0,
     shipping?: { method: string; fee: string },
+    customerAddressIri?: string,
 ) => ({
     totalAmount: String(totalAmount),
     paymentMethod,
-    paymentStatus: paymentMethod === PaymentMethods.PAYPAL ? 'Paid' : 'Pending',
+    paymentStatus:
+        paymentMethod === PaymentMethods.PAYPAL || paymentMethod === PaymentMethods.WALLET
+            ? 'Paid'
+            : 'Pending',
     orderStatus: 'Pending',
     pointsRedeemed: Math.max(0, Math.floor(pointsRedeemed)),
     ...(shipping
@@ -68,6 +72,7 @@ export const buildOrderPayload = (
               shippingFee: shipping.fee,
           }
         : {}),
+    ...(customerAddressIri ? { customerAddress: customerAddressIri } : {}),
     orderItems: selectedItems.map((item) => {
         const rawPrice = item.price || '0';
         const price = Number.isNaN(parseFloat(rawPrice))
