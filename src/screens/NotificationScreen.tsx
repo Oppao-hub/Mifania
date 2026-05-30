@@ -1,64 +1,124 @@
-// src/screens/NotificationScreen.tsx
 import React, { useState, useMemo, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  SectionList, 
-  StatusBar,
-  Alert
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  SectionList,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { useNavigation } from '@react-navigation/native';
+import { useScreenLiveSync } from '../hooks/useLiveSync';
+import { LIVE_SYNC_POLL_MS } from '../config/realtime';
 import { RootState, Notification } from '../utils/types';
 import * as Types from '../app/actions';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ROUTES } from '../utils';
-
-// 💡 Import the new component
+import Header from '../components/Header';
 import NotificationItem from '../components/NotificationItem';
+import EmptyState from '../components/EmptyState';
+import ErrorState from '../components/ErrorState';
+import LoadingState from '../components/LoadingState';
+import ConfirmationBottomSheet from '../components/ConfirmationBottomSheet';
+import ActionOptionsSheet from '../components/ActionOptionsSheet';
+import {
+  filterNotificationsByTab,
+  NotificationTab,
+} from '../utils/notificationPresentation';
+import { shouldShowFetchError } from '../utils/fetchError';
 
-const SectionHeader = ({ section: { title, data } }: any) => {
+const SectionHeader = ({ section: { title, data } }: { section: { title: string; data: Notification[] } }) => {
   if (data.length === 0) return null;
+
   return (
-      <View className="flex-row items-center px-6 mt-4 mb-6 bg-white">
-        <Text className="text-xs font-bold text-gray-400 uppercase tracking-widest mr-4">
-            {title}
-        </Text>
-        <View className="flex-1 h-[0.5px] bg-gray-100" />
-      </View>
+    <View className="flex-row items-center px-6 mt-5 mb-2">
+      <Text className="text-sm font-montserrat text-gray mr-3">{title}</Text>
+      <View className="flex-1 h-px bg-border-color" />
+    </View>
   );
 };
 
 const NotificationScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const dispatch = useDispatch();
-  const { items: notifications } = useSelector((state: RootState) => state.notification);
+  const {
+    items: notifications,
+    isLoading,
+    error: notificationsError,
+  } = useSelector((state: RootState) => state.notification);
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const token = authData?.token;
-  
+
+  const [activeTab, setActiveTab] = useState<NotificationTab>('General');
   const [refreshing, setRefreshing] = useState(false);
+  const [notificationToDelete, setNotificationToDelete] = useState<Notification | null>(null);
+  const [showClearAllSheet, setShowClearAllSheet] = useState(false);
+  const [showSettingsSheet, setShowSettingsSheet] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-        if (token) {
-            dispatch({ type: Types.GET_NOTIFICATIONS });
-        }
-    }, [token, dispatch])
-  );
-
-  const onRefresh = useCallback(() => {
+  const reloadNotifications = useCallback(() => {
     if (token) {
-      setRefreshing(true);
       dispatch({ type: Types.GET_NOTIFICATIONS });
-      setTimeout(() => setRefreshing(false), 800);
     }
   }, [token, dispatch]);
 
+  useScreenLiveSync(reloadNotifications, LIVE_SYNC_POLL_MS, Boolean(token));
+
+  const onRefresh = useCallback(() => {
+    if (!token) return;
+    setRefreshing(true);
+    dispatch({ type: Types.GET_NOTIFICATIONS });
+    setTimeout(() => setRefreshing(false), 800);
+  }, [token, dispatch]);
+
+  const showFetchError = shouldShowFetchError({
+    isLoading: isLoading && (notifications?.length ?? 0) === 0,
+    error: notificationsError,
+    hasData: (notifications?.length ?? 0) > 0,
+  });
+
+  const filteredNotifications = useMemo(
+    () => filterNotificationsByTab(notifications || [], activeTab),
+    [notifications, activeTab],
+  );
+
+  const sections = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const todayData: Notification[] = [];
+    const yesterdayData: Notification[] = [];
+    const olderData: Notification[] = [];
+
+    const sorted = [...filteredNotifications].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+
+    sorted.forEach((notification) => {
+      const date = new Date(notification.createdAt);
+      date.setHours(0, 0, 0, 0);
+
+      if (date.getTime() === today.getTime()) {
+        todayData.push(notification);
+      } else if (date.getTime() === yesterday.getTime()) {
+        yesterdayData.push(notification);
+      } else {
+        olderData.push(notification);
+      }
+    });
+
+    const result: { title: string; data: Notification[] }[] = [];
+    if (todayData.length > 0) result.push({ title: 'Today', data: todayData });
+    if (yesterdayData.length > 0) result.push({ title: 'Yesterday', data: yesterdayData });
+    if (olderData.length > 0) result.push({ title: 'Earlier', data: olderData });
+
+    return result;
+  }, [filteredNotifications]);
+
   const getOrderReference = (item: Notification): { orderId?: number; orderIri?: string } => {
-    const payloadOrderId = Number((item as any).orderId);
+    const payloadOrderId = Number((item as Notification & { orderId?: number }).orderId);
     if (!Number.isNaN(payloadOrderId) && payloadOrderId > 0) {
       return {
         orderId: payloadOrderId,
@@ -67,7 +127,6 @@ const NotificationScreen = () => {
     }
 
     const sourceText = `${item.targetUrl || ''} ${item.message || ''} ${item.body || ''}`;
-
     const orderIriMatch = sourceText.match(/(\/api\/orders\/\d+)/i);
     if (orderIriMatch?.[1]) {
       const iri = orderIriMatch[1];
@@ -104,40 +163,6 @@ const NotificationScreen = () => {
     );
   };
 
-  const sections = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const todayData: Notification[] = [];
-    const yesterdayData: Notification[] = [];
-    const olderData: Notification[] = [];
-
-    const safeNotifications = notifications || [];
-
-    safeNotifications.forEach(n => {
-        const date = new Date(n.createdAt);
-        date.setHours(0, 0, 0, 0);
-
-        if (date.getTime() === today.getTime()) {
-            todayData.push(n);
-        } else if (date.getTime() === yesterday.getTime()) {
-            yesterdayData.push(n);
-        } else {
-            olderData.push(n);
-        }
-    });
-
-    const result = [];
-    if (todayData.length > 0) result.push({ title: 'Today', data: todayData });
-    if (yesterdayData.length > 0) result.push({ title: 'Yesterday', data: yesterdayData });
-    if (olderData.length > 0) result.push({ title: 'Older', data: olderData });
-
-    return result;
-  }, [notifications]);
-
-  
   const handleNotificationPress = (item: Notification) => {
     if (item.id != null) {
       dispatch({
@@ -148,7 +173,7 @@ const NotificationScreen = () => {
         },
       });
     }
-    
+
     try {
       const url = String(item.targetUrl || '').toLowerCase();
       const isOrderNotification = isOrderRelatedNotification(item);
@@ -169,107 +194,198 @@ const NotificationScreen = () => {
         return;
       }
 
-      // 💡 Nested Navigation Logic
-      // We navigate to 'BottomTab' (the navigator name)
-      // and pass the 'screen' param (the specific tab name)
-      if (url.includes('/account')) {
+      if (url.includes('/account') || String(item.type || '').toLowerCase() === 'security') {
         navigation.navigate('BottomTab' as any, {
           screen: 'Account',
         });
-      }
-      else if (url.includes('/cart')) {
+      } else if (url.includes('/cart')) {
         navigation.navigate('BottomTab' as any, {
           screen: 'Cart',
         });
-      }
-      else if (item.targetUrl) {
-        // If the URL is just a simple screen name defined in MainNavigator
+      } else if (item.targetUrl) {
         navigation.navigate(item.targetUrl as any);
       }
-    } catch (e) {
-      console.error("Navigation error:", e);
+    } catch (error) {
+      console.error('Navigation error:', error);
     }
   };
 
   const handleMarkAllRead = () => {
-    dispatch({ type: Types.MARK_ALL_NOTIFICATIONS_READ });
+    dispatch({ type: Types.MARK_ALL_NOTIFICATIONS_READ, payload: { token } });
+  };
+
+  const handleDeleteNotification = (item: Notification) => {
+    setNotificationToDelete(item);
+  };
+
+  const handleConfirmDeleteNotification = () => {
+    const id = Number(notificationToDelete?.id);
+    if (Number.isNaN(id)) {
+      setNotificationToDelete(null);
+      return;
+    }
+
+    dispatch({
+      type: Types.DELETE_NOTIFICATION,
+      payload: { id, token },
+    });
+    setNotificationToDelete(null);
   };
 
   const handleClearAll = () => {
-    Alert.alert(
-        "Clear Notifications",
-        "Are you sure you want to delete all notifications?",
-        [
-            { text: "Cancel", style: "cancel" },
-            { 
-                text: "Delete", 
-                style: "destructive", 
-                onPress: () =>
-                  dispatch({
-                    type: Types.CLEAR_NOTIFICATIONS,
-                    payload: { token },
-                  }),
-            }
-        ]
-    );
+    setShowClearAllSheet(true);
   };
 
-  const hasUnread = (notifications || []).some(n => !n.isRead);
+  const handleConfirmClearAll = () => {
+    dispatch({
+      type: Types.CLEAR_NOTIFICATIONS,
+      payload: { token },
+    });
+    setShowClearAllSheet(false);
+  };
+
+  const hasUnread = (notifications || []).some((item) => !item.isRead);
+
+  const settingsOptions = [
+    ...(hasUnread
+      ? [
+          {
+            key: 'mark-read',
+            label: 'Mark all as read',
+            icon: 'checkmark-done-outline',
+            onPress: handleMarkAllRead,
+          },
+        ]
+      : []),
+    {
+      key: 'clear-all',
+      label: 'Clear all notifications',
+      icon: 'trash-outline',
+      tone: 'danger' as const,
+      onPress: handleClearAll,
+    },
+  ];
+
+  const emptyTitle =
+    activeTab === 'Promotions' ? 'No promotions yet' : 'No notifications yet';
+  const emptyDescription =
+    activeTab === 'Promotions'
+      ? "We'll let you know when there are deals, rewards, and special offers for you."
+      : "We'll notify you when something important happens with your account or orders.";
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-      <StatusBar barStyle="dark-content" />
+    <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+      <Header
+        title="Notification"
+        hideNotificationBell
+        rightActions={[
+          {
+            icon: 'settings-outline',
+            onPress: () => setShowSettingsSheet(true),
+          },
+        ]}
+      />
 
-      {/* HEADER */}
-      <View className="flex-row items-center justify-between px-6 py-4 mb-2">
-        <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        >
-          <Icon name="arrow-left" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text className="text-xl font-bold text-gray-900">Notifications</Text>
-        <View className="flex-row">
-            {hasUnread && (
-                <TouchableOpacity 
-                    onPress={handleMarkAllRead}
-                    className="mr-4"
-                    hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
-                >
-                    <Icon name="check-all" size={24} color="#52622E" />
-                </TouchableOpacity>
-            )}
-            <TouchableOpacity 
-                onPress={handleClearAll}
-                hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+      <View className="px-6 mb-2">
+        <View className="flex-row bg-white border border-border-color p-1 rounded-2xl shadow-sm">
+          {(['General', 'Promotions'] as NotificationTab[]).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              className={`flex-1 py-2.5 rounded-xl items-center ${
+                activeTab === tab ? 'bg-brand' : 'bg-transparent'
+              }`}
             >
-                <Icon name="delete-outline" size={24} color="#111827" />
+              <Text
+                className={`font-montserrat-bold text-[13px] ${
+                  activeTab === tab ? 'text-white' : 'text-gray'
+                }`}
+              >
+                {tab}
+              </Text>
             </TouchableOpacity>
+          ))}
         </View>
       </View>
 
-      {/* NOTIFICATIONS LIST */}
+      {showFetchError ? (
+        <ErrorState
+          error={notificationsError}
+          context="notifications"
+          onRetry={reloadNotifications}
+        />
+      ) : isLoading && (notifications?.length ?? 0) === 0 ? (
+        <LoadingState message="Loading notifications..." />
+      ) : (
       <SectionList
         sections={sections}
-        keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
-        renderItem={({ item }) => <NotificationItem item={item} onPress={handleNotificationPress} />}
-        renderSectionHeader={SectionHeader}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        stickySectionHeadersEnabled={false}
-        refreshing={refreshing}
-        onRefresh={onRefresh}
-        ListEmptyComponent={() => (
-            <View className="flex-1 items-center justify-center pt-20 px-10">
-                <View className="w-24 h-24 bg-gray-50 rounded-full items-center justify-center mb-6">
-                    <Icon name="bell-off-outline" size={48} color="#D1D5DB" />
-                </View>
-                <Text className="text-xl font-bold text-gray-900 mb-2 text-center">No notifications yet</Text>
-                <Text className="text-gray-400 text-center leading-5">
-                    We'll notify you when something important happens with your account or orders.
-                </Text>
-            </View>
+        keyExtractor={(item) => item.id?.toString() ?? `${item.createdAt}-${item.title}`}
+        renderItem={({ item }) => (
+          <NotificationItem
+            item={item}
+            onPress={handleNotificationPress}
+            onDelete={handleDeleteNotification}
+          />
         )}
+        renderSectionHeader={({ section }) => <SectionHeader section={section} />}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingBottom: 40,
+          flexGrow: sections.length === 0 ? 1 : undefined,
+        }}
+        stickySectionHeadersEnabled={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#52622E']}
+            tintColor="#52622E"
+          />
+        }
+        ListEmptyComponent={
+          <EmptyState
+            iconName="bell-off-outline"
+            title={emptyTitle}
+            description={emptyDescription}
+          />
+        }
+      />
+      )}
+
+      <ConfirmationBottomSheet
+        visible={notificationToDelete !== null}
+        title="Delete Notification"
+        titleTone="danger"
+        message={
+          notificationToDelete
+            ? `Remove "${notificationToDelete.title}" from your notifications?`
+            : ''
+        }
+        cancelLabel="Cancel"
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onCancel={() => setNotificationToDelete(null)}
+        onConfirm={handleConfirmDeleteNotification}
+      />
+
+      <ActionOptionsSheet
+        visible={showSettingsSheet}
+        title="Notification Settings"
+        options={settingsOptions}
+        onClose={() => setShowSettingsSheet(false)}
+      />
+
+      <ConfirmationBottomSheet
+        visible={showClearAllSheet}
+        title="Clear Notifications"
+        titleTone="danger"
+        message="Are you sure you want to delete all notifications?"
+        cancelLabel="Cancel"
+        confirmLabel="Delete All"
+        confirmVariant="danger"
+        onCancel={() => setShowClearAllSheet(false)}
+        onConfirm={handleConfirmClearAll}
+        isLoading={isLoading}
       />
     </SafeAreaView>
   );

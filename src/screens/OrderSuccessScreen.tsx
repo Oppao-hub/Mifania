@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, StatusBar, Text, TouchableOpacity } from 'react-native';
+import { View, StatusBar, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import ReusableOverlay from '../components/ReusableOverlay';
+import Button from '../components/Button';
 import { goToHomeTab, goToMyOrders } from '../utils/navigation';
 
 const BRAND = '#52622E';
@@ -50,24 +51,20 @@ const OrderSuccessScreen = () => {
             </Text>
           </View>
         )}
-        <TouchableOpacity
-          activeOpacity={0.9}
+        <Button
+          label="View My Order"
           onPress={() => goToMyOrders(navigation)}
-          className="w-full h-14 rounded-full bg-brand items-center justify-center mb-3 mt-2"
-        >
-          <Text className="text-white font-montserrat-bold text-base">
-            View My Order
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.9}
+          size="md"
+          shape="pill"
+          className="mt-2 mb-3"
+        />
+        <Button
+          label="Back to Home"
           onPress={() => goToHomeTab(navigation)}
-          className="w-full h-14 rounded-full bg-brand/10 items-center justify-center"
-        >
-          <Text className="text-brand font-montserrat-bold text-base">
-            Back to Home
-          </Text>
-        </TouchableOpacity>
+          variant="soft"
+          size="md"
+          shape="pill"
+        />
       </ReusableOverlay>
     </SafeAreaView>
   );
