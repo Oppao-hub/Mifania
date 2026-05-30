@@ -1,5 +1,5 @@
 import { LoginCredentials, RegisterCredentials, LoginResponse, RegisterResponse } from '../../utils/types';
-import { postRequest, patchRequest } from './client';
+import { deleteRequest, isApiRequestError, patchRequest, postRequest } from './client';
 
 export const userLoginApi = async (credentials: LoginCredentials) => {
     const body = {
@@ -24,11 +24,50 @@ export const userRegisterApi = async (credentials: RegisterCredentials) => {
     return await postRequest<RegisterResponse>("/register", body);
 };
 
-export const userUpdateDeviceTokenApi = async (customerIri: string, deviceToken: string, token: string) => {
-    const body = {
-        user: {
-            deviceToken: deviceToken
+type DeviceTokenRegistrationContext = {
+    userId?: number;
+    customerIri?: string | null;
+};
+
+export const registerDeviceTokenApi = async (
+    deviceToken: string,
+    token: string,
+    context: DeviceTokenRegistrationContext = {},
+) => {
+    try {
+        return await postRequest<{ success: boolean }>('/device-token', { deviceToken }, token);
+    } catch (error) {
+        if (!isApiRequestError(error) || error.status !== 404) {
+            throw error;
         }
-    };
-    return await patchRequest<any>(customerIri, body, token);
+
+        if (context.userId) {
+            return await patchRequest<{ success: boolean }>(
+                `/users/${context.userId}`,
+                { deviceToken },
+                token,
+            );
+        }
+
+        if (context.customerIri) {
+            return await patchRequest<{ success: boolean }>(
+                context.customerIri,
+                { user: { deviceToken } },
+                token,
+            );
+        }
+
+        throw error;
+    }
+};
+
+export const clearDeviceTokenApi = async (token: string) => {
+    try {
+        return await deleteRequest<{ success: boolean }>('/device-token', token);
+    } catch (error) {
+        if (isApiRequestError(error) && error.status === 404) {
+            return { success: true };
+        }
+        throw error;
+    }
 };

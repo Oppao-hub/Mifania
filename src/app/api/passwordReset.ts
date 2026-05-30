@@ -18,7 +18,9 @@ export interface ResetPasswordPayload {
 export const requestPasswordResetApi = async (
   payload: RequestPasswordResetPayload,
 ): Promise<PasswordResetActionResponse> => {
-  return postRequest<PasswordResetActionResponse>('/reset-password/request', payload);
+  return postRequest<PasswordResetActionResponse>('/reset-password/request', {
+    email: payload.email.trim().toLowerCase(),
+  });
 };
 
 export const resetPasswordApi = async (

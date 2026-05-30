@@ -26,6 +26,18 @@ export const topUpWalletApi = async (
     return await postRequest<WalletMutationResponse>('/wallet/top-up', payload, token);
 };
 
+export interface PayPalTopUpPrepareResponse {
+    prepareToken: string;
+    amount: string;
+}
+
+export const preparePayPalTopUpApi = async (
+    token: string,
+    payload: { amount: number },
+): Promise<PayPalTopUpPrepareResponse> => {
+    return await postRequest<PayPalTopUpPrepareResponse>('/wallet/paypal/prepare', payload, token);
+};
+
 export const transferWalletApi = async (
     token: string,
     payload: { recipientEmail: string; amount: number; note?: string },

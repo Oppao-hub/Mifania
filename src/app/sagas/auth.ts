@@ -1,10 +1,10 @@
-import { takeEvery, call, put, fork } from 'redux-saga/effects';
-import { userLoginApi, userRegisterApi, userGoogleLoginApi, userUpdateDeviceTokenApi } from '../api/auth';
+import { takeEvery, call, put, fork, select } from 'redux-saga/effects';
+import { userLoginApi, userRegisterApi, userGoogleLoginApi } from '../api/auth';
 import * as Type from '../../app/actions';
 import { getAuth, createUserWithEmailAndPassword, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
-import { getApp } from '@react-native-firebase/app';
-import { getMessaging, getToken } from '@react-native-firebase/messaging';
-import { resolveResourceIri, getCustomerRefFromUser } from '../../utils/apiResource';
+import { getCustomerRefFromUser } from '../../utils/apiResource';
+import { clearDevicePushToken, buildPushRegistrationContext, syncDevicePushToken } from '../../services/pushNotifications';
+import { RootState } from '../../utils/types';
 import { mapAuthErrorMessage } from '../../utils/authErrors';
 import { AlertMsg } from '../../components/AlertMsg';
 import { disconnectSocket } from '../../services/socket';
@@ -24,19 +24,14 @@ function assertCustomerAccount(roles: string[]): void {
 }
 
 function* syncDeviceToken(data: { token: string; user: any }): Generator<any, void, any> {
-    const customerRef = getCustomerRefFromUser(data.user);
-    const customerIri = resolveResourceIri(customerRef, 'customers');
+    if (!data.token) {
+        return;
+    }
 
     try {
-        const messagingInstance = getMessaging(getApp());
-        const deviceToken = yield call(getToken, messagingInstance);
-        if (deviceToken && data.token && customerIri) {
-            console.log('📲 FCM Token obtained:', deviceToken);
-            yield call(userUpdateDeviceTokenApi, customerIri, deviceToken, data.token);
-            console.log('✅ Device token synced with backend.');
-        }
+        yield call(syncDevicePushToken, data.token, buildPushRegistrationContext(data.user));
     } catch (pushError) {
-        console.log('⚠️ Push token sync failed:', pushError);
+        console.log('Push token sync failed:', pushError);
     }
 }
 
@@ -68,8 +63,9 @@ function* syncPostLoginSideEffects(
         AlertMsg.customSuccess({ title: 'Welcome Back!', message: 'You have successfully logged in.' });
     }
 
-    yield call(syncCustomerAndWallet, data);
     yield call(syncDeviceToken, data);
+    yield call(syncCustomerAndWallet, data);
+    yield put({ type: Type.GET_NOTIFICATIONS });
 }
 
 function* syncGooglePostLoginSideEffects(
@@ -97,8 +93,9 @@ function* syncGooglePostLoginSideEffects(
         });
     }
 
-    yield call(syncCustomerAndWallet, data);
     yield call(syncDeviceToken, data);
+    yield call(syncCustomerAndWallet, data);
+    yield put({ type: Type.GET_NOTIFICATIONS });
 }
 
 export function* userLoginAsync(action: { type: string; payload: any }): Generator<any, void, any> {
@@ -159,16 +156,24 @@ export function* userRegister(action: { type: string; payload: any }): Generator
 
 export function* userLogout(): Generator<any, void, any> {
     try {
+        const authToken: string | undefined = yield select(
+            (state: RootState) => state.authentication.data?.token,
+        );
+
+        if (authToken) {
+            yield call(clearDevicePushToken, authToken);
+        }
+
         const authInstance = getAuth();
         if (authInstance.currentUser) {
             yield call([authInstance, authInstance.signOut]);
         }
 
         disconnectSocket();
-        console.log('✅ Socket disconnected on logout.');
+        console.log('Socket disconnected on logout.');
 
     } catch (error) {
-        console.log('⚠️ Logout sync failed:', error);
+        console.log('Logout sync failed:', error);
     } finally {
         yield put({ type: Type.USER_LOGIN_RESET });
     }

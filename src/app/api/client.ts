@@ -1,4 +1,4 @@
-import { handleSessionExpired } from '../../utils/authSession';
+import { handleSessionExpired, isSessionLogoutSuppressed, isSessionReadyForAuthenticatedApi, isSilentSessionReset } from '../../utils/authSession';
 import { isPublicAuthRequestUrl, mapAuthErrorMessage } from '../../utils/authErrors';
 
 export class ApiRequestError extends Error {
@@ -88,7 +88,13 @@ const handleResponseError = async (response: Response, requestUrl: string) => {
         }
 
         console.log('❌ Server Error Response: 401 session expired');
-        handleSessionExpired();
+        if (
+            !isSessionLogoutSuppressed()
+            && !isSilentSessionReset()
+            && isSessionReadyForAuthenticatedApi()
+        ) {
+            handleSessionExpired();
+        }
         throw new ApiRequestError(401, 'Your session has expired. Please sign in again.');
     }
 

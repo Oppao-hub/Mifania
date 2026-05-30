@@ -1,11 +1,13 @@
 import * as Types from "../actions";
 import { AuthState, User } from "../../utils/types";
+import { REHYDRATE } from 'redux-persist';
 
 const initialState: AuthState = {
     isLoading: false, 
     data: null, 
     isError: false,
-    error: null
+    error: null,
+    sessionValidated: false,
 };
 
 export function authReducer(state = initialState, action: { type: string; payload?: any }): AuthState {
@@ -21,7 +23,8 @@ export function authReducer(state = initialState, action: { type: string; payloa
                 ...state, 
                 isLoading: false, 
                 data: action.payload, 
-                isError: false 
+                isError: false,
+                sessionValidated: true,
             };
         case Types.USER_LOGIN_ERROR:
             return { 
@@ -37,6 +40,19 @@ export function authReducer(state = initialState, action: { type: string; payloa
                 isError: false,
                 error: null,
             };
+        case Types.USER_REGISTER_COMPLETED:
+            return {
+                ...state,
+                isLoading: false,
+                data: action.payload,
+                isError: false,
+                sessionValidated: true,
+            };
+        case Types.SESSION_RESTORE_VALIDATED:
+            return {
+                ...state,
+                sessionValidated: true,
+            };
         case Types.USER_LOGOUT:
         case Types.USER_LOGIN_RESET:
         case Types.USER_REGISTER_RESET:
@@ -46,27 +62,32 @@ export function authReducer(state = initialState, action: { type: string; payloa
                 isLoading: false, 
                 isError: false,
                 error: null,
+                sessionValidated: false,
             };
         case Types.USER_REGISTER_REQUEST:
             return {
                 ...state,
                 isLoading: true,
                 isError: false,
-            }
-        case Types.USER_REGISTER_COMPLETED:
-            return {
-                ...state,
-                isLoading: false,
-                data: action.payload,
-                isError: false,
-            }
+            };
         case Types.USER_REGISTER_ERROR:
             return {
                 ...state,
                 isLoading: false,
                 isError: true,
                 error: action.payload,
+            };
+        case REHYDRATE: {
+            const incoming = action.payload?.authentication as AuthState | undefined;
+            if (!incoming) {
+                return state;
             }
+
+            return {
+                ...incoming,
+                sessionValidated: false,
+            };
+        }
         default:
             return state;
     }
