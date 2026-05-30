@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { 
     View, 
     Text, 
@@ -10,18 +10,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import PasswordVisibilityToggle from '../../components/PasswordVisibilityToggle';
+import { useNavigation, NavigationProp, useIsFocused, useFocusEffect } from '@react-navigation/native';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 // Redux Imports
 import { useDispatch, useSelector } from 'react-redux';
-import { userRegister, registerReset, userGoogleLogin } from '../../app/reducers/auth';
-import { IMG, ROUTES } from '../../utils';
+import { userRegister, loginUiReset, userGoogleLogin } from '../../app/reducers/auth';
+import { IMG, ROUTES, isValidEmail, validatePasswordStrength } from '../../utils';
 import { RootState } from '../../utils/types';
 import CustomModal from '../../components/CustomModal';
-import { AlertMsg } from '../../components/AlertMsg';
 import FormInput from '../../components/FormInput';
 import Button from '../../components/Button';
+import FormFieldError from '../../components/FormFieldError';
+import { showBlockingError, showBlockingSuccess } from '../../utils/userFeedback';
+import { mapAuthErrorMessage } from '../../utils/authErrors';
 
 const RegisterScreen = () => {
     const [firstName, setFirstName] = useState('');
@@ -30,41 +33,66 @@ const RegisterScreen = () => {
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
     const [agreeTerms, setAgreeTerms] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
     
     const navigation = useNavigation<NavigationProp<any>>();
     const dispatch = useDispatch();
     const { isLoading, isError, error, data } = useSelector((state: RootState) => state.authentication);
+    const isFocused = useIsFocused();
+
+    useFocusEffect(
+        useCallback(() => {
+            dispatch(loginUiReset());
+            setFormError(null);
+
+            return () => {
+                dispatch(loginUiReset());
+            };
+        }, [dispatch]),
+    );
 
     useEffect(() => {
-        dispatch(registerReset());
-    }, [dispatch]);
+        if (!isFocused || !isError || !error) {
+            return;
+        }
+
+        setFormError(mapAuthErrorMessage(error));
+        dispatch(loginUiReset());
+    }, [isFocused, isError, error, dispatch]);
 
     useEffect(() => {
         // Email registration only — Google login sets `token` and AppNavigator switches to Main
         const registerData = data as { token?: string; success?: boolean } | null;
         if (registerData?.success && !registerData.token && !isLoading && !isError) {
-            AlertMsg.customSuccess({ 
-                title: "Registration Successful", 
-                message: "Please check your inbox and verify your email before signing in." 
+            showBlockingSuccess({ 
+                title: 'Registration Successful', 
+                message: 'Please check your inbox and verify your email before signing in.' 
             });
             navigation.navigate(ROUTES.LOGIN);
         }
     }, [data, isLoading, isError, navigation]);
 
     const handleRegister = () => {
+        setFormError(null);
+
         if (!firstName.trim() || !lastName.trim() || !email.trim() || !password.trim()) {
-            AlertMsg.customError({ title: "Input Error", message: "Please fill in all fields." });
+            setFormError('Please fill in all fields.');
             return;
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            AlertMsg.customError({ title: "Input Error", message: "Please enter a valid email address." });
+        if (!isValidEmail(email)) {
+            setFormError('Please enter a valid email address.');
+            return;
+        }
+
+        const passwordError = validatePasswordStrength(password);
+        if (passwordError) {
+            setFormError(passwordError);
             return;
         }
 
         if (!agreeTerms) {
-            AlertMsg.customError({ title: "Input Error", message: "You must agree to the Terms & Conditions." });
+            setFormError('You must agree to the Terms & Conditions.');
             return;
         }
         
@@ -117,8 +145,8 @@ const RegisterScreen = () => {
                 extraInfo = "\n\n(Network Error: Please check your internet connection or verify if your backend server is running and accessible.)";
             }
             
-            AlertMsg.customError({ 
-                title: "Google Sign-In Failed", 
+            showBlockingError({ 
+                title: 'Google Sign-In Failed', 
                 message: `[Code: ${errorCode}] ${errorMessage}${extraInfo}` 
             });
         }
@@ -152,11 +180,16 @@ const RegisterScreen = () => {
                         </View>
 
                         {/* Form Section */}
-                        <View className="space-y-4">
+                        <View className="gap-4">
+                            <FormFieldError message={formError} variant="banner" className="mb-0" />
+
                             {/* First Name Input */}
                             <FormInput
                                 value={firstName}
-                                onChangeText={(text) => { setFirstName(text); if (isError) dispatch(registerReset()); }}
+                                onChangeText={(text) => {
+                                    setFirstName(text);
+                                    setFormError(null);
+                                }}
                                 placeholder="First Name"
                                 iconName="person-outline"
                                 autoCapitalize="words"
@@ -165,7 +198,10 @@ const RegisterScreen = () => {
 
                             <FormInput
                                 value={lastName}
-                                onChangeText={(text) => { setLastName(text); if (isError) dispatch(registerReset()); }}
+                                onChangeText={(text) => {
+                                    setLastName(text);
+                                    setFormError(null);
+                                }}
                                 placeholder="Last Name"
                                 iconName="person-outline"
                                 autoCapitalize="words"
@@ -176,39 +212,38 @@ const RegisterScreen = () => {
                                 value={email}
                                 onChangeText={(text) => {
                                     setEmail(text);
-                                    if (isError) dispatch(registerReset());
+                                    setFormError(null);
                                 }}
                                 placeholder="Email Address"
                                 iconName="mail-outline"
                                 keyboardType="email-address"
                                 autoCapitalize="none"
                                 editable={!isLoading}
-                                inputClassName={isError && error?.toLowerCase().includes('email') ? 'border-red-500' : ''}
                             />
 
                             <FormInput
                                 value={password}
                                 onChangeText={(text) => {
                                     setPassword(text);
-                                    if (isError) dispatch(registerReset());
+                                    setFormError(null);
                                 }}
                                 placeholder="Password"
                                 iconName="lock-closed-outline"
                                 secureTextEntry={!isPasswordVisible}
                                 rightElement={
-                                    <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                                        <Icon 
-                                            name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-                                            size={20} 
-                                            color="#6A7282" 
-                                        />
-                                    </TouchableOpacity>
+                                    <PasswordVisibilityToggle
+                                        visible={isPasswordVisible}
+                                        onToggle={() => setIsPasswordVisible((v) => !v)}
+                                    />
                                 }
                             />
 
                             {/* Terms and Conditions Checkbox */}
                             <View className="flex-row items-center mt-3 ml-1">
-                                <TouchableOpacity onPress={() => setAgreeTerms(!agreeTerms)}>
+                                <TouchableOpacity onPress={() => {
+                                    setAgreeTerms(!agreeTerms);
+                                    setFormError(null);
+                                }}>
                                     <Icon 
                                         name={agreeTerms ? "checkbox" : "square-outline"} 
                                         size={22} 
@@ -220,12 +255,6 @@ const RegisterScreen = () => {
                                 </Text>
                             </View>
 
-                            {/* Error Message */}
-                            {isError && error ? (
-                                <Text className="text-red-500 text-xs font-montserrat-medium ml-1 mt-1">
-                                    {error}
-                                </Text>
-                            ) : null}
                         </View>
 
                         {/* Action Buttons */}

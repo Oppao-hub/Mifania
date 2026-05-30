@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
     View, 
     Text, 
@@ -9,54 +9,79 @@ import {
     ScrollView 
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Icon from 'react-native-vector-icons/Ionicons';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
+import PasswordVisibilityToggle from '../../components/PasswordVisibilityToggle';
+import { useNavigation, useIsFocused, useFocusEffect } from '@react-navigation/native';
+import type { AuthNavigationProp } from '../../types/navigation';
 
 // Redux Imports
 import { useDispatch, useSelector } from 'react-redux';
 import { userLogin, loginUiReset, userGoogleLogin } from '../../app/reducers/auth';
-import { IMG, ROUTES } from '../../utils';
+import { IMG, ROUTES, isValidEmail } from '../../utils';
 import { RootState } from '../../utils/types';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { AlertMsg } from '../../components/AlertMsg';
 import CustomModal from '../../components/CustomModal';
-import FormInput from '../../components/FormInput'
+import FormInput from '../../components/FormInput';
+import FormFieldError from '../../components/FormFieldError';
 import Button from '../../components/Button';
+import { showBlockingError } from '../../utils/userFeedback';
+import { getLoginErrorPresentation } from '../../utils/authErrors';
 
 const LoginScreen = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+    const [formError, setFormError] = useState<string | null>(null);
     
-    const navigation = useNavigation<NavigationProp<any>>();
+    const navigation = useNavigation<AuthNavigationProp>();
     const dispatch = useDispatch();
 
     const { isLoading, isError, error } = useSelector((state: RootState) => state.authentication);
+    const isFocused = useIsFocused();
 
-    // Clear stale "Signing in..." if a previous login was interrupted (e.g. app reload)
-    useEffect(() => {
-        dispatch(loginUiReset());
-    }, [dispatch]);
+    useFocusEffect(
+        useCallback(() => {
+            dispatch(loginUiReset());
+            setFormError(null);
+
+            return () => {
+                dispatch(loginUiReset());
+            };
+        }, [dispatch]),
+    );
 
     useEffect(() => {
-        if (isError && error) {
-            AlertMsg.customError({ title: "Login Failed", message: error });
+        if (!isFocused || !isError || !error) {
+            return;
         }
-    }, [isError, error]);
+
+        const presentation = getLoginErrorPresentation(error);
+
+        if (presentation.style === 'inline') {
+            setFormError(presentation.message);
+        } else {
+            showBlockingError({
+                title: presentation.title,
+                message: presentation.message,
+            });
+        }
+
+        dispatch(loginUiReset());
+    }, [isFocused, isError, error, dispatch]);
 
     const handleLogin = () => {
         if (isLoading) {
             return;
         }
 
+        setFormError(null);
+
         if (!email.trim() || !password.trim()) {
-            AlertMsg.customError({ title: "Input Error", message: "Please enter your credentials." });
+            setFormError('Please enter your email and password.');
             return;
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) {
-            AlertMsg.customError({ title: "Input Error", message: "Please enter a valid email address." });
+        if (!isValidEmail(email)) {
+            setFormError('Please enter a valid email address.');
             return;
         }
         
@@ -101,8 +126,8 @@ const LoginScreen = () => {
             const errorCode = signInError.code || "unknown";
             const errorMessage = signInError.message || "An unknown error occurred.";
             
-            AlertMsg.customError({ 
-                title: "Google Sign-In Failed", 
+            showBlockingError({ 
+                title: 'Google Sign-In Failed', 
                 message: `[Code: ${errorCode}] ${errorMessage}` 
             });
         }
@@ -136,52 +161,63 @@ const LoginScreen = () => {
                         </View>
 
                         {/* Form Section */}
-                        <View className="space-y-4">
+                        <View className="gap-1">
+                            <FormFieldError message={formError} variant="banner" className="mb-2" />
+
                             <FormInput
                                 value={email}
                                 onChangeText={(text) => {
                                     setEmail(text);
-                                    if (isError) dispatch(loginUiReset());
+                                    setFormError(null);
                                 }}
                                 placeholder="Email Address"
-                                iconName="mail-outline" // Icon matches your reference image
-                                keyboardType="email-address" // Ensures the @ symbol is on the keyboard
-                                autoCapitalize="none" // Essential for emails
+                                iconName="mail-outline"
+                                keyboardType="email-address"
+                                autoCapitalize="none"
                                 editable={!isLoading}
-                                inputClassName={isError && error?.toLowerCase().includes('email') ? 'border-red-500' : ''}
                             />
+
+                            <View className="flex-row justify-end gap-4">
+                                {formError?.toLowerCase().includes('verify') ? (
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate(ROUTES.RESEND_VERIFICATION)}
+                                        disabled={isLoading}
+                                    >
+                                        <Text className="text-xs font-bold text-brand tracking-wider">
+                                            Resend verification
+                                        </Text>
+                                    </TouchableOpacity>
+                                ) : null}
+                                <TouchableOpacity
+                                    onPress={() => navigation.navigate(ROUTES.FORGOT_PASSWORD)}
+                                    disabled={isLoading}
+                                >
+                                    <Text className="text-xs font-bold text-brand tracking-wider">
+                                        Forgot Password?
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
 
                             <FormInput
                                 value={password}
                                 onChangeText={(text) => {
                                     setPassword(text);
-                                    if (isError) dispatch(loginUiReset());
+                                    setFormError(null);
                                 }}
                                 placeholder="Password"
                                 iconName="lock-closed-outline" // Icon matches your reference image
                                 secureTextEntry={!isPasswordVisible}
                                 rightElement={
-                                    <TouchableOpacity onPress={() => setIsPasswordVisible(!isPasswordVisible)}>
-                                        <Icon 
-                                            name={isPasswordVisible ? "eye-off-outline" : "eye-outline"} 
-                                            size={20} 
-                                            color="#6A7282" 
-                                        />
-                                    </TouchableOpacity>
+                                    <PasswordVisibilityToggle
+                                        visible={isPasswordVisible}
+                                        onToggle={() => setIsPasswordVisible((v) => !v)}
+                                    />
                                 }
                             />
-
-                            {/* Forgot Password */}
-                            <TouchableOpacity 
-                                onPress={() => AlertMsg.customInfo({ title: "Reset Password", message: "Coming soon!" })}
-                                className="items-end mt-3"
-                            >
-                                <Text className="text-xs font-bold text-brand tracking-wider">Forgot Password?</Text>
-                            </TouchableOpacity>
                         </View>
 
                         {/* Action Buttons */}
-                        <View className="mt-10">
+                        <View className="mt-5">
                             <Button
                                 label="Sign In"
                                 onPress={handleLogin}
