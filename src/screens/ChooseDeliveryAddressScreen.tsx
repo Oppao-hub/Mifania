@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import LoadingState from '../components/LoadingState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -141,12 +142,10 @@ const ChooseDeliveryAddressScreen = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-            <Header title="Choose Delivery Address" />
+            <Header title="Choose Delivery Address" hideNotificationBell />
 
             {isLoading && ADDRESS_OPTIONS.length === 0 ? (
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#52622E" />
-                </View>
+                <LoadingState message="Loading addresses..." />
             ) : (
                 <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
                     {ADDRESS_OPTIONS.length === 0 ? (

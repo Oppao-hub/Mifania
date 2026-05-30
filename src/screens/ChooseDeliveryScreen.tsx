@@ -1,20 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, ScrollView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ROUTES } from '../utils';
 import Header from '../components/Header';
-import { mergeSurfaceCardStyle, SURFACE_CARD_CLASS } from '../utils/cardStyles';
+import SelectableOptionCard from '../components/SelectableOptionCard';
 import { useSelector } from 'react-redux';
 import { RootState } from '../utils/types';
 import Button from '../components/Button';
 import StickyBottomBar from '../components/StickyBottomBar';
 import EmptyState from '../components/EmptyState';
+import LoadingState from '../components/LoadingState';
 import { DeliveryOption, fetchDeliveryOptions } from '../utils/checkoutOptions';
 import { useFocusEffect } from '@react-navigation/native';
-
-const BRAND = '#52622E';
 
 const deliveryIconName = (option: DeliveryOption): string => {
     const key = `${option.id} ${option.name}`.toLowerCase();
@@ -101,10 +100,8 @@ const ChooseDeliveryScreen = () => {
     if (isLoading) {
         return (
             <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-                <Header title="Choose Delivery Options" />
-                <View className="flex-1 items-center justify-center">
-                    <Text className="text-sm font-montserrat text-gray">Loading delivery options...</Text>
-                </View>
+                <Header title="Choose Delivery Options" hideNotificationBell />
+                <LoadingState message="Loading delivery options..." />
             </SafeAreaView>
         );
     }
@@ -112,7 +109,7 @@ const ChooseDeliveryScreen = () => {
     if (loadError) {
         return (
             <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-                <Header title="Choose Delivery Options" />
+                <Header title="Choose Delivery Options" hideNotificationBell />
                 <EmptyState
                     iconName="cloud-off-outline"
                     title="Could not load delivery options"
@@ -127,7 +124,7 @@ const ChooseDeliveryScreen = () => {
     if (deliveryOptions.length === 0) {
         return (
             <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-                <Header title="Choose Delivery Options" />
+                <Header title="Choose Delivery Options" hideNotificationBell />
                 <View className="flex-1 items-center justify-center px-6">
                     <Text className="text-sm font-montserrat text-gray text-center">
                         No delivery options available right now.
@@ -139,42 +136,31 @@ const ChooseDeliveryScreen = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-            <Header title="Choose Delivery Options" />
+            <Header title="Choose Delivery Options" hideNotificationBell />
 
             <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
                 {deliveryOptions.map((item) => {
                     const selected = item.id === selectedDeliveryId;
                     return (
-                        <TouchableOpacity
+                        <SelectableOptionCard
                             key={item.id}
-                            activeOpacity={0.85}
+                            selected={selected}
                             onPress={() => setSelectedDeliveryId(item.id)}
-                            style={mergeSurfaceCardStyle()}
-                            className={`px-4 py-4 mb-4 flex-row items-center ${SURFACE_CARD_CLASS} ${
-                                selected ? 'border-2 border-brand' : ''
-                            }`}
-                        >
-                            <View className="w-14 h-14 rounded-full bg-white border border-border-color items-center justify-center mr-4 overflow-hidden">
-                                {item.logo ? (
-                                    <Image source={{ uri: item.logo }} className="w-11 h-11" resizeMode="contain" />
-                                ) : (
-                                    <Icon name={deliveryIconName(item)} size={24} color="#6B7280" />
-                                )}
-                            </View>
-                            <View className="flex-1">
-                                <Text className="text-[17px] font-montserrat-bold text-dark-gray" numberOfLines={2}>
-                                    {item.name}
-                                </Text>
-                                <Text className="text-[13px] font-montserrat text-gray mt-1">{item.estimate}</Text>
-                                {item.description ? (
-                                    <Text className="text-xs font-montserrat text-gray mt-1" numberOfLines={2}>
-                                        {item.description}
-                                    </Text>
-                                ) : null}
-                                <Text className="text-[18px] font-montserrat-bold text-brand mt-1">{item.fee}</Text>
-                            </View>
-                            {selected ? <Icon name="checkmark" size={24} color={BRAND} /> : null}
-                        </TouchableOpacity>
+                            left={
+                                <View className="w-14 h-14 rounded-full bg-white border border-border-color items-center justify-center overflow-hidden">
+                                    {item.logo ? (
+                                        <Image source={{ uri: item.logo }} className="w-11 h-11" resizeMode="contain" />
+                                    ) : (
+                                        <Icon name={deliveryIconName(item)} size={24} color="#6B7280" />
+                                    )}
+                                </View>
+                            }
+                            title={item.name}
+                            description={[item.estimate, item.description].filter(Boolean).join(' · ')}
+                            trailing={
+                                <Text className="text-[18px] font-montserrat-bold text-brand">{item.fee}</Text>
+                            }
+                        />
                     );
                 })}
             </ScrollView>

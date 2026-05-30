@@ -5,12 +5,13 @@ import {
   TouchableOpacity,
   ScrollView,
   TextInput,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector } from 'react-redux';
+import Header from '../components/Header';
+import LoadingState from '../components/LoadingState';
 import Button from '../components/Button';
 import StickyBottomBar from '../components/StickyBottomBar';
 import SurfaceCard from '../components/SurfaceCard';
@@ -121,15 +122,15 @@ const AddPaymentMethodScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-      <View className="flex-row items-center justify-between px-6 py-4">
-        <TouchableOpacity onPress={() => navigation.goBack()} className="w-10">
-          <Icon name="close" size={26} color="#4B5563" />
-        </TouchableOpacity>
-        <Text className="text-xl font-montserrat-bold text-dark-gray">Add New Payment</Text>
-        <TouchableOpacity className="w-10 items-end" onPress={() => showBlockingInfo({ title: 'Scan card', message: 'Card scanning is coming soon.' })}>
-          <Icon name="scan-outline" size={24} color="#4B5563" />
-        </TouchableOpacity>
-      </View>
+      <Header
+        title="Add New Payment"
+        leftVariant="close"
+        hideNotificationBell
+        rightIcon="scan-outline"
+        onRightPress={() =>
+          showBlockingInfo({ title: 'Scan card', message: 'Card scanning is coming soon.' })
+        }
+      />
 
       <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text className="text-xs font-montserrat-bold text-gray mb-2 ml-1">Connect digital wallet</Text>
@@ -143,7 +144,12 @@ const AddPaymentMethodScreen = () => {
             >
               <SurfaceCard className="py-3 items-center">
                 {connectingWallet === wallet.providerType ? (
-                  <ActivityIndicator size="small" color={wallet.color} />
+                  <LoadingState
+                    size="small"
+                    fill={false}
+                    card={false}
+                    message="Connecting wallet..."
+                  />
                 ) : (
                   <>
                     <Icon name={wallet.icon} size={24} color={wallet.color} />

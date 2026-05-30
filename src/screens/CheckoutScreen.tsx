@@ -6,8 +6,8 @@ import {
     ScrollView,
     Image,
     Linking,
-    ActivityIndicator,
 } from 'react-native';
+import LoadingState from '../components/LoadingState';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -28,11 +28,13 @@ import { PaymentMethods, PaymentMethodType } from '../constants/Payment';
 import { ASSET_URL } from '../app/api/client';
 import { getLoyaltyPolicyApi } from '../app/api/reward';
 import * as Types from '../app/actions';
+import Header from '../components/Header';
 import AlertMsg from '../components/AlertMsg/AlertMsg';
 import Button from '../components/Button';
 import StickyBottomBar from '../components/StickyBottomBar';
 import { mergeSurfaceCardStyle, SURFACE_CARD_CLASS } from '../utils/cardStyles';
 import { hasDeliverableAddress } from '../utils/address';
+import { showBlockingInfo } from '../utils/userFeedback';
 
 const BRAND = '#52622E';
 type OrderFlowStatus = 'processing' | 'success';
@@ -241,7 +243,9 @@ const CheckoutScreen = () => {
         return fullName || 'Customer';
     }, [customerData]);
 
-    const availablePoints = useSelector((state: RootState) => state.wallet.wallet?.rewardPoints ?? 0);
+    const walletState = useSelector((state: RootState) => state.wallet.wallet);
+    const availablePoints = walletState?.rewardPoints ?? 0;
+    const walletBalance = parseCurrencyAmount(walletState?.balance ?? '0');
 
     const activePromoDiscount =
         pricingSnapshot?.promoDiscount ??
@@ -249,11 +253,24 @@ const CheckoutScreen = () => {
     const activeFinalTotal = pricingSnapshot?.finalTotal ?? Number(displayTotals.totalFormatted) - activePromoDiscount;
     const activeFinalTotalFormatted = activeFinalTotal.toFixed(2);
 
+    const paymentMethodSummary = useMemo(() => {
+        if (paymentMethod === PaymentMethods.WALLET) {
+            return `${selectedPaymentLabel}\nBalance: ₱${walletBalance.toFixed(2)} · Pay: ₱${activeFinalTotalFormatted}`;
+        }
+        return selectedPaymentLabel;
+    }, [paymentMethod, selectedPaymentLabel, walletBalance, activeFinalTotalFormatted]);
+
     useEffect(() => {
         if (token) {
             dispatch({ type: Types.GET_ADDRESSES });
         }
     }, [token, dispatch]);
+
+    useEffect(() => {
+        if (token && customerRef) {
+            dispatch({ type: Types.GET_WALLET, payload: { id: customerRef, token } });
+        }
+    }, [token, customerRef, dispatch]);
 
     useEffect(() => {
         if (!customerFromSlice && customerRef && token) {
@@ -354,8 +371,11 @@ const CheckoutScreen = () => {
             0;
         setPointsEarned(points);
         setPointsUsed((lastCreatedOrder as { pointsRedeemed?: number })?.pointsRedeemed ?? selectedRedeemPoints);
+        if (paymentMethod === PaymentMethods.WALLET && token && customerRef) {
+            dispatch({ type: Types.GET_WALLET, payload: { id: customerRef, token } });
+        }
         setFlowStatus('success');
-    }, [isOrdering, isOrderError, orderError, lastCreatedOrder]);
+    }, [isOrdering, isOrderError, orderError, lastCreatedOrder, paymentMethod, token, customerRef, dispatch, selectedRedeemPoints]);
 
     const resetCheckoutFlow = () => {
         setFlowStatus('idle');
@@ -428,6 +448,14 @@ const CheckoutScreen = () => {
             return;
         }
 
+        if (paymentMethod === PaymentMethods.WALLET && walletBalance < activeFinalTotal) {
+            AlertMsg.customInfo({
+                title: 'Insufficient Wallet Balance',
+                message: `You need ₱${activeFinalTotalFormatted} but your wallet has ₱${walletBalance.toFixed(2)}. Top up in My Wallet or choose another payment method.`,
+            });
+            return;
+        }
+
         const needsPaypalGateway =
             selectedPaymentGatewayType === 'paypal' || paymentMethod === PaymentMethods.PAYPAL;
         if (needsPaypalGateway && paypalPreparedAmount !== activeFinalTotalFormatted) {
@@ -490,23 +518,20 @@ const CheckoutScreen = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-4 py-3">
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    className="w-10 h-10 items-center justify-center"
-                >
-                    <Icon name="arrow-back" size={24} color="#111827" />
-                </TouchableOpacity>
-                <Text className="text-[18px] font-montserrat-bold text-dark-gray">Checkout</Text>
-                <TouchableOpacity
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    className="w-10 h-10 items-center justify-center"
-                >
-                    <Icon name="ellipsis-vertical" size={22} color="#111827" />
-                </TouchableOpacity>
-            </View>
+            <Header
+                title="Checkout"
+                hideNotificationBell
+                rightActions={[
+                    {
+                        icon: 'ellipsis-vertical',
+                        onPress: () =>
+                            showBlockingInfo({
+                                title: 'Checkout Options',
+                                message: 'More checkout actions will be available soon.',
+                            }),
+                    },
+                ]}
+            />
 
             <ScrollView
                 className="flex-1 px-4"
@@ -572,10 +597,11 @@ const CheckoutScreen = () => {
                 <SectionCard
                     icon="card-outline"
                     label="Payment Methods"
-                    value={selectedPaymentLabel}
+                    value={paymentMethodSummary}
                     onPress={() =>
                         navigation.navigate(ROUTES.CHOOSE_PAYMENT_METHOD, {
                             selectedPaymentId,
+                            checkoutTotal: activeFinalTotal,
                             sourceCheckoutRouteKey: route.key,
                         })
                     }
@@ -700,12 +726,12 @@ const CheckoutScreen = () => {
                 contentClassName="bg-white rounded-3xl w-full max-w-sm px-6 py-8 items-center"
             >
                 {flowStatus === 'processing' ? (
-                    <>
-                        <ActivityIndicator size="large" color={BRAND} className="mb-5" />
-                        <Text className="text-lg font-montserrat-bold text-dark-gray text-center">
-                            Processing Payments...
-                        </Text>
-                    </>
+                    <LoadingState
+                        fill={false}
+                        card={false}
+                        message="Processing payment..."
+                        className="w-full"
+                    />
                 ) : (
                     <>
                         <SuccessIcon />

@@ -7,14 +7,15 @@ import {
     ScrollView,
     KeyboardAvoidingView,
     Platform,
-    ActivityIndicator,
 } from 'react-native';
+import Button from '../components/Button';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { RootState, CustomerAddress } from '../utils/types';
 import * as Types from '../app/actions';
+import Header from '../components/Header';
 import { formatAddressLine, getAddressId } from '../utils/address';
 import { getEmbeddedCustomer } from '../utils/apiResource';
 
@@ -163,19 +164,7 @@ const EditAddressScreen = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-            <View className="flex-row items-center justify-between px-4 h-14">
-                <TouchableOpacity
-                    onPress={() => navigation.goBack()}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                    className="w-10 h-10 items-center justify-center"
-                >
-                    <Icon name="close" size={26} color="#4B5563" />
-                </TouchableOpacity>
-                <Text className="text-[18px] font-montserrat-bold text-dark-gray">
-                    Address Details
-                </Text>
-                <View className="w-10" />
-            </View>
+            <Header title="Address Details" leftVariant="close" hideNotificationBell />
 
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -252,22 +241,14 @@ const EditAddressScreen = () => {
                 </ScrollView>
 
                 <View className="px-5 py-4 bg-white">
-                    <TouchableOpacity
-                        activeOpacity={0.9}
+                    <Button
+                        label="Save"
                         onPress={handleSave}
-                        disabled={isLoading || !label.trim() || !address.trim()}
-                        className={`w-full h-[52px] rounded-full items-center justify-center ${
-                            isLoading || !label.trim() || !address.trim()
-                                ? 'bg-brand/50'
-                                : 'bg-brand'
-                        }`}
-                    >
-                        {isLoading ? (
-                            <ActivityIndicator color="#FFFFFF" />
-                        ) : (
-                            <Text className="text-white text-base font-montserrat-bold">Save</Text>
-                        )}
-                    </TouchableOpacity>
+                        disabled={!label.trim() || !address.trim()}
+                        isLoading={isLoading}
+                        shape="pill"
+                        size="md"
+                    />
                 </View>
             </KeyboardAvoidingView>
         </SafeAreaView>

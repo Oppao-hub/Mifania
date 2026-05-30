@@ -4,7 +4,6 @@ import {
     Text,
     TouchableOpacity,
     ScrollView,
-    ActivityIndicator,
     Share,
 } from 'react-native';
 import type { MenuAnchor } from '../components/AddressOptionsMenu';
@@ -18,6 +17,7 @@ import AddressOptionsMenu from '../components/AddressOptionsMenu';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import ErrorState from '../components/ErrorState';
+import LoadingState from '../components/LoadingState';
 import ConfirmationBottomSheet from '../components/ConfirmationBottomSheet';
 import { ROUTES } from '../utils';
 import { RootState, CustomerAddress } from '../utils/types';
@@ -134,6 +134,7 @@ const ManageAddressesScreen = () => {
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
             <Header
                 title="Manage Addresses"
+                hideNotificationBell
                 rightIcon="add"
                 onRightPress={handleAddAddress}
             />
@@ -148,9 +149,7 @@ const ManageAddressesScreen = () => {
             />
 
             {isLoading && addresses.length === 0 ? (
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#52622E" />
-                </View>
+                <LoadingState message="Loading addresses..." />
             ) : isError && addresses.length === 0 ? (
                 <ErrorState
                     error={error}

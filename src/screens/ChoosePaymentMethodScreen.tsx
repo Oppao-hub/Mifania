@@ -1,32 +1,23 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions, useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 import { ROUTES } from '../utils';
 import Header from '../components/Header';
-import { mergeSurfaceCardStyle, SURFACE_CARD_CLASS } from '../utils/cardStyles';
+import SelectableOptionCard from '../components/SelectableOptionCard';
 import { RootState } from '../utils/types';
 import Button from '../components/Button';
+import ConfirmationBottomSheet from '../components/ConfirmationBottomSheet';
 import StickyBottomBar from '../components/StickyBottomBar';
 import EmptyState from '../components/EmptyState';
+import LoadingState from '../components/LoadingState';
+import PaymentOptionIcon from '../components/PaymentOptionIcon';
 import { fetchPaymentOptions, PaymentOption } from '../utils/checkoutOptions';
 import { parseCurrencyAmount } from '../utils/checkout';
 import { PaymentMethods } from '../constants/Payment';
 import { getCustomerRefFromUser } from '../utils/apiResource';
 import * as Types from '../app/actions';
-
-const BRAND = '#52622E';
-
-const paymentIconName = (option: PaymentOption): string => {
-    const key = `${option.id} ${option.name} ${option.backendMethod}`.toLowerCase();
-    if (key.includes('wallet')) return 'wallet-outline';
-    if (key.includes('paypal')) return 'logo-paypal';
-    if (key.includes('cash')) return 'cash-outline';
-    if (key.includes('bank')) return 'business-outline';
-    return 'card-outline';
-};
 
 const ChoosePaymentMethodScreen = () => {
     const navigation = useNavigation<any>();
@@ -46,6 +37,7 @@ const ChoosePaymentMethodScreen = () => {
     const checkoutTotal = Number(route.params?.checkoutTotal ?? 0);
     const walletBalance = parseCurrencyAmount(wallet?.balance ?? '0');
     const [selectedPaymentId, setSelectedPaymentId] = useState<string>(initialPaymentId);
+    const [walletTopUpSheetVisible, setWalletTopUpSheetVisible] = useState(false);
 
     const selectedPayment = useMemo(
         () => paymentOptions.find((item) => item.id === selectedPaymentId) ?? paymentOptions[0],
@@ -92,15 +84,30 @@ const ChoosePaymentMethodScreen = () => {
         return walletBalance < checkoutTotal;
     };
 
+    const walletShortfall = Math.max(0, checkoutTotal - walletBalance);
+
     const getOptionDescription = (option: PaymentOption): string | undefined => {
         if (option.backendMethod === PaymentMethods.WALLET) {
             const balanceLabel = `Balance: ₱${walletBalance.toFixed(2)}`;
-            if (checkoutTotal > 0 && walletBalance < checkoutTotal) {
-                return `${balanceLabel} · Need ₱${checkoutTotal.toFixed(2)}`;
+            if (checkoutTotal > 0 && walletShortfall > 0) {
+                return `${balanceLabel} · Short ₱${walletShortfall.toFixed(2)} for this order`;
             }
             return balanceLabel;
         }
         return option.description;
+    };
+
+    const handlePaymentOptionPress = (item: PaymentOption) => {
+        if (isWalletOptionDisabled(item)) {
+            setWalletTopUpSheetVisible(true);
+            return;
+        }
+        setSelectedPaymentId(item.id);
+    };
+
+    const handleWalletTopUpConfirm = () => {
+        setWalletTopUpSheetVisible(false);
+        navigation.navigate(ROUTES.WALLET as never);
     };
 
     const handleConfirm = () => {
@@ -146,10 +153,8 @@ const ChoosePaymentMethodScreen = () => {
     if (isLoading) {
         return (
             <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-                <Header title={accountMode ? 'Payment Methods' : 'Choose Payment Methods'} />
-                <View className="flex-1 items-center justify-center">
-                    <Text className="text-sm font-montserrat text-gray">Loading payment methods...</Text>
-                </View>
+                <Header title={accountMode ? 'Payment Methods' : 'Choose Payment Methods'} hideNotificationBell />
+                <LoadingState message="Loading payment methods..." />
             </SafeAreaView>
         );
     }
@@ -157,7 +162,7 @@ const ChoosePaymentMethodScreen = () => {
     if (loadError) {
         return (
             <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-                <Header title={accountMode ? 'Payment Methods' : 'Choose Payment Methods'} />
+                <Header title={accountMode ? 'Payment Methods' : 'Choose Payment Methods'} hideNotificationBell />
                 <EmptyState
                     iconName="cloud-off-outline"
                     title="Could not load payment methods"
@@ -172,7 +177,7 @@ const ChoosePaymentMethodScreen = () => {
     if (paymentOptions.length === 0) {
         return (
             <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-                <Header title={accountMode ? 'Payment Methods' : 'Choose Payment Methods'} />
+                <Header title={accountMode ? 'Payment Methods' : 'Choose Payment Methods'} hideNotificationBell />
                 <View className="flex-1 items-center justify-center px-6">
                     <Text className="text-sm font-montserrat text-gray text-center">
                         No payment methods available right now.
@@ -184,42 +189,23 @@ const ChoosePaymentMethodScreen = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-            <Header title={accountMode ? 'Payment Methods' : 'Choose Payment Methods'} />
+            <Header title={accountMode ? 'Payment Methods' : 'Choose Payment Methods'} hideNotificationBell />
 
             <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
                 {paymentOptions.map((item) => {
                     const selected = item.id === selectedPaymentId;
                     const disabled = isWalletOptionDisabled(item);
                     return (
-                        <TouchableOpacity
+                        <SelectableOptionCard
                             key={item.id}
-                            activeOpacity={disabled ? 1 : 0.85}
+                            selected={selected}
                             disabled={disabled}
-                            onPress={() => setSelectedPaymentId(item.id)}
-                            style={mergeSurfaceCardStyle()}
-                            className={`px-4 py-5 mb-4 flex-row items-center ${SURFACE_CARD_CLASS} ${
-                                selected ? 'border-2 border-brand' : ''
-                            } ${disabled ? 'opacity-50' : ''}`}
-                        >
-                            <View className="w-14 h-14 rounded-full bg-white border border-border-color items-center justify-center mr-4 overflow-hidden">
-                                {item.logo ? (
-                                    <Image source={{ uri: item.logo }} className="w-11 h-11" resizeMode="contain" />
-                                ) : (
-                                    <Icon name={paymentIconName(item)} size={24} color="#6B7280" />
-                                )}
-                            </View>
-                            <View className="flex-1">
-                                <Text className="text-[17px] font-montserrat-bold text-dark-gray">
-                                    {item.name}
-                                </Text>
-                                {getOptionDescription(item) ? (
-                                    <Text className="text-xs font-montserrat text-gray mt-1">
-                                        {getOptionDescription(item)}
-                                    </Text>
-                                ) : null}
-                            </View>
-                            {selected ? <Icon name="checkmark" size={24} color={BRAND} /> : null}
-                        </TouchableOpacity>
+                            onPress={() => handlePaymentOptionPress(item)}
+                            className="py-5"
+                            left={<PaymentOptionIcon option={item} size={56} />}
+                            title={item.name}
+                            description={getOptionDescription(item)}
+                        />
                     );
                 })}
             </ScrollView>
@@ -228,11 +214,23 @@ const ChoosePaymentMethodScreen = () => {
                 <Button
                     label={accountMode ? 'Done' : 'OK'}
                     onPress={handleConfirm}
-                    disabled={isLoading || !selectedPayment}
+                    disabled={isLoading || !selectedPayment || isWalletOptionDisabled(selectedPayment)}
                     size="md"
                     shape="pill"
                 />
             </StickyBottomBar>
+
+            <ConfirmationBottomSheet
+                visible={walletTopUpSheetVisible}
+                title="Insufficient wallet balance"
+                titleTone="brand"
+                message={`This order needs ₱${checkoutTotal.toFixed(2)}. Your wallet has ₱${walletBalance.toFixed(2)}.`}
+                description={`Top up at least ₱${walletShortfall.toFixed(2)} to pay with Mifania Wallet.`}
+                cancelLabel="Not now"
+                confirmLabel="Top up wallet"
+                onCancel={() => setWalletTopUpSheetVisible(false)}
+                onConfirm={handleWalletTopUpConfirm}
+            />
         </SafeAreaView>
     );
 };
