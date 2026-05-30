@@ -1,97 +1,138 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Mifania Mobile (React Native)
 
-# Getting Started
+Android/iOS client for the Mifania sustainable fashion e-commerce platform. Connects to the Symfony API (JWT), Firebase Auth, Socket.IO realtime, and local notifications (Notifee).
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Submission checklist (30 pts — Mobile APK)
 
-## Step 1: Start Metro
+| Item | Location |
+|------|----------|
+| Signed release APK | Build below → copy to [`releases/`](releases/README.md) |
+| WebSocket realtime | [Realtime demo](#realtime-demo-websocket) |
+| Local notifications | Notifee + FCM (see [SECURITY.md](SECURITY.md)) |
+| Security notes | [SECURITY.md](SECURITY.md) |
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+---
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+## Signed release APK
+
+### Prerequisites
+
+- Android SDK, JDK 17, `ANDROID_HOME` set
+- Release keystore at `android/app/releaseMe.jks` with `MYAPP_UPLOAD_*` in `android/gradle.properties`
+
+### Build release APK
 
 ```sh
-# Using npm
+npm install
+npm run android:release
+```
+
+APK path:
+
+`android/app/build/outputs/apk/release/app-release.apk`
+
+### Copy for submission
+
+```sh
+npm run android:copy-release
+# → releases/mifania-release.apk
+```
+
+### Verify signature
+
+```sh
+apksigner verify --verbose releases/mifania-release.apk
+```
+
+---
+
+## Realtime demo (WebSocket)
+
+The app connects to Socket.IO **after login** (`src/app/sagas/socket.ts` → `src/services/socket.ts`).
+
+**Server:** `https://web-socket-production-29ca.up.railway.app` (path `/socket.io`)
+
+**Events handled:**
+
+| Event | App behavior |
+|-------|----------------|
+| `notification` | Local Notifee banner + in-app notification list |
+| `new_order` | Local notification (“New Order Received”) |
+| `order_status_update` | Local notification + refreshes orders in Redux |
+
+### Demo steps (for reviewers)
+
+1. Install the **release** or **debug** APK and log in as a customer.
+2. Ensure the Mifania-Web API and `socket-server` are running (or use deployed Railway services).
+3. From **admin/staff** (web) or API, change an order status or trigger a notification for that user.
+4. On the device you should see:
+   - A **local notification** (Notifee) in the tray, and/or
+   - Updated **Notifications** screen and **My Orders** / tracking after tap.
+
+**Logs (debug build):** Metro / `adb logcat` — look for `Socket connected` or connection errors.
+
+---
+
+## Local notifications
+
+- **Socket-driven:** `src/services/socket.ts` → `notifee.displayNotification`
+- **FCM foreground:** `App.tsx` → Notifee when a push arrives while app is open
+- **Channel:** `default` (Android 8+), high importance
+- **Tap:** Order-related notifications open Order Tracking (`AppNavigator`)
+
+---
+
+## Security
+
+See **[SECURITY.md](SECURITY.md)** for JWT, Keychain token storage, HTTPS/cleartext policy, logout, and signing notes.
+
+---
+
+## Development
+
+### Start Metro
+
+```sh
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+### Run on Android (debug)
 
 ```sh
-# Using npm
 npm run android
-
-# OR using Yarn
-yarn android
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+### Run on iOS
 
 ```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+cd ios && bundle exec pod install && cd ..
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### Lint & test
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```sh
+npm run lint
+npm run test
+```
 
-## Step 3: Modify your app
+---
 
-Now that you have successfully run the app, let's make changes!
+## Project structure
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+| Path | Purpose |
+|------|---------|
+| `App.tsx` | Root providers, FCM + Notifee setup |
+| `src/app/` | Redux, sagas, API |
+| `src/services/socket.ts` | Socket.IO client |
+| `src/navigations/` | Auth / main stacks |
+| `src/screens/` | Feature screens |
+| `android/` | Native Android + signing |
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+More detail: [GEMINI.md](GEMINI.md)
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+---
 
-## Congratulations! :tada:
+## Backend
 
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Pair with **Mifania-Web** (Symfony + API Platform) and the `socket-server` in that repo for full realtime and API behavior.
