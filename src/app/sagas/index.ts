@@ -11,6 +11,8 @@ import { watchWallet } from './wallet';
 import { watchOrder } from './order';
 import { watchNotification } from './notification';
 import { watchWishlist } from './wishlist';
+import { watchSessionRestore } from './sessionRestore';
+import { watchRealtimeRefresh } from './realtimeRefresh';
 
 export default function* rootSaga() {
     yield all([
@@ -29,5 +31,7 @@ export default function* rootSaga() {
         watchOrder(),
         watchNotification(),
         watchWishlist(),
+        watchSessionRestore(),
+        watchRealtimeRefresh(),
     ]);
 }

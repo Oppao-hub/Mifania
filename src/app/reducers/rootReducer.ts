@@ -18,7 +18,7 @@ const authPersistConfig = {
     key: 'auth',
     storage: secureStorage,
     // Never persist transient login UI state (causes infinite "Signing in..." after reload)
-    blacklist: ['isLoading', 'isError', 'error'],
+    blacklist: ['isLoading', 'isError', 'error', 'sessionValidated'],
 };
 
 export const appReducer = combineReducers({

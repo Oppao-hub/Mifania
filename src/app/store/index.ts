@@ -8,6 +8,7 @@ import rootSaga from "../sagas";
 import { appReducer } from '../reducers/rootReducer';
 import * as Types from '../actions';
 import { setAuthStore } from '../../utils/authSession';
+import { setRealtimeStore } from '../../utils/realtimeDispatch';
 
 const sagaMiddleware = createSagaMiddleware();
 
@@ -35,6 +36,7 @@ const store = createStore(
 );
 
 setAuthStore(store);
+setRealtimeStore(store);
 
 export const persistor = persistStore(store);
 

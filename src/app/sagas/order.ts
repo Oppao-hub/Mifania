@@ -1,14 +1,38 @@
-import { takeEvery, call, put, select } from 'redux-saga/effects';
+import { takeEvery, call, put, select, fork } from 'redux-saga/effects';
 import { cancelOrderApi, deleteOrderApi, getOrdersApi, createOrderApi, getOrderDetailsApi } from '../api/order';
-import { addToCartApi } from '../api/cart';
+import { addToCartApi, getCartApi } from '../api/cart';
+import { getWalletApi } from '../api/wallet';
 import { formatFetchErrorMessage } from '../../utils/fetchError';
 import * as Type from '../../app/actions';
 import { Order, RootState } from '../../utils/types';
 import { getCustomerRefFromUser } from '../../utils/apiResource';
 import { getReorderLineItems } from '../../utils/orderActions';
+import { normalizeOrderStatus } from '../../utils/orderPresentation';
 import { showFeedbackToast, showBlockingError } from '../../utils/userFeedback';
+import { beginSuppressedSessionLogout, endSuppressedSessionLogout } from '../../utils/authSession';
 import { getCartAsync } from './cart';
 const getToken = (state: RootState) => state.authentication.data?.token;
+
+function* refreshAfterOrderCreated(token: string, customerRef: string | null): Generator<any, void, any> {
+  beginSuppressedSessionLogout();
+  try {
+    const orders = yield call(getOrdersApi, token);
+    yield put({ type: Type.GET_ORDERS_COMPLETED, payload: orders });
+
+    if (customerRef) {
+      const wallet = yield call(getWalletApi, customerRef, token);
+      yield put({ type: Type.GET_WALLET_COMPLETED, payload: wallet });
+    }
+
+    const cartData = yield call(getCartApi, token);
+    const products = yield select((state: RootState) => state.product.items);
+    yield put({ type: Type.GET_CART_COMPLETED, payload: { data: cartData, products } });
+  } catch (error: unknown) {
+    console.log('Post-order refresh skipped:', error instanceof Error ? error.message : error);
+  } finally {
+    endSuppressedSessionLogout();
+  }
+}
 
 export function* getOrdersAsync(action: { type: string; payload: string }): Generator<any, void, any> {
   let token = action.payload;
@@ -88,15 +112,9 @@ export function* createOrderAsync(action: {
       yield put({ type: Type.REMOVE_PURCHASED_CART_ITEMS, payload: purchasedCartItemIds });
     }
 
-    yield put({ type: Type.GET_ORDERS, payload: action.payload.token });
-
-    // Refresh wallet and sync cart from server (only purchased lines are removed there)
     const authData = yield select((state: RootState) => state.authentication.data);
     const customerRef = getCustomerRefFromUser(authData?.user);
-    if (customerRef) {
-        yield put({ type: Type.GET_WALLET, payload: { id: customerRef, token: action.payload.token } });
-    }
-    yield put({ type: Type.GET_CART });
+    yield fork(refreshAfterOrderCreated, action.payload.token, customerRef ?? null);
 
     console.log("✅ Order created successfully:", data.id);
   } catch (error: unknown) {
@@ -137,6 +155,26 @@ export function* cancelOrderAsync(action: {
       showFeedbackToast('Order Cancelled');
     }
   } catch (error: unknown) {
+    try {
+      const order = yield call(getOrderDetailsApi, action.payload.orderId, token);
+      if (normalizeOrderStatus(order?.orderStatus) === 'cancelled') {
+        yield put({
+          type: Type.CANCEL_ORDER_COMPLETED,
+          payload: {
+            id: action.payload.orderId,
+            orderStatus: order.orderStatus,
+          },
+        });
+        yield put({ type: Type.GET_ORDERS, payload: token });
+        if (!action.payload.suppressToast) {
+          showFeedbackToast('Order Cancelled');
+        }
+        return;
+      }
+    } catch {
+      // Fall through to the standard error path below.
+    }
+
     const message = error instanceof Error ? error.message : 'Could not cancel order';
     if (message === 'Unauthorized') {
       yield put({ type: Type.USER_LOGOUT });
