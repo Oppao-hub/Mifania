@@ -26,6 +26,7 @@ DerivedData
 #
 build/
 .idea
+.settings/
 .gradle
 local.properties
 *.iml
@@ -65,6 +66,9 @@ yarn-error.log
 
 # testing
 /coverage
+
+# Release APK copies (rebuild with npm run android:release)
+releases/*.apk
 
 # Firebase / Google Services
 **/google-services.json

@@ -5,6 +5,8 @@
   "scripts": {
     "android": "npm run android:setup && react-native run-android",
     "android:setup": "adb reverse tcp:8081 tcp:8081 2>/dev/null || true",
+    "android:release": "cd android && ./gradlew assembleRelease",
+    "android:copy-release": "bash scripts/copy-release-apk.sh",
     "android:check-network": "bash scripts/android-check-network.sh",
     "ios": "react-native run-ios",
     "lint": "eslint .",
