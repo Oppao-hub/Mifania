@@ -194,7 +194,8 @@ export const GET_NOTIFICATIONS_ERROR = 'GET_NOTIFICATIONS_ERROR';
 
 export const ADD_NOTIFICATION = 'ADD_NOTIFICATION';
 export const SOCKET_REALTIME_REFRESH = 'SOCKET_REALTIME_REFRESH';
-/** Connect or reconnect Socket.IO when a persisted session is restored. */
+/** Persisted session passed local/API validation — safe to run authenticated startup sync. */
+export const SESSION_RESTORE_VALIDATED = 'SESSION_RESTORE_VALIDATED';
 export const SOCKET_ENSURE_CONNECTED = 'SOCKET_ENSURE_CONNECTED';
 export const MARK_NOTIFICATION_READ = 'MARK_NOTIFICATION_READ';
 export const MARK_ALL_NOTIFICATIONS_READ = 'MARK_ALL_NOTIFICATIONS_READ';

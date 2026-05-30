@@ -1,57 +1,56 @@
-import { take, call, cancel, put, fork, select } from 'redux-saga/effects';
-import { eventChannel } from 'redux-saga';
+import { take, call, cancel, fork, delay, select } from 'redux-saga/effects';
+import { REHYDRATE } from 'redux-persist';
 import * as Type from '../actions';
-import { setupSocket } from '../../services/socket';
+import { setupSocket, disconnectSocket } from '../../services/socket';
+import { isJwtUsable } from '../../utils/jwtToken';
 import { RootState } from '../../utils/types';
 
-function* handleSocketLifecycle(authToken: string, userId: string | number): Generator<any, void, any> {
+function* getSocketCredentials(): Generator<any, { token: string; userId: string | number } | null, any> {
+  const auth = yield select((state: RootState) => state.authentication);
+  const token = auth?.data?.token;
+  const userId = auth?.data?.user?.id;
+  if (!token || userId == null || !auth.sessionValidated || !isJwtUsable(token)) {
+    return null;
+  }
+  return { token: String(token), userId };
+}
+
+function* handleSocketLifecycle(_authToken: string, userId: string | number): Generator<any, void, any> {
   try {
-    const channel = yield call(function(): any {
-      return eventChannel(emit => {
-        // Pass both authToken and userId to setupSocket
-        const s = setupSocket(authToken, String(userId), (action) => {
-          emit(action);
-        });
-        return () => {
-          s.disconnect();
-        };
-      });
-    });
-
-    while (true) {
-      const action: { type: string; payload?: any } = yield take(channel);
-      
-      if (action.type === 'SOCKET_ORDER_UPDATE') {
-        const token = yield select((state: RootState) => state.authentication.data?.token);
-        if (token) {
-          yield put({ type: Type.GET_ORDERS, payload: token });
-        }
-      } else {
-        yield put({ type: Type[action.type as keyof typeof Type] || action.type, payload: action.payload });
-      }
-    }
-
+    yield call(setupSocket, _authToken, String(userId));
+    yield delay(Number.MAX_SAFE_INTEGER);
   } finally {
-    console.log("🔌 Socket channel closed");
+    yield call(disconnectSocket);
+    console.log('Socket channel closed');
   }
 }
 
 export function* watchSocket(): Generator<any, void, any> {
   let socketTask: any = null;
-  
-  while (true) {
-    const action: { type: string; payload: any } = yield take(Type.USER_LOGIN_COMPLETED);
-    
+
+  const connectIfAuthenticated = function* (): Generator<any, void, any> {
+    const credentials = yield call(getSocketCredentials);
+    if (!credentials) {
+      return;
+    }
+
     if (socketTask) {
       yield cancel(socketTask);
     }
 
-    const token = action.payload.token;
-    const userId = action.payload.user?.id; // Extracting userId from payload
+    console.log('Setting up socket for user', credentials.userId);
+    socketTask = yield fork(handleSocketLifecycle, credentials.token, credentials.userId);
+  };
 
-    if (token && userId) {
-      console.log('🔗 Setting up socket for user (Saga) with token');
-      socketTask = yield fork(handleSocketLifecycle, String(token), userId);
-    }
+  yield take(REHYDRATE);
+
+  while (true) {
+    yield take([
+      Type.USER_LOGIN_COMPLETED,
+      Type.SESSION_RESTORE_VALIDATED,
+      Type.SOCKET_ENSURE_CONNECTED,
+      REHYDRATE,
+    ]);
+    yield call(connectIfAuthenticated);
   }
 }
