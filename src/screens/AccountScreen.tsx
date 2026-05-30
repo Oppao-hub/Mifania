@@ -14,54 +14,14 @@ import * as Types from '../app/actions';
 import Header from '../components/Header';
 import SurfaceCard from '../components/SurfaceCard';
 import LogoutBottomSheet from '../components/LogoutBottomSheet';
+import { SettingsList, SettingsMenuRow } from '../components/SettingsList';
 import IMAGES from '../utils/image';
 import { useTabBarBottomPadding } from '../utils/layout';
-import { showBlockingInfo } from '../utils/userFeedback';
-
-interface MenuItemProps {
-  icon: string;
-  label: string;
-  isLogout?: boolean;
-  showChevron?: boolean;
-  onPress?: () => void;
-  isLast?: boolean;
-}
-
-const MenuDivider = () => <View className="h-px bg-border-color ml-12" />;
-
-const MenuItem: React.FC<MenuItemProps> = ({
-  icon,
-  label,
-  isLogout = false,
-  showChevron = true,
-  onPress,
-  isLast = false,
-}) => (
-  <>
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} className="flex-row items-center py-4">
-      <Icon
-        name={icon}
-        size={22}
-        color={isLogout ? '#DC3545' : '#6A7282'}
-        style={{ width: 28 }}
-      />
-      <Text
-        className={`flex-1 text-[15px] font-montserrat-bold ${
-          isLogout ? 'text-danger' : 'text-dark-gray'
-        }`}
-      >
-        {label}
-      </Text>
-      {showChevron && !isLogout ? (
-        <Icon name="chevron-forward" size={18} color="#9CA3AF" />
-      ) : null}
-    </TouchableOpacity>
-    {!isLast ? <MenuDivider /> : null}
-  </>
-);
+import { showComingSoon } from '../utils/userFeedback';
+import type { MainNavigationProp } from '../types/navigation';
 
 const AccountScreen = () => {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<MainNavigationProp>();
   const dispatch = useDispatch();
   const [showLogoutSheet, setShowLogoutSheet] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -78,45 +38,6 @@ const AccountScreen = () => {
       ? `${user.firstName} ${user.lastName}`.trim()
       : 'Mifania User';
   const displayEmail = user?.email || 'user@mifania.com';
-
-  const showComingSoon = (feature: string) => {
-    showBlockingInfo({
-      title: feature,
-      message: 'This feature is coming soon.',
-    });
-  };
-
-  const handleEditProfile = () => {
-    navigation.navigate(ROUTES.PROFILE as never);
-  };
-
-  const handleNotification = () => {
-    navigation.navigate(ROUTES.NOTIFICATION as never);
-  };
-
-  const handleManageAddresses = () => {
-    navigation.navigate(ROUTES.MANAGE_ADDRESSES as never);
-  };
-
-  const handleOrder = () => {
-    navigation.navigate(ROUTES.ORDER as never);
-  };
-
-  const handleWallet = () => {
-    navigation.navigate(ROUTES.WALLET as never);
-  };
-
-  const handleRewards = () => {
-    navigation.navigate(ROUTES.REWARDS as never);
-  };
-
-  const handlePaymentMethods = () => {
-    navigation.navigate(ROUTES.PAYMENT_METHODS as never);
-  };
-
-  const handleLogout = () => {
-    setShowLogoutSheet(true);
-  };
 
   const performLogout = async () => {
     setIsLoggingOut(true);
@@ -143,26 +64,26 @@ const AccountScreen = () => {
   };
 
   const accountShortcuts = [
-    { icon: 'location-outline', label: 'Manage Addresses', onPress: handleManageAddresses },
-    { icon: 'document-text-outline', label: 'My Orders', onPress: handleOrder },
-    { icon: 'wallet-outline', label: 'My Wallet', onPress: handleWallet },
-    { icon: 'gift-outline', label: 'Rewards', onPress: handleRewards },
-    { icon: 'card-outline', label: 'Payment Methods', onPress: handlePaymentMethods },
+    { icon: 'location-outline', label: 'Manage Addresses', onPress: () => navigation.navigate(ROUTES.MANAGE_ADDRESSES) },
+    { icon: 'document-text-outline', label: 'My Orders', onPress: () => navigation.navigate(ROUTES.ORDER) },
+    { icon: 'wallet-outline', label: 'My Wallet', onPress: () => navigation.navigate(ROUTES.WALLET) },
+    { icon: 'gift-outline', label: 'Rewards', onPress: () => navigation.navigate(ROUTES.REWARDS) },
+    { icon: 'card-outline', label: 'Payment Methods', onPress: () => navigation.navigate(ROUTES.PAYMENT_METHODS) },
     {
       icon: 'shield-checkmark-outline',
       label: 'Account & Security',
-      onPress: () => showComingSoon('Account & Security'),
+      onPress: () => navigation.navigate(ROUTES.ACCOUNT_SECURITY),
     },
   ];
 
   const settingsItems = [
-    { icon: 'person-outline', label: 'My Profile', onPress: handleEditProfile },
-    { icon: 'notifications-outline', label: 'Notifications', onPress: handleNotification },
+    { icon: 'person-outline', label: 'My Profile', onPress: () => navigation.navigate(ROUTES.PROFILE) },
+    { icon: 'notifications-outline', label: 'Notifications', onPress: () => navigation.navigate(ROUTES.NOTIFICATION) },
     { icon: 'swap-vertical-outline', label: 'Linked Accounts', onPress: () => showComingSoon('Linked Accounts') },
     {
       icon: 'eye-outline',
       label: 'App Appearance',
-      onPress: () => navigation.navigate(ROUTES.APP_APPEARANCE as never),
+      onPress: () => navigation.navigate(ROUTES.APP_APPEARANCE),
     },
   ];
 
@@ -171,6 +92,7 @@ const AccountScreen = () => {
       <Header
         title="Account"
         leftVariant="logo"
+        hideNotificationBell
         rightIcon="scan-outline"
         onRightPress={() => showComingSoon('Scanner')}
       />
@@ -180,7 +102,6 @@ const AccountScreen = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: tabBarBottomPadding }}
       >
-        {/* Profile card */}
         <SurfaceCard className="flex-row items-center p-5 mb-4">
           <Image
             source={customer?.avatar ? { uri: customer.avatar } : IMAGES.DEFAULT_AVATAR}
@@ -204,10 +125,9 @@ const AccountScreen = () => {
           </TouchableOpacity>
         </SurfaceCard>
 
-        {/* Addresses, payments, security */}
-        <SurfaceCard className="px-5 mb-4">
+        <SettingsList className="mb-4">
           {accountShortcuts.map((item, index) => (
-            <MenuItem
+            <SettingsMenuRow
               key={item.label}
               icon={item.icon}
               label={item.label}
@@ -215,28 +135,26 @@ const AccountScreen = () => {
               isLast={index === accountShortcuts.length - 1}
             />
           ))}
-        </SurfaceCard>
+        </SettingsList>
 
-        {/* Profile, notifications, settings, logout */}
-        <SurfaceCard className="px-5">
-          {settingsItems.map((item, index) => (
-            <MenuItem
+        <SettingsList>
+          {settingsItems.map((item) => (
+            <SettingsMenuRow
               key={item.label}
               icon={item.icon}
               label={item.label}
               onPress={item.onPress}
-              isLast={false}
             />
           ))}
-          <MenuItem
+          <SettingsMenuRow
             icon="log-out-outline"
             label="Logout"
             isLogout
             showChevron={false}
-            onPress={handleLogout}
+            onPress={() => setShowLogoutSheet(true)}
             isLast
           />
-        </SurfaceCard>
+        </SettingsList>
       </ScrollView>
 
       <LogoutBottomSheet

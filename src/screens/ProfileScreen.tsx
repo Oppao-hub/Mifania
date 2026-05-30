@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  Image, 
-  TouchableOpacity, 
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Image,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator
+  TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
+import LoadingState from '../components/LoadingState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useSelector, useDispatch } from 'react-redux';
@@ -18,6 +19,7 @@ import { getEmbeddedCustomer, getCustomerRefFromUser } from '../utils/apiResourc
 import * as Types from '../app/actions';
 import Header from '../components/Header';
 import CustomModal from '../components/CustomModal';
+import Button from '../components/Button';
 import IMAGES from '../utils/image';
 
 const ProfileScreen = () => {
@@ -26,7 +28,6 @@ const ProfileScreen = () => {
 
   const { data: authData } = useSelector((state: RootState) => state.authentication);
   const { data: customerFromSlice, isLoading: isCustomerLoading, isError: isCustomerError, error: customerError } = useSelector((state: RootState) => state.customer);
-  const { wallet } = useSelector((state: RootState) => state.wallet);
   
   const user = authData?.user;
   const token = authData?.token;
@@ -42,6 +43,9 @@ const ProfileScreen = () => {
   const [postalCode, setPostalCode] = useState('');
 
   
+  const [isEditing, setIsEditing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
   // 💡 TRACK IF WE ARE ACTUALLY PERFORMING AN UPDATE
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -75,9 +79,45 @@ const ProfileScreen = () => {
     }
   }, [customerRef, token, customerFromSlice, isCustomerLoading, isCustomerError, dispatch]);
 
+  const fetchProfile = useCallback(() => {
+    if (!customerRef || !token) return;
+    dispatch({
+      type: Types.GET_CUSTOMER,
+      payload: { id: customerRef, token },
+    });
+    dispatch({
+      type: Types.GET_WALLET,
+      payload: { id: customerRef, token },
+    });
+  }, [customerRef, token, dispatch]);
+
+  const onRefresh = async () => {
+    if (isEditing) return;
+    setRefreshing(true);
+    lastSyncedCustomerKey.current = null;
+    fetchProfile();
+    setTimeout(() => setRefreshing(false), 1000);
+  };
+
+  const resetFormFromCustomer = () => {
+    if (user?.email) setEmail(user.email);
+
+    if (customer) {
+      setFirstName(customer.firstName || '');
+      setLastName(customer.lastName || '');
+      setPhone(customer.contactNumber || '');
+      setAddress(customer.address || '');
+      setCity(customer.city || '');
+      setPostalCode(customer.postalCode || '');
+    } else if (user) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+    }
+  };
+
   // Sync form when customer profile loads or updates from API
   useEffect(() => {
-    if (isUpdating) return;
+    if (isUpdating || isEditing) return;
 
     if (user?.email) setEmail(user.email);
 
@@ -96,7 +136,7 @@ const ProfileScreen = () => {
       setFirstName(user.firstName || '');
       setLastName(user.lastName || '');
     }
-  }, [customer, user, isUpdating]);
+  }, [customer, user, isUpdating, isEditing]);
 
   // Monitor loading/error states for feedback
   useEffect(() => {
@@ -128,11 +168,22 @@ const ProfileScreen = () => {
         isLoading: false,
         iconName: 'checkmark-circle-outline'
       });
-      setIsUpdating(false); // Reset update state
+      setIsUpdating(false);
+      setIsEditing(false);
     }
   }, [isCustomerLoading, isCustomerError, customerError, isUpdating, modalConfig.isLoading]);
 
+  const handleStartEditing = () => {
+    if (!isEditing) setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    resetFormFromCustomer();
+    setIsEditing(false);
+  };
+
   const handleUpdateProfile = () => {
+    if (!isEditing) return;
     if (customerRef && token) {
       setIsUpdating(true); // 💡 Start update flow
       dispatch({
@@ -155,58 +206,74 @@ const ProfileScreen = () => {
 
   const closeModal = () => setModalConfig({ ...modalConfig, visible: false });
 
+  const fieldContainerClass = (editable: boolean) =>
+    `flex-row items-center border border-border-color rounded-2xl px-4 h-16 shadow-sm ${
+      editable ? 'bg-white' : 'bg-gray-100'
+    }`;
+
+  const fieldTextClass = (editable: boolean) =>
+    `flex-1 font-montserrat-bold text-sm ${editable ? 'text-brand-dark' : 'text-gray-500'}`;
+
   if (isCustomerLoading && !customer && customerRef) {
     return (
-      <View className="flex-1 justify-center items-center bg-app-bg">
-        <ActivityIndicator size="large" color="#52622E" />
-      </View>
+      <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
+        <LoadingState message="Loading profile..." />
+      </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-      <Header title="Profile"/>
+      <Header title="Profile" hideNotificationBell />
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
         {/* HEADER */}
-        <ScrollView 
+        <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
           className="flex-1"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#52622E']}
+              tintColor="#52622E"
+              enabled={!isEditing}
+            />
+          }
         >
-          {/* WALLET & REWARDS SECTION */}
-          <View className="flex-row px-6 mt-4 justify-between">
-            <View className="bg-white p-4 rounded-2xl flex-1 mr-2 shadow-sm border border-border-color">
-              <Text className="text-xs font-montserrat-medium text-gray-500 mb-1">Wallet Balance</Text>
-              <Text className="text-lg font-montserrat-bold text-brand">₱{wallet?.balance || '0.00'}</Text>
-            </View>
-            <View className="bg-white p-4 rounded-2xl flex-1 ml-2 shadow-sm border border-border-color">
-              <Text className="text-xs font-montserrat-medium text-gray-500 mb-1">Reward Points</Text>
-              <Text className="text-lg font-montserrat-bold text-terracotta">{wallet?.rewardPoints || 0} pts</Text>
-            </View>
-          </View>
-
           {/* AVATAR SECTION */}
           <View className="items-center mt-6 mb-8">
-            <View className="relative">
-              <Image 
-                source={
-                  customer?.avatar 
-                    ? { uri: customer.avatar }
-                    : IMAGES.DEFAULT_AVATAR
-                } 
-                className="w-48 h-48 rounded-md bg-light-gray"
-                resizeMode="cover"
-              />  
-              <TouchableOpacity 
-                activeOpacity={0.8}
-                className="absolute bottom-1 right-1 bg-brand w-8 h-8 rounded-lg items-center justify-center border-2 border-white shadow-sm"
-              >
-                <Icon name="pencil" size={16} color="#FFFFFF" />
-              </TouchableOpacity>
+            <View className="relative w-48 h-48">
+              <View className="w-48 h-48 rounded-full overflow-hidden bg-light-gray border-2 border-border-color">
+                <Image
+                  source={
+                    customer?.avatar
+                      ? { uri: customer.avatar }
+                      : IMAGES.DEFAULT_AVATAR
+                  }
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              </View>
+              {!isEditing ? (
+                <TouchableOpacity
+                  onPress={handleStartEditing}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Edit profile"
+                  className="absolute bottom-0 right-0 w-11 h-11 rounded-full bg-brand items-center justify-center border-[3px] border-white shadow-md"
+                >
+                  <Icon name="pencil" size={18} color="#FFFFFF" />
+                </TouchableOpacity>
+              ) : null}
             </View>
+            {isEditing ? (
+              <Text className="text-xs font-montserrat text-gray mt-3">
+                Tap Cancel below to stop editing
+              </Text>
+            ) : null}
           </View>
 
           {/* FORM FIELDS */}
@@ -214,16 +281,20 @@ const ProfileScreen = () => {
             
             <View className="flex-row justify-between items-center mb-2 ml-1">
               <Text className="text-xs font-montserrat-bold text-dark-gray">Personal Information</Text>
+              {isEditing ? (
+                <Text className="text-xs font-montserrat-bold text-brand">Editing</Text>
+              ) : null}
             </View>
 
             {/* First Name */}
             <View className="mb-5">
               <Text className="text-xs font-montserrat-medium text-gray-500 mb-2 ml-1">First Name</Text>
-              <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm focus:border-brand">
-                <TextInput 
+              <View className={fieldContainerClass(isEditing)}>
+                <TextInput
                   value={firstName}
                   onChangeText={setFirstName}
-                  className="flex-1 font-montserrat-bold text-brand-dark text-sm"
+                  editable={isEditing}
+                  className={fieldTextClass(isEditing)}
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
@@ -232,11 +303,12 @@ const ProfileScreen = () => {
             {/* Last Name */}
             <View className="mb-5">
               <Text className="text-xs font-montserrat-medium text-gray-500 mb-2 ml-1">Last Name</Text>
-              <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
-                <TextInput 
+              <View className={fieldContainerClass(isEditing)}>
+                <TextInput
                   value={lastName}
                   onChangeText={setLastName}
-                  className="flex-1 font-montserrat-bold text-brand-dark text-sm"
+                  editable={isEditing}
+                  className={fieldTextClass(isEditing)}
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
@@ -247,7 +319,7 @@ const ProfileScreen = () => {
               <Text className="text-xs font-montserrat-medium text-gray-500 mb-2 ml-1">Email</Text>
               <View className="flex-row items-center bg-gray-100 border border-border-color rounded-2xl px-4 h-16 shadow-sm">
                 <Icon name="mail-outline" size={20} color="#6A7282" />
-                <TextInput 
+                <TextInput
                   value={email}
                   editable={false}
                   className="flex-1 font-montserrat-bold text-gray-500 text-sm ml-3"
@@ -259,14 +331,15 @@ const ProfileScreen = () => {
             {/* Phone Number */}
             <View className="mb-5">
               <Text className="text-xs font-montserrat-medium text-gray-500 mb-2 ml-1">Phone Number</Text>
-              <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
-                <TextInput 
+              <View className={fieldContainerClass(isEditing)}>
+                <TextInput
                   value={phone}
                   onChangeText={setPhone}
+                  editable={isEditing}
                   keyboardType="phone-pad"
-                  className="flex-1 font-montserrat-bold text-brand-dark text-sm ml-1"
+                  className={`${fieldTextClass(isEditing)} ml-1`}
                   placeholderTextColor="#9CA3AF"
-                  placeholder="e.g., 09171234567"
+                  placeholder={isEditing ? 'e.g., 09171234567' : undefined}
                 />
               </View>
             </View>
@@ -274,11 +347,12 @@ const ProfileScreen = () => {
             {/* Address */}
             <View className="mb-5">
               <Text className="text-xs font-montserrat-medium text-gray-500 mb-2 ml-1">Address</Text>
-              <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
-                <TextInput 
+              <View className={fieldContainerClass(isEditing)}>
+                <TextInput
                   value={address}
                   onChangeText={setAddress}
-                  className="flex-1 font-montserrat-bold text-brand-dark text-sm"
+                  editable={isEditing}
+                  className={fieldTextClass(isEditing)}
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
@@ -287,11 +361,12 @@ const ProfileScreen = () => {
             {/* City */}
             <View className="mb-5">
               <Text className="text-xs font-montserrat-medium text-gray-500 mb-2 ml-1">City</Text>
-              <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
-                <TextInput 
+              <View className={fieldContainerClass(isEditing)}>
+                <TextInput
                   value={city}
                   onChangeText={setCity}
-                  className="flex-1 font-montserrat-bold text-brand-dark text-sm"
+                  editable={isEditing}
+                  className={fieldTextClass(isEditing)}
                   placeholderTextColor="#9CA3AF"
                 />
               </View>
@@ -300,24 +375,30 @@ const ProfileScreen = () => {
             {/* Postal Code */}
             <View className="mb-5">
               <Text className="text-xs font-montserrat-medium text-gray-500 mb-2 ml-1">Postal Code</Text>
-              <View className="flex-row items-center bg-white border border-border-color rounded-2xl px-4 h-16 shadow-sm">
-                <TextInput 
+              <View className={fieldContainerClass(isEditing)}>
+                <TextInput
                   value={postalCode}
                   onChangeText={setPostalCode}
+                  editable={isEditing}
                   keyboardType="numeric"
-                  className="flex-1 font-montserrat-bold text-brand-dark text-sm"
+                  className={fieldTextClass(isEditing)}
                   placeholderTextColor="#9CA3AF"
-                  placeholder="e.g., 1000"
+                  placeholder={isEditing ? 'e.g., 1000' : undefined}
                 />
               </View>
             </View>
 
-            <TouchableOpacity 
-              onPress={handleUpdateProfile}
-              className="bg-brand h-16 rounded-2xl items-center justify-center mt-4 shadow-md"
-            >
-              <Text className="text-white font-montserrat-bold text-lg">Save Profile</Text>
-            </TouchableOpacity>
+            {isEditing ? (
+              <View className="mt-4 gap-3">
+                <Button label="Save Profile" onPress={handleUpdateProfile} />
+                <Button
+                  label="Cancel"
+                  onPress={handleCancelEdit}
+                  variant="outline"
+                  disabled={isUpdating}
+                />
+              </View>
+            ) : null}
 
           </View>
         </ScrollView>
