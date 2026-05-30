@@ -1,20 +1,17 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
-  ScrollView, 
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
+import LoadingState from '../components/LoadingState';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { RootState, CartItem, Customer } from '../utils/types';
 import { getEmbeddedCustomer, getCustomerRefFromUser } from '../utils/apiResource';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { 
     getCart,
     removeFromCart, 
-    toggleCartItemSelection, 
+    toggleCartItemSelection,
+    setCartItemsSelection,
     updateCartQty,
     editCartItem,
 } from '../app/reducers/cart';
@@ -29,6 +26,8 @@ import StickyBottomBar from '../components/StickyBottomBar';
 import * as Types from '../app/actions';
 import { ROUTES } from '../utils';
 import { hasDeliverableAddress } from '../utils/address';
+import { useScreenLiveSync } from '../hooks/useLiveSync';
+import { LIVE_SYNC_POLL_MS } from '../config/realtime';
 import { useTabBarBottomPadding } from '../utils/layout';
 import { showBlockingInfo } from '../utils/userFeedback';
 
@@ -55,6 +54,7 @@ const CartScreen = () => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Modal State
   const [isModalVisible, setModalVisible] = useState(false);
@@ -71,15 +71,21 @@ const CartScreen = () => {
     message: '',
   });
 
-  useFocusEffect(
-    useCallback(() => {
-      dispatch(getCart());
-      dispatch(getProducts());
-      if (token) {
-        dispatch({ type: Types.GET_ADDRESSES });
-      }
-    }, [dispatch, token]),
-  );
+  const reloadCart = useCallback(() => {
+    dispatch(getCart());
+    dispatch(getProducts());
+    if (token) {
+      dispatch({ type: Types.GET_ADDRESSES });
+    }
+  }, [dispatch, token]);
+
+  useScreenLiveSync(reloadCart, LIVE_SYNC_POLL_MS, Boolean(token));
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    reloadCart();
+    setTimeout(() => setRefreshing(false), 1000);
+  };
 
   useEffect(() => {
     if (!customerFromSlice && customerRef && token) {
@@ -129,6 +135,19 @@ const CartScreen = () => {
       getCartItemName(item).toLowerCase().includes(query),
     );
   }, [cartItems, searchQuery]);
+
+  const isSearchActive = searchQuery.trim().length > 0;
+  const selectionScope = isSearchActive ? displayedItems : cartItems;
+  const allInScopeSelected =
+    selectionScope.length > 0 && selectionScope.every((item) => item.selected);
+  const someInScopeSelected = selectionScope.some((item) => item.selected);
+
+  const handleToggleSelectAll = () => {
+    const ids = selectionScope
+      .map((item) => item.id)
+      .filter((id): id is string | number => id !== undefined && id !== null);
+    dispatch(setCartItemsSelection(!allInScopeSelected, ids));
+  };
 
   // Local calculation for selected items
   const { selectedCount, displayTotal } = useMemo(() => {
@@ -225,16 +244,46 @@ const CartScreen = () => {
       />
 
       {isLoading && cartItems.length === 0 ? (
-        <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#52622E" />
-        </View>
+        <LoadingState message="Loading cart..." />
       ) : cartItems.length > 0 ? (
         displayedItems.length > 0 ? (
-        <ScrollView 
+        <ScrollView
             className="flex-1 px-4 pt-4"
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: scrollBottomPadding }}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#52622E']}
+                tintColor="#52622E"
+              />
+            }
         >
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={handleToggleSelectAll}
+              className="flex-row items-center mb-3 px-1"
+            >
+              <View className="mr-3">
+                {allInScopeSelected ? (
+                  <View className="w-6 h-6 rounded-md bg-brand items-center justify-center">
+                    <Icon name="check" size={16} color="#FFFFFF" />
+                  </View>
+                ) : someInScopeSelected ? (
+                  <View className="w-6 h-6 rounded-md bg-brand items-center justify-center">
+                    <Icon name="minus" size={16} color="#FFFFFF" />
+                  </View>
+                ) : (
+                  <View className="w-6 h-6 rounded-md border-[1.5px] border-gray-300" />
+                )}
+              </View>
+              <Text className="text-sm font-semibold text-brand-dark">
+                {isSearchActive
+                  ? `Select all results (${selectionScope.length})`
+                  : `Select all (${cartItems.length})`}
+              </Text>
+            </TouchableOpacity>
             {displayedItems.map((item) => (
             <CartItemComponent 
                 key={item.id}

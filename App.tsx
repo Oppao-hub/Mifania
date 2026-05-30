@@ -9,7 +9,11 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 // 💡 ADDED IMPORTS
 import { getApp } from '@react-native-firebase/app';
 import { getMessaging, onMessage, onNotificationOpenedApp, getInitialNotification } from '@react-native-firebase/messaging';
-import notifee, { AndroidImportance } from '@notifee/react-native';
+import { presentLocalNotification } from './src/services/localNotifications';
+import { scheduleOrderNotification } from './src/services/orderNotificationCoordinator';
+import { upsertNotificationFromSocket } from './src/utils/notificationInbox';
+import { initializePushNotifications } from './src/services/pushNotifications';
+import { dispatchRealtimeRefresh } from './src/utils/realtimeDispatch';
 
 import store, { persistor } from './src/app/store'; 
 import AppNavigation from './src/navigations';
@@ -109,46 +113,72 @@ const App = () => {
   useEffect(() => {
     const messagingInstance = getMessaging(getApp());
 
-    // 1. Create a channel (Required for Android 8.0+)
-    const createChannel = async () => {
-      await notifee.createChannel({
-        id: 'default',
-        name: 'Default Channel',
-        importance: AndroidImportance.HIGH,
-      });
-    };
-    createChannel();
+    void initializePushNotifications().then((granted) => {
+      if (!granted) {
+        console.warn('[push] Notification permission was not granted at startup.');
+      }
+    });
 
-    // 2. Listen for messages when the app is OPEN
     const unsubscribe = onMessage(messagingInstance, async remoteMessage => {
-      console.log('A new FCM message arrived in the foreground!', JSON.stringify(remoteMessage));
+      console.log('[push] Foreground FCM message:', remoteMessage?.messageId || 'no-id');
 
-      // 3. Display the notification manually
-      await notifee.displayNotification({
-        title: remoteMessage.notification?.title || 'New Notification',
-        body: remoteMessage.notification?.body || '',
-        data: {
-          type: String(remoteMessage.data?.type || ''),
-          targetUrl: String(remoteMessage.data?.targetUrl || ''),
-          orderId: String(remoteMessage.data?.orderId || ''),
-          message: String(remoteMessage.notification?.body || ''),
-          title: String(remoteMessage.notification?.title || ''),
-        },
-        android: {
-          channelId: 'default',
-          importance: AndroidImportance.HIGH,
-          pressAction: {
-            id: 'default',
-          },
-        },
-      });
+      const data = remoteMessage.data || {};
+      const type = String(data.type || '');
+      const orderId = data.orderId != null ? String(data.orderId) : undefined;
+      const orderReference = data.orderReference != null ? String(data.orderReference) : undefined;
+      const targetUrl = data.targetUrl != null ? String(data.targetUrl) : '';
 
-      // 2. NEW: Refresh the Redux store instantly!
-      // This grabs the current user's token and triggers your GET_NOTIFICATIONS action.
-      const currentToken = store.getState().authentication.data?.token;
-      if (currentToken) {
+      if (type.toLowerCase().includes('order') && orderId) {
+        dispatchRealtimeRefresh({
+          entity: 'order',
+          orderId,
+          action: 'updated',
+        });
+      } else if (store.getState().authentication.data?.token) {
         store.dispatch({ type: 'GET_NOTIFICATIONS' });
       }
+
+      const pushTitle = remoteMessage.notification?.title || String(data.title || 'New Notification');
+      const pushBody = remoteMessage.notification?.body || String(data.message || '');
+
+      if (type.toLowerCase().includes('order') && orderId) {
+        upsertNotificationFromSocket({
+          title: pushTitle,
+          message: pushBody,
+          orderId,
+          orderReference,
+          targetUrl,
+          type: 'order',
+        });
+        scheduleOrderNotification({
+          title: pushTitle,
+          message: pushBody,
+          orderId,
+          orderReference,
+          targetUrl,
+          skipInboxRefresh: true,
+        });
+        return;
+      }
+
+      upsertNotificationFromSocket({
+        title: pushTitle,
+        message: pushBody,
+        type: type || 'system',
+        targetUrl,
+        orderId,
+        orderReference,
+      });
+
+      await presentLocalNotification({
+        type,
+        orderId,
+        orderReference,
+        title: pushTitle,
+        message: pushBody,
+        targetUrl,
+        skipInboxRefresh: true,
+      });
     });
 
     const unsubscribeOpened = onNotificationOpenedApp(messagingInstance, remoteMessage => {

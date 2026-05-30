@@ -1,15 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions, useNavigation, useRoute } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { ROUTES } from '../utils';
 import Header from '../components/Header';
+import SurfaceCard from '../components/SurfaceCard';
+import Button from '../components/Button';
+import StickyBottomBar from '../components/StickyBottomBar';
 import { useSelector } from 'react-redux';
 import { RootState } from '../utils/types';
 import { getLoyaltyPolicyApi } from '../app/api/reward';
 
-const BRAND = '#5B8E68';
+const BRAND = '#52622E';
 const PromosVouchersScreen = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
@@ -17,6 +20,7 @@ const PromosVouchersScreen = () => {
     const availablePoints = useSelector((state: RootState) => state.wallet.wallet?.rewardPoints ?? 0);
     const currentPoints = route.params?.selectedRedeemPoints ?? 0;
     const [selectedRedeemPoints, setSelectedRedeemPoints] = useState<number>(Math.max(0, currentPoints));
+    const [pointsInput, setPointsInput] = useState<string>(String(Math.max(0, currentPoints)));
     const [pointsPerCurrency, setPointsPerCurrency] = useState<number>(10);
     const [minOrderForRedemption, setMinOrderForRedemption] = useState<number>(100);
     const [maxRedemptionPercentage, setMaxRedemptionPercentage] = useState<number>(0.3);
@@ -57,15 +61,43 @@ const PromosVouchersScreen = () => {
         [selectedRedeemPoints, pointsPerCurrency],
     );
 
+    const clampPoints = (value: number) =>
+        Math.min(maxRedeemablePoints, Math.max(0, Math.floor(value)));
+
+    const applyPoints = (value: number) => {
+        const clamped = clampPoints(value);
+        setSelectedRedeemPoints(clamped);
+        setPointsInput(String(clamped));
+    };
+
     const adjustPoints = (delta: number) => {
-        setSelectedRedeemPoints((prev) => {
-            const next = prev + delta;
-            return Math.min(maxRedeemablePoints, Math.max(0, next));
-        });
+        applyPoints(selectedRedeemPoints + delta);
+    };
+
+    const handlePointsInputChange = (text: string) => {
+        const digitsOnly = text.replace(/\D/g, '');
+        setPointsInput(digitsOnly);
+        if (digitsOnly === '') {
+            setSelectedRedeemPoints(0);
+            return;
+        }
+        const parsed = parseInt(digitsOnly, 10);
+        if (!Number.isNaN(parsed)) {
+            setSelectedRedeemPoints(clampPoints(parsed));
+        }
+    };
+
+    const handlePointsInputEnd = () => {
+        const parsed = pointsInput === '' ? 0 : parseInt(pointsInput, 10);
+        applyPoints(Number.isNaN(parsed) ? 0 : parsed);
     };
 
     useEffect(() => {
-        setSelectedRedeemPoints((prev) => Math.min(prev, maxRedeemablePoints));
+        setSelectedRedeemPoints((prev) => {
+            const clamped = Math.min(prev, maxRedeemablePoints);
+            setPointsInput(String(clamped));
+            return clamped;
+        });
     }, [maxRedeemablePoints]);
 
     const handleConfirm = () => {
@@ -95,10 +127,10 @@ const PromosVouchersScreen = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-            <Header title="Loyalty Redemption" />
+            <Header title="Loyalty Redemption" hideNotificationBell />
 
             <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-                <View className="rounded-2xl bg-white border border-border-color p-4 mb-4">
+                <SurfaceCard className="p-4 mb-4">
                     <Text className="text-[17px] font-montserrat-bold text-dark-gray mb-3">
                         Redeem Your Points
                     </Text>
@@ -126,10 +158,24 @@ const PromosVouchersScreen = () => {
                         >
                             <Icon name="remove" size={20} color={BRAND} />
                         </TouchableOpacity>
-                        <View className="items-center">
-                            <Text className="text-2xl font-montserrat-bold text-dark-gray">
-                                {selectedRedeemPoints} pts
-                            </Text>
+                        <View className="items-center flex-1 mx-3">
+                            <View className="flex-row items-baseline justify-center">
+                                <TextInput
+                                    value={pointsInput}
+                                    onChangeText={handlePointsInputChange}
+                                    onBlur={handlePointsInputEnd}
+                                    onSubmitEditing={handlePointsInputEnd}
+                                    keyboardType="number-pad"
+                                    inputMode="numeric"
+                                    returnKeyType="done"
+                                    selectTextOnFocus
+                                    maxLength={8}
+                                    className="text-2xl font-montserrat-bold text-dark-gray text-center min-w-[72px] px-2 py-1"
+                                />
+                                <Text className="text-2xl font-montserrat-bold text-dark-gray ml-1">
+                                    pts
+                                </Text>
+                            </View>
                             <Text className="text-sm font-montserrat text-brand mt-1">
                                 Discount: ₱{pointsDiscount.toFixed(2)}
                             </Text>
@@ -143,30 +189,24 @@ const PromosVouchersScreen = () => {
                     </View>
                     <TouchableOpacity
                         activeOpacity={0.85}
-                        onPress={() => setSelectedRedeemPoints(maxRedeemablePoints)}
+                        onPress={() => applyPoints(maxRedeemablePoints)}
                         className="mt-4 bg-brand/10 px-4 py-3 rounded-xl"
                     >
                         <Text className="text-brand font-montserrat-bold text-center">Use Max Points</Text>
                     </TouchableOpacity>
-                </View>
+                </SurfaceCard>
 
-                <View className="rounded-2xl bg-white border border-border-color p-4">
+                <SurfaceCard className="p-4">
                     <Text className="text-sm font-montserrat text-gray leading-6">
                         Applied points are validated by backend at checkout, and actual discount may be capped based
                         on your order total.
                     </Text>
-                </View>
+                </SurfaceCard>
             </ScrollView>
 
-            <View className="px-5 py-4 bg-app-bg">
-                <TouchableOpacity
-                    activeOpacity={0.9}
-                    onPress={handleConfirm}
-                    className="w-full h-14 rounded-full bg-brand items-center justify-center"
-                >
-                    <Text className="text-white text-base font-montserrat-bold">OK</Text>
-                </TouchableOpacity>
-            </View>
+            <StickyBottomBar>
+                <Button label="OK" onPress={handleConfirm} size="md" shape="pill" />
+            </StickyBottomBar>
         </SafeAreaView>
     );
 };

@@ -1,17 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, FlatList } from 'react-native';
+import LoadingState from '../components/LoadingState';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useDispatch, useSelector } from 'react-redux';
 
+import Header from '../components/Header';
 import ProductCard from '../components/ProductCard';
 import CategorySortFilterBar from '../components/CategorySortFilterBar';
 import CatalogOptionsSheet, { CatalogOption } from '../components/CatalogOptionsSheet';
@@ -129,66 +124,32 @@ const CategoryProductsScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-      <View className="px-4 py-3 flex-row items-center justify-between">
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          className="w-10 h-10 items-center justify-center"
-          hitSlop={8}
-        >
-          <Icon name="arrow-back" size={24} color="#4B5563" />
-        </TouchableOpacity>
-
-        <Text className="text-lg font-montserrat-bold text-dark-gray flex-1 text-center mx-2">
-          {category.name}
-        </Text>
-
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => setShowSearch((v) => !v)}
-            className="w-10 h-10 items-center justify-center"
-            hitSlop={8}
-          >
-            <Icon
-              name={showSearch ? 'close' : 'search-outline'}
-              size={22}
-              color={showSearch ? '#52622E' : '#4B5563'}
-            />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setMenuVisible(true)}
-            className="w-10 h-10 items-center justify-center"
-            hitSlop={8}
-          >
-            <Icon name="ellipsis-vertical" size={22} color="#4B5563" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {showSearch ? (
-        <View className="px-4 pb-3">
-          <View className="flex-row items-center bg-surface border border-border-color rounded-2xl px-4 h-11">
-            <Icon name="search-outline" size={18} color="#9CA3AF" />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder={`Search in ${category.name}...`}
-              placeholderTextColor="#9CA3AF"
-              autoFocus
-              className="flex-1 ml-2 text-sm font-montserrat text-dark-gray"
-            />
-            {searchQuery.length > 0 ? (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Icon name="close-circle" size={18} color="#9CA3AF" />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
-      ) : null}
+      <Header
+        title={category.name}
+        hideNotificationBell
+        showSearch={showSearch}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchPlaceholder={`Search in ${category.name}...`}
+        rightActions={[
+          {
+            icon: showSearch ? 'close-outline' : 'search-outline',
+            onPress: () => {
+              setShowSearch((prev) => {
+                if (prev) setSearchQuery('');
+                return !prev;
+              });
+            },
+          },
+          {
+            icon: 'ellipsis-vertical',
+            onPress: () => setMenuVisible(true),
+          },
+        ]}
+      />
 
       {isLoading && products.length === 0 ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#52622E" />
-        </View>
+        <LoadingState message="Loading products..." />
       ) : (
         <FlatList
           data={displayProducts}

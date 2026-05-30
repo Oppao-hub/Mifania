@@ -1,180 +1,260 @@
-import React, { useEffect, useState } from 'react';
-import { View, FlatList, ActivityIndicator, Text } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { View, ScrollView, Text, RefreshControl } from 'react-native';
+import LoadingState from '../components/LoadingState';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useDispatch, useSelector } from 'react-redux';
-import { getApp } from '@react-native-firebase/app';
-import { getMessaging, requestPermission, getToken, AuthorizationStatus } from '@react-native-firebase/messaging';
 
 import { RootState, Category } from '../utils/types';
 import Header from '../components/Header';
 import SectionHeader from '../components/SectionHeader';
-import ProductCard from '../components/ProductCard';
 import HorizontalProductList from '../components/HorizontalProductList';
+import CategoriesList from '../components/CategoriesList';
+import HomePromoBanner from '../components/HomePromoBanner';
+import CategoryTile from '../components/CategoryTile';
+import ErrorState from '../components/ErrorState';
 import { getProducts } from '../app/reducers/product';
 import { getCategories } from '../app/reducers/category';
 import { getSubCategories } from '../app/reducers/subCategory';
-import { userUpdateDeviceTokenApi } from '../app/api/auth';
-import { getCustomerRefFromUser, resolveResourceIri } from '../utils';
-import { isUnauthorizedError } from '../utils/authSession';
+import { ROUTES } from '../utils';
+import { useScreenLiveSync } from '../hooks/useLiveSync';
+import { LIVE_SYNC_POLL_MS } from '../config/realtime';
+import { useTabBarBottomPadding } from '../utils/layout';
+import { pickPrimaryFetchError, shouldShowFetchError } from '../utils/fetchError';
+import {
+  DISCOVER_CATEGORY,
+  filterProductsByCategory,
+  getCategoryPreviewImage,
+  sortProductsByNewest,
+  sortProductsByPriceDesc,
+} from '../utils/home';
+import { ASSET_URL } from '../app/api/client';
 
+const SECTION_LIMIT = 8;
+const GRID_CATEGORY_LIMIT = 10;
+
+const resolveAssetUri = (url?: string) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  const separator = url.startsWith('/') ? '' : '/';
+  return `${ASSET_URL}${separator}${url}`;
+};
 
 const HomeScreen = () => {
   const navigation = useNavigation<NavigationProp<any>>();
   const dispatch = useDispatch();
-  const [searchQuery, setSearchQuery] = useState('');
+  const tabBarBottomPadding = useTabBarBottomPadding();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | string | null>('all');
   const [selectedSubCategoryId, setSelectedSubCategoryId] = useState<number | string | null>(null);
-  
-  const { items, isLoading: isProductsLoading } = useSelector((state: RootState) => state.product);
-  const { items: categories, isLoading: isCategoriesLoading } = useSelector((state: RootState) => state.category);
-  const { items: subCategories, isLoading: isSubCategoriesLoading } = useSelector((state: RootState) => state.subCategory);
-  
-  // 💡 ADDED: Get Auth Data from Redux so we know WHO is logging in
-  const { data: authData } = useSelector((state: RootState) => state.authentication);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Existing Data Fetching
-  useEffect(() => {
+  const { items, isLoading: isProductsLoading, error: productsError } = useSelector(
+    (state: RootState) => state.product,
+  );
+  const {
+    items: categories,
+    isLoading: isCategoriesLoading,
+    error: categoriesError,
+  } = useSelector((state: RootState) => state.category);
+  const { items: subCategories, error: subCategoriesError } = useSelector(
+    (state: RootState) => state.subCategory,
+  );
+
+  const reloadCatalog = useCallback(() => {
     dispatch(getProducts());
     dispatch(getCategories());
     dispatch(getSubCategories());
   }, [dispatch]);
 
-  // 💡 ADDED: Push Notification Registration Effect
-  useEffect(() => {
-    const messagingInstance = getMessaging(getApp());
+  useScreenLiveSync(reloadCatalog, LIVE_SYNC_POLL_MS, true);
 
-    const getErrorMessage = (error: unknown): string => {
-      if (error instanceof Error) return error.message;
-      if (typeof error === 'string') return error;
-      if (typeof error === 'object' && error && 'message' in error) {
-        const message = (error as { message?: unknown }).message;
-        return typeof message === 'string' ? message : '';
-      }
-      return '';
-    };
-
-    const registerDevice = async (customerIri: string, authToken: string) => {
-        try {
-            const authStatus = await requestPermission(messagingInstance);
-            const enabled = authStatus === AuthorizationStatus.AUTHORIZED || authStatus === AuthorizationStatus.PROVISIONAL;
-
-            if (enabled) {
-                const deviceToken = await getToken(messagingInstance);
-                console.log('📱 Registering Device Token:', deviceToken);
-                await userUpdateDeviceTokenApi(customerIri, deviceToken, authToken);
-            }
-        } catch (error) {
-            if (isUnauthorizedError(getErrorMessage(error))) {
-                // Session-expired flow is already handled globally in client.ts
-                return;
-            }
-            console.error('Push Notification Registration Error:', error);
-        }
-    };
-
-    const customerRef = getCustomerRefFromUser(authData?.user);
-    const customerIri = resolveResourceIri(customerRef, 'customers');
-
-    // Only run if the user is fully logged in and customer reference is available
-    if (customerIri && authData?.token) {
-        registerDevice(customerIri, authData.token);
-    }
-  }, [authData?.user, authData?.token]);
-
-  // Combine "All" with categories from API
-  const allCategories = [{ id: 'all' as any, name: 'All', slug: 'all' } as Category, ...categories];
-
-  // Filter subcategories based on the selected parent category
-  const activeSubCategories = selectedCategoryId && selectedCategoryId !== 'all' 
-    ? subCategories.filter(sub => {
-        const cat = typeof sub.category === 'object' ? sub.category : null;
-        return cat?.id === selectedCategoryId;
-      })
-    : [];
-
-  // Reset subcategory when category changes
-  const handleCategoryPress = (category: any) => {
-    setSelectedCategoryId(category.id);
-    setSelectedSubCategoryId(null); // Reset sub-filter when parent changes
+  const onRefresh = async () => {
+    setRefreshing(true);
+    reloadCatalog();
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
-  // Filter products based on selected category, subcategory, and search query
-  const filteredProducts = items.filter((product) => {
-    // 1. Get the subcategory object for this product from the state
-    const productSubCat = subCategories.find(sc => `/api/sub_categories/${sc.id}` === product.subCategory);
-
-    // 2. Category Filter: Match the parent category of the product's subcategory
-    const cat = typeof productSubCat?.category === 'object' ? productSubCat.category : null;
-    const matchesCategory = !selectedCategoryId || selectedCategoryId === 'all' || 
-                           cat?.id === selectedCategoryId;
-
-    // 3. SubCategory Filter: Match the subcategory ID directly
-    const matchesSubCategory = !selectedSubCategoryId || productSubCat?.id === selectedSubCategoryId;
-
-    // 4. Search Filter
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesCategory && matchesSubCategory && matchesSearch;
+  const catalogError = pickPrimaryFetchError(productsError, categoriesError, subCategoriesError);
+  const hasCatalogData = items.length > 0 || categories.length > 0;
+  const isCatalogLoading =
+    (isProductsLoading || isCategoriesLoading) && !hasCatalogData;
+  const showCatalogError = shouldShowFetchError({
+    isLoading: isCatalogLoading,
+    error: catalogError,
+    hasData: hasCatalogData,
   });
 
-  const trendingProducts = items.slice(0, 5);
-
-  const renderHeader = () => (
-    <View className="mb-4">
-      <SectionHeader title="Trending Products" onPress={() => console.log('See all trending')} />
-      <HorizontalProductList products={trendingProducts} />
-      <SectionHeader title="New Arrivals" />
-    </View>
+  const categoryFilters = useMemo(
+    () => [DISCOVER_CATEGORY, ...categories],
+    [categories],
   );
+
+  const activeSubCategories = useMemo(
+    () =>
+      selectedCategoryId && selectedCategoryId !== 'all'
+        ? subCategories.filter((sub) => {
+            const cat = typeof sub.category === 'object' ? sub.category : null;
+            return cat?.id === selectedCategoryId;
+          })
+        : [],
+    [subCategories, selectedCategoryId],
+  );
+
+  const filteredProducts = useMemo(
+    () =>
+      filterProductsByCategory(
+        items,
+        subCategories,
+        selectedCategoryId,
+        selectedSubCategoryId,
+        '',
+      ),
+    [items, subCategories, selectedCategoryId, selectedSubCategoryId],
+  );
+
+  const featuredProducts = useMemo(
+    () => filteredProducts.slice(0, SECTION_LIMIT),
+    [filteredProducts],
+  );
+
+  const newArrivals = useMemo(
+    () => sortProductsByNewest(filteredProducts).slice(0, SECTION_LIMIT),
+    [filteredProducts],
+  );
+
+  const hotDeals = useMemo(
+    () => sortProductsByPriceDesc(filteredProducts).slice(0, SECTION_LIMIT),
+    [filteredProducts],
+  );
+
+  const gridCategories = useMemo(
+    () => categories.slice(0, GRID_CATEGORY_LIMIT),
+    [categories],
+  );
+
+  const promoImageUri = useMemo(() => {
+    const hero = featuredProducts[0] || items[0];
+    return hero ? resolveAssetUri(hero.imageUrl || hero.image) : null;
+  }, [featuredProducts, items]);
+
+  const handleCategoryPress = (category: Category) => {
+    setSelectedCategoryId(category.id ?? 'all');
+    setSelectedSubCategoryId(null);
+  };
+
+  const openCategoryCatalog = (category: Category) => {
+    navigation.navigate(ROUTES.CATEGORY_PRODUCTS, { category });
+  };
+
+  const isInitialLoad = isCatalogLoading;
 
   return (
     <SafeAreaView className="flex-1 bg-app-bg" edges={['top']}>
-      <Header 
+      <Header
         isHome
         showSearch
-        searchQuery={searchQuery} 
-        setSearchQuery={setSearchQuery}
-        categories={allCategories}
-        isCategoriesLoading={isCategoriesLoading}
-        activeCategoryId={selectedCategoryId}
-        onCategoryPress={handleCategoryPress}
-        subCategories={activeSubCategories}
-        isSubCategoriesLoading={isSubCategoriesLoading}
-        activeSubCategoryId={selectedSubCategoryId}
-        onSubCategoryPress={(sub) => setSelectedSubCategoryId(sub.id ?? null)}
+        showCategoryFilters={false}
+        onSearchPress={() => navigation.navigate(ROUTES.SEARCH)}
       />
 
-      <View className="flex-1 px-4">
-        {isProductsLoading && items.length === 0 ? (
-          <View className="flex-1 justify-center items-center">
-            <ActivityIndicator size="large" color="#52622E" />
+      {showCatalogError ? (
+        <ErrorState error={catalogError} context="store" onRetry={reloadCatalog} />
+      ) : isInitialLoad ? (
+        <LoadingState message="Loading store..." />
+      ) : (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: tabBarBottomPadding }}
+          className="flex-1"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#52622E']}
+              tintColor="#52622E"
+            />
+          }
+        >
+          <View className="px-4 pt-2">
+            <HomePromoBanner
+              imageUri={promoImageUri}
+              onPress={() => navigation.navigate(ROUTES.PROMOS_VOUCHERS)}
+            />
           </View>
-        ) : (
-          <FlatList
-            data={filteredProducts}
-            numColumns={2}
-            keyExtractor={(item) => item.id?.toString() ?? Math.random().toString()}
-            columnWrapperStyle={{ justifyContent: 'space-between' }}
-            contentContainerStyle={{ paddingBottom: 100 }}
-            ListHeaderComponent={renderHeader}
-            renderItem={({ item }) => (
-              <ProductCard
-                product={item}
-                onPress={() => navigation.navigate('ProductDetails', { product: item })}
+
+          <View className="px-4 mt-1">
+            <CategoriesList
+              categories={categoryFilters}
+              isLoading={isCategoriesLoading}
+              activeId={selectedCategoryId}
+              onCategoryPress={handleCategoryPress}
+            />
+            {activeSubCategories.length > 0 ? (
+              <CategoriesList
+                categories={activeSubCategories}
+                isLoading={false}
+                activeId={selectedSubCategoryId}
+                onCategoryPress={(sub) => {
+                  const parent = categories.find((c) => c.id === selectedCategoryId);
+                  if (parent) {
+                    navigation.navigate(ROUTES.CATEGORY_PRODUCTS, {
+                      category: parent,
+                      subCategoryId: sub.id,
+                    });
+                  } else {
+                    setSelectedSubCategoryId(sub.id ?? null);
+                  }
+                }}
               />
-            )}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              !isProductsLoading ? (
-                <View className="items-center mt-10">
-                  <Text className="text-gray font-montserrat">No products found</Text>
-                </View>
-              ) : null
-            }
-          />
-        )}
-      </View>
+            ) : null}
+          </View>
+
+          {featuredProducts.length > 0 ? (
+            <View className="px-4 mt-2">
+              <SectionHeader title="Featured" />
+              <HorizontalProductList products={featuredProducts} />
+            </View>
+          ) : null}
+
+          {gridCategories.length > 0 ? (
+            <View className="px-4 mt-4">
+              <SectionHeader title="Shop by Category" />
+              <View className="flex-row flex-wrap justify-between">
+                {gridCategories.map((category) => (
+                  <CategoryTile
+                    key={category.id}
+                    category={category}
+                    imageUri={getCategoryPreviewImage(category.id!, items, subCategories)}
+                    onPress={openCategoryCatalog}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
+
+          {newArrivals.length > 0 ? (
+            <View className="px-4">
+              <SectionHeader title="New Arrival" />
+              <HorizontalProductList products={newArrivals} />
+            </View>
+          ) : null}
+
+          {hotDeals.length > 0 ? (
+            <View className="px-4">
+              <SectionHeader title="Hot Deals This Week" />
+              <HorizontalProductList products={hotDeals} />
+            </View>
+          ) : null}
+
+          {filteredProducts.length === 0 && !isProductsLoading ? (
+            <View className="items-center py-12 px-4">
+              <Text className="text-gray font-montserrat text-center">
+                No products match this filter. Try another category.
+              </Text>
+            </View>
+          ) : null}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
