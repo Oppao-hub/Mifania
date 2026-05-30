@@ -1,3 +1,10 @@
 {
-    "java.compile.nullAnalysis.mode": "automatic"
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.import.gradle.wrapper.enabled": true,
+    "java.import.gradle.project": "android",
+    "java.import.gradle.java.home": "/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home",
+    "java.jdt.ls.java.home": "/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home",
+    "java.import.exclusions": [
+        "**/node_modules/**"
+    ]
 }
