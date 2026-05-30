@@ -54,7 +54,7 @@ const FormFieldError: React.FC<FormFieldErrorProps> = ({
 
   return (
     <View
-      className={`w-full flex-row items-center rounded-2xl border px-4 py-3.5 ${config.container} ${className}`}
+      className={`w-full flex-row items-center rounded-2xl border px-3 py-2 ${config.container} ${className}`}
     >
       <View
         className={`mr-3 h-10 w-10 shrink-0 items-center justify-center rounded-full ${config.iconBg}`}

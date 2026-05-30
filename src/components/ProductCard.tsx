@@ -8,6 +8,9 @@ import { ASSET_URL } from '../app/api/client';
 import { mergeSurfaceCardStyle } from '../utils/cardStyles';
 import { getProductRating } from '../utils/productPresentation';
 
+const WISHLIST_HEART_COLOR = '#52622E';
+const WISHLIST_HEART_OUTLINE_COLOR = '#4B5563';
+
 interface ProductCardProps {
   product: Product;
   onPress: () => void;
@@ -85,11 +88,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
             size={18}
             color={
               isWishlisted
-                ? isWishlist
-                  ? '#111827'
-                  : '#DC3545'
+                ? WISHLIST_HEART_COLOR
                 : isCarousel || isWishlist
-                  ? '#4B5563'
+                  ? WISHLIST_HEART_OUTLINE_COLOR
                   : '#FFFFFF'
             }
           />

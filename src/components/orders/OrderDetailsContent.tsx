@@ -11,6 +11,7 @@ import OrderCard from '../OrderCard';
 import { Customer, OrderItem } from '../../utils/types';
 import { ASSET_URL } from '../../app/api/client';
 import { mergeSurfaceCardStyle } from '../../utils/cardStyles';
+import LoadingState from '../LoadingState';
 
 interface OrderDetailsContentProps {
   order: any;
@@ -148,7 +149,7 @@ const OrderDetailsContent = ({ order }: OrderDetailsContentProps) => {
                   <Text className="text-xs text-gray font-montserrat leading-5">{customer.address}, {customer.city}</Text>
                 </>
               ) : (
-                <Text className="text-xs text-gray font-montserrat">Loading customer details...</Text>
+                <LoadingState size="small" fill={false} message="Loading customer details..." />
               )}
           </View>
         </View>

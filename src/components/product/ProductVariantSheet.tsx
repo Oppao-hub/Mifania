@@ -158,28 +158,24 @@ const ProductVariantSheet: React.FC<ProductVariantSheetProps> = ({
             ) : null}
           </View>
 
-          <View className="flex-row items-center gap-3 px-5 pt-2 border-t border-border-color">
-            <View className="flex-1">
-              <Button
-                label={isOutOfStock ? 'Unavailable' : 'Buy Now'}
-                variant="soft"
-                size="sm"
-                shape="pill"
-                disabled={isOutOfStock}
-                onPress={onBuyNow}
-                isLoading={isBuyingNow}
-              />
-            </View>
-            <View className="flex-1">
-              <Button
-                label={isOutOfStock ? 'Unavailable' : 'Add to Cart'}
-                size="sm"
-                shape="pill"
-                disabled={isOutOfStock}
-                onPress={onAddToCart}
-                isLoading={isAddingToCart}
-              />
-            </View>
+          <View className="gap-3 px-5 pt-3 border-t border-border-color">
+            <Button
+              label={isOutOfStock ? 'Unavailable' : 'Add to Cart'}
+              size="md"
+              shape="pill"
+              disabled={isOutOfStock}
+              onPress={onAddToCart}
+              isLoading={isAddingToCart}
+            />
+            <Button
+              label={isOutOfStock ? 'Unavailable' : 'Buy Now'}
+              variant="soft"
+              size="md"
+              shape="pill"
+              disabled={isOutOfStock}
+              onPress={onBuyNow}
+              isLoading={isBuyingNow}
+            />
           </View>
         </View>
       </View>
